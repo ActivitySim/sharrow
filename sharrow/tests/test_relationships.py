@@ -222,7 +222,7 @@ def test_with_2d_base(dataframe_regression):
     assert result.dims == ("HHID", "dtaz", "expressions")
     assert result.shape == (5000, 25, 6)
     result = result.to_dataset("expressions").to_dataframe()
-    dataframe_regression.check(result)
+    dataframe_regression.check(result.iloc[::83])
 
     dot_result = ss.load(tree, as_dataarray=True, dot=np.ones(6))
     assert dot_result.dims == ("HHID", "dtaz",)
