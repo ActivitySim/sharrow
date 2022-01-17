@@ -201,6 +201,7 @@ class DataTree:
         cache_dir=None,
         relationships=(),
         force_digitization=False,
+        dim_order=None,
         **kwargs,
     ):
         if isinstance(graph, Dataset):
@@ -212,6 +213,7 @@ class DataTree:
         self._graph = graph
         self._root_node_name = None
         self.force_digitization = force_digitization
+        self.dim_order = dim_order
 
         # defined init
         if root_node_name is not None and root_node_name in kwargs:
@@ -229,6 +231,72 @@ class DataTree:
             self.add_relationship(r)
         if force_digitization:
             self.digitize_relationships(inplace=True)
+
+        if self.dim_order:
+            self.root_dataset = self.apply_dim_ordering(self.root_dataset)
+
+    def apply_dim_ordering(self, x):
+        """
+        Rename dimensions to ensure correct ordering.
+
+        Parameters
+        ----------
+        x : str or Any
+            A string giving a dimension name, or an object with a `dims`
+            attribute and a `rename` method (e.g. Dataset, DataArray)
+
+        Returns
+        -------
+        Same type as `x`
+        """
+        if self.dim_order:
+            for n, dim_name in enumerate(self.dim_order):
+                try:
+                    x_dims = x.dims
+                except AttributeError:
+                    if isinstance(x, str) and x == dim_name:
+                        return f"AAA{n}{dim_name}"
+                else:
+                    if dim_name in x_dims:
+                        x = x.rename({dim_name: f"AAA{n}{dim_name}"})
+        return x
+
+    def clean_dim_ordering(self, x):
+        """
+        Undo the `apply_dim_ordering` transformation.
+
+        Parameters
+        ----------
+        x : str or Any
+            A string giving a dimension name, or an object with a `dims`
+            attribute and a `rename` method (e.g. Dataset, DataArray)
+
+        Returns
+        -------
+        Same type as `x`
+        """
+        if self.dim_order:
+            for n, dim_name in enumerate(self.dim_order):
+                try:
+                    x_dims = x.dims
+                except AttributeError:
+                    if isinstance(x, str) and x == f"AAA{n}{dim_name}":
+                        return dim_name
+                else:
+                    if f"AAA{n}{dim_name}" in x_dims:
+                        x = x.rename({f"AAA{n}{dim_name}": dim_name})
+        return x
+
+    @property
+    def shape(self):
+        """Tuple[int]: base shape of arrays that will be loaded when using this DataTree."""
+        if self.dim_order:
+            dim_order = self.dim_order
+        else:
+            dim_order = sorted(self.root_dataset.dims)
+        return tuple(
+            self.root_dataset.dims[self.apply_dim_ordering(i)] for i in dim_order
+        )
 
     def __shallow_copy_extras(self):
         return dict(
@@ -328,6 +396,10 @@ class DataTree:
         else:
             r = Relationship(*args, **kwargs)
 
+        if self.dim_order:
+            if r.parent_data == self.root_node_name:
+                r.parent_name = self.apply_dim_ordering(r.parent_name)
+
         # check for existing relationships, don't duplicate
         for e in self._graph.edges:
             r2 = self._get_relationship(e)
@@ -395,7 +467,7 @@ class DataTree:
 
         if not isinstance(x, Dataset):
             x = self.DatasetType.construct(x)
-        self._graph.nodes[self.root_node_name]["dataset"] = x
+        self._graph.nodes[self.root_node_name]["dataset"] = self.apply_dim_ordering(x)
 
     def _get_relationship(self, edge):
         return Relationship(
@@ -701,9 +773,9 @@ class DataTree:
         -------
         TableGroupProcessor
         """
-        from .flows import RFlow
+        from .flows import Flow
 
-        return RFlow(
+        return Flow(
             self,
             definition_spec,
             cache_dir=cache_dir or self.cache_dir,

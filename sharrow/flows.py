@@ -417,10 +417,68 @@ def mnl_transform(
 """
 
 
-class RFlow:
+class Flow:
+    """
+    A prepared data flow.
+
+    Parameters
+    ----------
+    tree : DataTree
+        The tree from whence the output will be constructed.
+    defs : Mapping[str,str]
+        Gives the names and definitions for the variables to create in the
+        generated output.
+    error_model : {'numpy', 'python'}, default 'numpy'
+        The error_model option controls the divide-by-zero behavior. Setting
+        it to ‘python’ causes divide-by-zero to raise exception like
+        CPython. Setting it to ‘numpy’ causes divide-by-zero to set the
+        result to +/-inf or nan.
+    cache_dir : Path-like, optional
+        A location to write out generated python and numba code. If not
+        provided, a unique temporary directory is created.
+    name : str, optional
+        The name of this Flow used for writing out cached files. If not
+        provided, a unique name is generated. If `cache_dir` is given,
+        be sure to avoid name conflicts with other flow's in the same
+        directory.
+    dtype : str, default "float32"
+        The name of the numpy dtype that will be used for the output.
+    boundscheck : bool, default False
+        If True, boundscheck enables bounds checking for array indices, and
+        out of bounds accesses will raise IndexError. The default is to not
+        do bounds checking, which is faster but can produce garbage results
+        or segfaults if there are problems, so try turning this on for
+        debugging if you are getting unexplained errors or crashes.
+    nopython : bool, default True
+        Compile using numba's `nopython` mode.  Provided for debugging only,
+        as there's little point in turning this off for production code, as
+        all the speed benefits of sharrow will be lost.
+    fastmath : bool, default True
+        If true, fastmath enables the use of "fast" floating point transforms,
+        which can improve performance but can result in tiny distortions in
+        results.  See numba docs for details.
+    parallel : bool, default True
+        Enable or disable parallel computation for certain functions.
+    readme : str, optional
+        A string to inject as a comment at the top of the flow Python file.
+    flow_library : Mapping[str,Flow], optional
+        An in-memory cache of precompiled Flow objects.  Using this can result
+        in performance improvements when repeatedly using the same definitions.
+    extra_hash_data : Tuple[Hashable], optional
+        Additional data used for generating the flow hash.  Useful to prevent
+        conflicts when using a flow_library with multiple similar flows.
+    write_hash_audit : bool, default True
+        Writes a hash audit log into a comment in the flow Python file, for
+        debugging purposes.
+    hashing_level : int, default 1
+        Level of detail to write into flow hashes.  Increase detail to avoid
+        hash conflicts for similar flows.
+
+    """
+
     def __new__(
         cls,
-        shared_data,
+        tree,
         defs,
         error_model="numpy",
         cache_dir=None,
@@ -436,8 +494,8 @@ class RFlow:
         write_hash_audit=True,
         hashing_level=1,
     ):
-        assert isinstance(shared_data, DataTree)
-        shared_data.digitize_relationships(inplace=True)
+        assert isinstance(tree, DataTree)
+        tree.digitize_relationships(inplace=True)
 
         self = super().__new__(cls)
         # clean defs with hidden values
@@ -445,7 +503,7 @@ class RFlow:
 
         # start init up to flow_hash
         self.__initialize_1(
-            shared_data,
+            tree,
             defs,
             cache_dir=cache_dir,
             extra_hash_data=extra_hash_data,
@@ -455,7 +513,7 @@ class RFlow:
         if flow_library is not None and self.flow_hash in flow_library:
             logger.info(f"flow exists in library: {self.flow_hash}")
             result = flow_library[self.flow_hash]
-            result.shared_data = shared_data
+            result.tree = tree
             return result
         # otherwise finish normal init
         self.__initialize_2(
@@ -477,7 +535,7 @@ class RFlow:
 
     def __initialize_1(
         self,
-        shared_data,
+        tree,
         defs,
         cache_dir=None,
         extra_hash_data=(),
@@ -490,25 +548,7 @@ class RFlow:
         """
         Initialize up to the flow_hash
 
-        Parameters
-        ----------
-        shared_data : SharedData
-        defs : Dict[str,str]
-            Gives the names and definitions for the columns to create in our
-            generated table.
-        error_model : {'numpy', 'python'}, default 'numpy'
-            The error_model option controls the divide-by-zero behavior. Setting
-            it to ‘python’ causes divide-by-zero to raise exception like
-            CPython. Setting it to ‘numpy’ causes divide-by-zero to set the
-            result to +/-inf or nan.
-        cache_dir : Path-like, optional
-            A location to write out generated python and numba code. If not
-            provided, a unique temporary directory is created.
-        name : str, optional
-            The name of this Flow used for writing out cached files. If not
-            provided, a unique name is generated. If `cache_dir` is given,
-            be sure to avoid name conflicts with other flow's in the same
-            directory.
+        See main docstring for arguments.
         """
         if cache_dir is None:
             import tempfile
@@ -518,7 +558,7 @@ class RFlow:
         else:
             self.cache_dir = cache_dir
 
-        self.shared_data = shared_data
+        self.tree = tree
         self._raw_functions = {}
         self._secondary_flows = {}
 
@@ -527,22 +567,18 @@ class RFlow:
         for k, expr in defs.items():
             plain_names, attribute_pairs, subscript_pairs = extract_names_2(expr)
             all_raw_names |= plain_names
-            if self.shared_data.root_node_name:
-                all_raw_names |= attribute_pairs.get(
-                    self.shared_data.root_node_name, set()
-                )
-                all_raw_names |= subscript_pairs.get(
-                    self.shared_data.root_node_name, set()
-                )
+            if self.tree.root_node_name:
+                all_raw_names |= attribute_pairs.get(self.tree.root_node_name, set())
+                all_raw_names |= subscript_pairs.get(self.tree.root_node_name, set())
 
-        index_slots = {i: n for n, i in enumerate(sorted(self.shared_data.dims))}
+        index_slots = {i: n for n, i in enumerate(sorted(self.tree.dims))}
         self.arg_name_positions = index_slots
-        self.arg_names = sorted(self.shared_data.dims)
+        self.arg_names = sorted(self.tree.dims)
         self.output_name_positions = {}
 
         self._used_extra_vars = {}
-        if self.shared_data.extra_vars:
-            for k, v in self.shared_data.extra_vars.items():
+        if self.tree.extra_vars:
+            for k, v in self.tree.extra_vars.items():
                 if k in all_raw_names:
                     self._used_extra_vars[k] = v
 
@@ -585,7 +621,7 @@ class RFlow:
         _flow_hash_push("---DataTree---")
         for k in self.arg_names:
             _flow_hash_push(f"arg:{k}")
-        for k in self.shared_data._hash_features():
+        for k in self.tree._hash_features():
             if self._hashing_level > 0 or not k.startswith("relationship:"):
                 _flow_hash_push(k)
         if self._hashing_level > 1:
@@ -597,7 +633,7 @@ class RFlow:
                 parts = k.split("__")
                 if len(parts) > 2:
                     try:
-                        digital_encoding = self.shared_data.subspaces[parts[1]][
+                        digital_encoding = self.tree.subspaces[parts[1]][
                             "__".join(parts[2:])
                         ].attrs["digital_encoding"]
                     except (AttributeError, KeyError) as err:
@@ -620,7 +656,7 @@ class RFlow:
         self.flow_hash_audit = "]\n# [".join(flow_hash_audit)
 
     def _index_slots(self):
-        return {i: n for n, i in enumerate(sorted(self.shared_data.dims))}
+        return {i: n for n, i in enumerate(sorted(self.tree.dims))}
 
     def init_sub_funcs(
         self,
@@ -632,22 +668,22 @@ class RFlow:
     ):
         func_code = ""
         all_name_tokens = set()
-        index_slots = {i: n for n, i in enumerate(sorted(self.shared_data.dims))}
+        index_slots = {i: n for n, i in enumerate(sorted(self.tree.dims))}
         self.arg_name_positions = index_slots
-        candidate_names = self.shared_data.namespace_names()
+        candidate_names = self.tree.namespace_names()
 
         meta_data = {}
 
-        if self.shared_data.relationships_are_digitized:
-            for spacename, spacearrays in self.shared_data.subspaces.items():
+        if self.tree.relationships_are_digitized:
+            for spacename, spacearrays in self.tree.subspaces.items():
                 dim_slots = {}
                 for k1 in spacearrays.keys():
                     try:
-                        toks = self.shared_data._arg_tokenizer(
+                        toks = self.tree._arg_tokenizer(
                             spacename, spacearray=spacearrays._variables[k1]
                         )
                     except:
-                        toks = self.shared_data._arg_tokenizer(
+                        toks = self.tree._arg_tokenizer(
                             spacename, spacearray=spacearrays[k1]
                         )
                     dim_slots[k1] = toks
@@ -658,7 +694,7 @@ class RFlow:
                 meta_data[spacename] = (dim_slots, digital_encodings)
 
         else:
-            for spacename, spacearrays in self.shared_data.subspaces.items():
+            for spacename, spacearrays in self.tree.subspaces.items():
                 dim_slots = {}
                 for k1 in spacearrays.keys():
                     try:
@@ -676,28 +712,16 @@ class RFlow:
         for n, (k, expr) in enumerate(defs.items()):
             expr = str(expr).lstrip()
             init_expr = expr
-            for spacename, spacearrays in self.shared_data.subspaces.items():
+            for spacename, spacearrays in self.tree.subspaces.items():
                 if spacename == "":
                     expr = expression_for_numba(
                         expr,
                         spacename,
                         (),
                         {},  # input name positions not used
-                        rawalias=self.shared_data.root_node_name or "____",
+                        rawalias=self.tree.root_node_name or "____",
                     )
                 else:
-                    # dim_slots = {}
-                    # for k1 in spacearrays.keys():
-                    #     try:
-                    #         _dims = spacearrays._variables[k1].dims
-                    #     except:
-                    #         _dims = spacearrays[k1].dims
-                    #     dim_slots[k1] = [index_slots[z] for z in _dims]
-                    #
-                    # try:
-                    #     digital_encodings = spacearrays.digital_encodings
-                    # except AttributeError:
-                    #     digital_encodings = {}
                     dim_slots, digital_encodings = meta_data[spacename]
                     try:
                         expr = expression_for_numba(
@@ -710,7 +734,7 @@ class RFlow:
                     except KeyError:
                         # check if we can resolve this name on any other subspace
                         other_way = False
-                        for other_spacename in self.shared_data.subspaces:
+                        for other_spacename in self.tree.subspaces:
                             if other_spacename == spacename:
                                 continue
                             dim_slots, digital_encodings = meta_data[other_spacename]
@@ -759,9 +783,7 @@ class RFlow:
                 error_model=error_model,
                 extra_imports="\n".join(
                     [
-                        "from .extra_funcs import *"
-                        if self.shared_data.extra_funcs
-                        else "",
+                        "from .extra_funcs import *" if self.tree.extra_funcs else "",
                         "from .extra_vars import *" if self._used_extra_vars else "",
                     ]
                 ),
@@ -793,7 +815,7 @@ class RFlow:
 
         Parameters
         ----------
-        shared_data : DataTree
+        tree : DataTree
         defs : Dict[str,str]
             Gives the names and definitions for the columns to create in our
             generated table.
@@ -828,7 +850,7 @@ class RFlow:
                 parts = k.split("__")
                 if len(parts) > 2:
                     try:
-                        digital_encoding = self.shared_data.subspaces[parts[1]][
+                        digital_encoding = self.tree.subspaces[parts[1]][
                             "__".join(parts[2:])
                         ].attrs["digital_encoding"]
                     except (AttributeError, KeyError) as err:
@@ -881,14 +903,14 @@ class RFlow:
             func_code = self._func_code
 
             # write extra_funcs file, if there are any extra_funcs
-            if self.shared_data.extra_funcs:
+            if self.tree.extra_funcs:
                 try:
                     import cloudpickle as pickle
                 except ModuleNotFoundError:
                     import pickle
                 dependencies.add("import pickle")
                 func_code += "\n\n# extra_funcs\n"
-                for x_func in self.shared_data.extra_funcs:
+                for x_func in self.tree.extra_funcs:
                     func_code += f"\n\n{x_func.__name__} = pickle.loads({repr(pickle.dumps(x_func))})\n"
 
             # write extra_vars file, if there are any used extra_vars
@@ -989,9 +1011,9 @@ class RFlow:
 
                 f_code.write("\n\n# machinery code\n\n")
 
-                if self.shared_data.relationships_are_digitized:
+                if self.tree.relationships_are_digitized:
 
-                    root_dims = sorted(self.shared_data.root_dataset.dims)
+                    root_dims = sorted(self.tree.root_dataset.dims)
                     n_root_dims = len(root_dims)
 
                     if n_root_dims == 1:
@@ -1267,7 +1289,7 @@ class RFlow:
                 if dtype is not None:
                     kwargs["dtype"] = dtype
                 if dot is not None:
-                    kwargs["dotarray"] = dot
+                    kwargs["dotarray"] = np.asarray(dot)
                 if mnl is not None:
                     kwargs["random_draws"] = mnl
                     kwargs["pick_counted"] = pick_counted
@@ -1307,11 +1329,8 @@ class RFlow:
         runner=None,
         dtype=None,
         dot=None,
-        return_indexes=False,
-        use_indexes_cache=True,
         mnl_draws=None,
         pick_counted=False,
-        dim_order=None,
     ):
         """
         Compute the flow outputs.
@@ -1320,9 +1339,31 @@ class RFlow:
         ----------
         source : DataTree, optional
             This is the source of the data for this flow. If not provided, the
-            last available source is used.
-        as_dataframe
-        as_table : bool
+            tree used to initialize this flow is used.
+        as_dataframe : bool, default False
+            Return the loaded data as a pandas.DataFrame. Must not be used in
+            conjunction with the `dot` argument.
+        as_dataarray : bool, default False
+            Return the loaded data as a xarray.DataArray.
+        as_table : bool, default False
+            Return the loaded data as a sharrow.Table (a subclass of pyarrow.Table).
+        runner : Callable, optional
+            Overload the prepared function with a different callable. Recommended
+            for advanced usage only.
+        dtype : str or dtype
+            Override the default dtype for the result. May trigger re-compilation
+            of the underlying code.
+        dot : array-like, optional
+            An array of coefficients. If provided, the function returns the
+            dot-product of the computed expressions and this array of coefficients,
+            but without ever materializing the array of computed expression values
+            in memory, achiving significant performance gains.
+        mnl_draws : array-like, optional
+            An array of random values in the unit interval. If provided, `dot` must
+            also be provided. The dot-product is treated as the utility function
+            for a multinomial logit model, and these draws are used to simulate
+            choices from the implied probabilities.
+
 
         Returns
         -------
@@ -1331,7 +1372,7 @@ class RFlow:
         if (as_dataframe or as_table) and dot is not None:
             raise ValueError("cannot format output other than as array if using dot")
         if source is None:
-            source = self.shared_data
+            source = self.tree
         if dtype is None and dot is not None:
             dtype = dot.dtype
         dot_collapse = False
@@ -1340,6 +1381,10 @@ class RFlow:
         if dot is not None and dot.ndim == 1:
             dot = np.expand_dims(dot, -1)
             dot_collapse = True
+        mnl_collapse = False
+        if mnl_draws is not None and mnl_draws.ndim == 1:
+            mnl_draws = np.expand_dims(mnl_draws, -1)
+            mnl_collapse = True
         if not source.relationships_are_digitized:
             source = source.digitize_relationships()
         if source.relationships_are_digitized:
@@ -1357,11 +1402,6 @@ class RFlow:
             indexes_dict = None
         else:
             raise RuntimeError("please digitize")
-            indexes_dict = source.get_indexes(use_cache=use_indexes_cache)
-            # TODO only compute and use required indexes
-            result = self.load_raw(
-                source, indexes_dict, runner=runner, dtype=dtype, dot=dot
-            )
         if as_dataframe:
             index = getattr(source.root_dataset, "index", None)
             result = pd.DataFrame(
@@ -1385,12 +1425,52 @@ class RFlow:
                     dims=sorted(source.root_dataset.dims),
                     coords=source.root_dataset.coords,
                 )
-            else:
-                raise NotImplementedError(
-                    "cannot format as DataArray with multi-dimensional dot array"
+            elif mnl_collapse:
+                if isinstance(dot, xr.DataArray):
+                    plus_dims = list(dot.dims[1:])
+                else:
+                    plus_dims = []
+                result = xr.DataArray(
+                    np.squeeze(result, -1),
+                    dims=sorted(source.root_dataset.dims)[:-1] + plus_dims,
+                    coords=source.root_dataset.coords,
                 )
-        if return_indexes:
-            return result, indexes_dict
+                result_p = xr.DataArray(
+                    np.squeeze(result_p, -1),
+                    dims=sorted(source.root_dataset.dims)[:-1] + plus_dims,
+                    coords=source.root_dataset.coords,
+                )
+                if pick_count is not None:
+                    pick_count = xr.DataArray(
+                        np.squeeze(pick_count, -1),
+                        dims=sorted(source.root_dataset.dims)[:-1] + plus_dims,
+                        coords=source.root_dataset.coords,
+                    )
+                for plus_dim in plus_dims:
+                    if plus_dim in dot.coords:
+                        result.coords[plus_dim] = dot.coords[plus_dim]
+                        result_p.coords[plus_dim] = dot.coords[plus_dim]
+                        if pick_count is not None:
+                            pick_count.coords[plus_dim] = dot.coords[plus_dim]
+            elif isinstance(dot, xr.DataArray):
+                plus_dims = dot.dims[1:]
+                result = xr.DataArray(
+                    result,
+                    dims=sorted(source.root_dataset.dims) + list(plus_dims),
+                    coords=source.root_dataset.coords,
+                )
+                for plus_dim in plus_dims:
+                    if plus_dim in dot.coords:
+                        result.coords[plus_dim] = dot.coords[plus_dim]
+            else:
+                dot_ = xr.DataArray(dot)
+                plus_dims = dot_.dims[1:]
+                result = xr.DataArray(
+                    result,
+                    dims=sorted(source.root_dataset.dims) + list(plus_dims),
+                    coords=source.root_dataset.coords,
+                )
+            result = source.clean_dim_ordering(result)
         if result_p is not None:
             if pick_counted:
                 return result, result_p, pick_count
@@ -1398,30 +1478,147 @@ class RFlow:
                 return result, result_p
         return result
 
-    def merge(self, source, dtype=None):
+    def load_dataframe(self, source=None, dtype=None):
         """
-        Merge the data created by this flow into the source.
+        Compute the flow outputs as a pandas.DataFrame.
 
         Parameters
         ----------
-        source : Dataset or Table or DataFrame
+        source : DataTree, optional
+            This is the source of the data for this flow. If not provided, the
+            tree used to initialize this flow is used.
         dtype : str or dtype
-            The loaded data will be generated with this dtype.
+            Override the default dtype for the result. May trigger re-compilation
+            of the underlying code.
 
         Returns
         -------
-        merged : Dataset or Table or DataFrame
-            The same data type as `source` is returned.
+        pandas.DataFrame
         """
-        assert isinstance(source, (xr.Dataset, pa.Table, pd.DataFrame, Table))
-        new_cols = self.load(source, dtype=dtype)
-        if isinstance(source, (pa.Table, Table)):
-            for n, k in enumerate(self._raw_functions.keys()):
-                source = source.append_column(k, [new_cols[:, n]])
-        else:
-            for n, k in enumerate(self._raw_functions.keys()):
-                source[k] = new_cols[:, n]
-        return source
+        return self.load(source=source, dtype=dtype, as_dataframe=True)
+
+    def load_dataarray(self, source=None, dtype=None):
+        """
+        Compute the flow outputs as a xarray.DataArray.
+
+        Parameters
+        ----------
+        source : DataTree, optional
+            This is the source of the data for this flow. If not provided, the
+            tree used to initialize this flow is used.
+        dtype : str or dtype
+            Override the default dtype for the result. May trigger re-compilation
+            of the underlying code.
+
+        Returns
+        -------
+        xarray.DataArray
+        """
+        return self.load(source=source, dtype=dtype, as_dataarray=True)
+
+    def dot(self, coefficients, source=None, dtype=None):
+        """
+        Compute the dot-product of expression results and coefficients.
+
+        Parameters
+        ----------
+        coefficients : array-like
+            This function will return the dot-product of the computed expressions
+            and this array of coefficients, but without ever materializing the
+            array of computed expression values in memory, achieving significant
+            performance gains.
+        source : DataTree, optional
+            This is the source of the data for this flow. If not provided, the
+            tree used to initialize this flow is used.
+        dtype : str or dtype
+            Override the default dtype for the result. May trigger re-compilation
+            of the underlying code.
+
+        Returns
+        -------
+        numpy.ndarray
+        """
+        return self.load(
+            source,
+            dot=coefficients,
+            dtype=dtype,
+        )
+
+    def dot_dataarray(self, coefficients, source=None, dtype=None):
+        """
+        Compute the dot-product of expression results and coefficients.
+
+        Parameters
+        ----------
+        coefficients : DataArray
+            This function will return the dot-product of the computed expressions
+            and this array of coefficients, but without ever materializing the
+            array of computed expression values in memory, achieving significant
+            performance gains.
+        source : DataTree, optional
+            This is the source of the data for this flow. If not provided, the
+            tree used to initialize this flow is used.
+        dtype : str or dtype
+            Override the default dtype for the result. May trigger re-compilation
+            of the underlying code.
+
+        Returns
+        -------
+        xarray.DataArray
+        """
+        return self.load(
+            source,
+            dot=coefficients,
+            dtype=dtype,
+            as_dataarray=True,
+        )
+
+    def mnl_draws(
+        self, coefficients, draws, source=None, pick_counted=False, dtype=None
+    ):
+        """
+        Make random simulated choices for a multinomial logit model.
+
+        Parameters
+        ----------
+        coefficients : array-like
+            These coefficients are used is in `dot` to compute the dot-product
+            of the computed expressions, and this result is treated as the utility
+            function for a multinomial logit model.
+        draws : array-like
+            A one or two dimensional array of random values in the unit interval.
+            If one dimensional, then it must have length equal to the first
+            dimension of the base `shape` of `source`, and a single draw will be
+            applied for each row in that dimension.  If two dimensional, the first
+            dimension must match as above, and the second dimension determines the
+            number of draws applied for each row in the first dimension.
+        source : DataTree, optional
+            This is the source of the data for this flow. If not provided, the
+            tree used to initialize this flow is used.
+        pick_counted : bool, default False
+            Whether to tally multiple repeated choices with a pick count.
+        dtype : str or dtype
+            Override the default dtype for the probability. May trigger re-compilation
+            of the underlying code.  The choices and pick counts (if included)
+            are always integers.
+
+        Returns
+        -------
+        choices : array[int32]
+            The positions of the simulated choices.
+        probs : array[dtype]
+            The probability that was associated with each simulated choice.
+        pick_count : array[int32], optional
+            A count of how many times this choice was chosen, only included
+            if `pick_counted` is True.
+        """
+        return self.load(
+            source=source,
+            dot=coefficients,
+            mnl_draws=draws,
+            dtype=dtype,
+            pick_counted=pick_counted,
+        )
 
     @property
     def function_names(self):
@@ -1434,7 +1631,7 @@ class RFlow:
                 self._raw_functions[name] = (None, None, set(), [])
 
     def _spill(self, all_name_tokens=None):
-        cmds = [self.shared_data._spill(all_name_tokens)]
+        cmds = [self.tree._spill(all_name_tokens)]
         cmds.append("\n")
         cmds.append(f"output_name_positions = {self.output_name_positions!r}")
         cmds.append(f"function_names = {self.function_names!r}")
