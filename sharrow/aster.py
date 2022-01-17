@@ -1,9 +1,10 @@
 import ast
-import tokenize
 import io
 import logging
+import tokenize
 
 logger = logging.getLogger("sharrow.aster")
+
 
 def _isNone(c):
     if c is None:
@@ -45,7 +46,7 @@ def extract_names_2(command):
     for i in ast.walk(z):
         if isinstance(i, ast.Attribute):
             if not isinstance(i.value, ast.Name):
-                #print("skip", i.attr, i.value)
+                # print("skip", i.attr, i.value)
                 continue
             k = i.value.id
             a = i.attr
@@ -59,14 +60,16 @@ def extract_names_2(command):
     for i in ast.walk(z):
         if isinstance(i, ast.Subscript):
             if not isinstance(i.value, ast.Name):
-                #print("skip", i.attr, i.value)
+                # print("skip", i.attr, i.value)
                 continue
             k = i.value.id
             try:
-                a = i.slice.value.value # Python <= 3.8
+                a = i.slice.value.value  # Python <= 3.8
             except AttributeError:
                 try:
-                    a = i.slice.value       # Python == 3.9  # FIXME when dropping support for 3.8
+                    a = (
+                        i.slice.value
+                    )  # Python == 3.9  # FIXME when dropping support for 3.8
                 except AttributeError:
                     a = None
             skip_names.add(id(i.value))
@@ -84,6 +87,7 @@ def extract_names_2(command):
             plain_names.add(i.id)
 
     return plain_names, attribute_name_pairs, subscript_name_pairs
+
 
 class RewriteExpression(ast.NodeTransformer):
     def visit_Call(self, node):
@@ -103,7 +107,11 @@ class RewriteExpression(ast.NodeTransformer):
                 return ast.Call(
                     func=ast.Name(id="where", ctx=ast.Load()),
                     args=[
-                        ast.Compare(left=basic, ops=[ast.Gt()], comparators=[lower],),
+                        ast.Compare(
+                            left=basic,
+                            ops=[ast.Gt()],
+                            comparators=[lower],
+                        ),
                         basic,
                         lower,
                     ],
@@ -113,7 +121,11 @@ class RewriteExpression(ast.NodeTransformer):
                 return ast.Call(
                     func=ast.Name(id="where", ctx=ast.Load()),
                     args=[
-                        ast.Compare(left=basic, ops=[ast.Lt()], comparators=[upper],),
+                        ast.Compare(
+                            left=basic,
+                            ops=[ast.Lt()],
+                            comparators=[upper],
+                        ),
                         basic,
                         upper,
                     ],
@@ -123,12 +135,18 @@ class RewriteExpression(ast.NodeTransformer):
                 return ast.Call(
                     func=ast.Name(id="where", ctx=ast.Load()),
                     args=[
-                        ast.Compare(left=basic, ops=[ast.Gt()], comparators=[lower],),
+                        ast.Compare(
+                            left=basic,
+                            ops=[ast.Gt()],
+                            comparators=[lower],
+                        ),
                         ast.Call(
                             func=ast.Name(id="where", ctx=ast.Load()),
                             args=[
                                 ast.Compare(
-                                    left=basic, ops=[ast.Lt()], comparators=[upper],
+                                    left=basic,
+                                    ops=[ast.Lt()],
+                                    comparators=[upper],
                                 ),
                                 basic,
                                 upper,
@@ -151,18 +169,30 @@ class RewriteExpression(ast.NodeTransformer):
                 clip = ast.Call(
                     func=ast.Name(id="where", ctx=ast.Load()),
                     args=[
-                        ast.Compare(left=basic, ops=[ast.Gt()], comparators=[lower],),
+                        ast.Compare(
+                            left=basic,
+                            ops=[ast.Gt()],
+                            comparators=[lower],
+                        ),
                         basic,
                         lower,
                     ],
                     keywords=[],
                 )
-                return ast.BinOp(left=clip, op=ast.Sub(), right=lower,)
+                return ast.BinOp(
+                    left=clip,
+                    op=ast.Sub(),
+                    right=lower,
+                )
             elif _isNone(lower):
                 return ast.Call(
                     func=ast.Name(id="where", ctx=ast.Load()),
                     args=[
-                        ast.Compare(left=basic, ops=[ast.Lt()], comparators=[upper],),
+                        ast.Compare(
+                            left=basic,
+                            ops=[ast.Lt()],
+                            comparators=[upper],
+                        ),
                         basic,
                         upper,
                     ],
@@ -172,12 +202,18 @@ class RewriteExpression(ast.NodeTransformer):
                 clip = ast.Call(
                     func=ast.Name(id="where", ctx=ast.Load()),
                     args=[
-                        ast.Compare(left=basic, ops=[ast.Gt()], comparators=[lower],),
+                        ast.Compare(
+                            left=basic,
+                            ops=[ast.Gt()],
+                            comparators=[lower],
+                        ),
                         ast.Call(
                             func=ast.Name(id="where", ctx=ast.Load()),
                             args=[
                                 ast.Compare(
-                                    left=basic, ops=[ast.Lt()], comparators=[upper],
+                                    left=basic,
+                                    ops=[ast.Lt()],
+                                    comparators=[upper],
                                 ),
                                 basic,
                                 upper,
@@ -188,16 +224,26 @@ class RewriteExpression(ast.NodeTransformer):
                     ],
                     keywords=[],
                 )
-                return ast.BinOp(left=clip, op=ast.Sub(), right=lower,)
-        elif tag=="max":
+                return ast.BinOp(
+                    left=clip,
+                    op=ast.Sub(),
+                    right=lower,
+                )
+        elif tag == "max":
             if len(node.args) == 2:
                 left, right = node.args
             else:
-                raise ValueError("incorrect number of args for max (currently only 2 is allowed)")
+                raise ValueError(
+                    "incorrect number of args for max (currently only 2 is allowed)"
+                )
             return ast.Call(
                 func=ast.Name(id="where", ctx=ast.Load()),
                 args=[
-                    ast.Compare(left=left, ops=[ast.Lt()], comparators=[right], ),
+                    ast.Compare(
+                        left=left,
+                        ops=[ast.Lt()],
+                        comparators=[right],
+                    ),
                     right,
                     left,
                 ],
@@ -207,11 +253,17 @@ class RewriteExpression(ast.NodeTransformer):
             if len(node.args) == 2:
                 left, right = node.args
             else:
-                raise ValueError("incorrect number of args for max (currently only 2 is allowed)")
+                raise ValueError(
+                    "incorrect number of args for max (currently only 2 is allowed)"
+                )
             return ast.Call(
                 func=ast.Name(id="where", ctx=ast.Load()),
                 args=[
-                    ast.Compare(left=left, ops=[ast.Lt()], comparators=[right], ),
+                    ast.Compare(
+                        left=left,
+                        ops=[ast.Lt()],
+                        comparators=[right],
+                    ),
                     left,
                     right,
                 ],
@@ -222,11 +274,12 @@ class RewriteExpression(ast.NodeTransformer):
 
 
 def bool_wrap(subnode):
-    if (isinstance(subnode, ast.Call) and
-        isinstance(subnode.func, ast.Attribute) and
-        subnode.func.attr == "bool_" and
-        isinstance(subnode.func.value, ast.Name) and
-        subnode.func.value.id == 'np'
+    if (
+        isinstance(subnode, ast.Call)
+        and isinstance(subnode.func, ast.Attribute)
+        and subnode.func.attr == "bool_"
+        and isinstance(subnode.func.value, ast.Name)
+        and subnode.func.value.id == "np"
     ):
         return subnode
     return ast.Call(
@@ -238,17 +291,17 @@ def bool_wrap(subnode):
         keywords={},
     )
 
-class RewriteForNumba(ast.NodeTransformer):
 
+class RewriteForNumba(ast.NodeTransformer):
     def __init__(
-            self,
-            spacename,
-            dim_slots,
-            spacevars=None,
-            rawname='_inputs',
-            rawalias='____',
-            digital_encodings=None,
-            preferred_spacename=None,
+        self,
+        spacename,
+        dim_slots,
+        spacevars=None,
+        rawname="_inputs",
+        rawalias="____",
+        digital_encodings=None,
+        preferred_spacename=None,
     ):
         self.spacename = spacename
         self.dim_slots = dim_slots
@@ -261,13 +314,18 @@ class RewriteForNumba(ast.NodeTransformer):
     def log_event(self, tag, node1=None, node2=None):
         if logger.getEffectiveLevel() <= -1:
             if node1 is None:
-                logger.log(5, f"RewriteForNumba({self.spacename}|{self.rawalias}).{tag}")
+                logger.log(
+                    5, f"RewriteForNumba({self.spacename}|{self.rawalias}).{tag}"
+                )
             elif node2 is None:
                 try:
                     unparsed = ast.unparse(node1)
                 except:
                     unparsed = f"{type(node1)} not unparseable"
-                logger.log(5, f"RewriteForNumba({self.spacename}|{self.rawalias}).{tag} [{type(node1).__name__}]= {unparsed}")
+                logger.log(
+                    5,
+                    f"RewriteForNumba({self.spacename}|{self.rawalias}).{tag} [{type(node1).__name__}]= {unparsed}",
+                )
             else:
                 try:
                     unparsed1 = ast.unparse(node1)
@@ -277,14 +335,18 @@ class RewriteForNumba(ast.NodeTransformer):
                     unparsed2 = ast.unparse(node2)
                 except:
                     unparsed2 = f"{type(node2).__name__} not unparseable"
-                logger.log(5, f"RewriteForNumba({self.spacename}|{self.rawalias}).{tag} [{type(node1).__name__},{type(node2).__name__}]= {unparsed1} => {unparsed2}")
-
+                logger.log(
+                    5,
+                    f"RewriteForNumba({self.spacename}|{self.rawalias}).{tag} [{type(node1).__name__},{type(node2).__name__}]= {unparsed1} => {unparsed2}",
+                )
 
     def generic_visit(self, node):
         self.log_event(f"generic_visit", node)
         return super().generic_visit(node)
 
-    def _replacement(self, attr, ctx, original_node, topname=None, transpose_lead=False):
+    def _replacement(
+        self, attr, ctx, original_node, topname=None, transpose_lead=False
+    ):
         if topname is None:
             topname = self.spacename
         pref_topname = self.preferred_spacename or topname
@@ -300,20 +362,21 @@ class RewriteForNumba(ast.NodeTransformer):
 
         if transpose_lead:
             decorated_name = ast.Call(
-                func=ast.Name('transpose_leading', ctx=ast.Load()),
-                args=[ast.Name(id=f'__{pref_topname}__{attr}', ctx=ast.Load())],
+                func=ast.Name("transpose_leading", ctx=ast.Load()),
+                args=[ast.Name(id=f"__{pref_topname}__{attr}", ctx=ast.Load())],
                 keywords=[],
             )
         else:
-            decorated_name = ast.Name(id=f'__{pref_topname}__{attr}', ctx=ast.Load())
+            decorated_name = ast.Name(id=f"__{pref_topname}__{attr}", ctx=ast.Load())
 
         if isinstance(dim_slots, (tuple, list)):
             if len(dim_slots):
                 s = ast.Tuple(
                     elts=[
                         (
-                            ast.Name(id=f'_arg{n:02}', ctx=ast.Load())
-                            if isinstance(n, int) else n
+                            ast.Name(id=f"_arg{n:02}", ctx=ast.Load())
+                            if isinstance(n, int)
+                            else n
                         )
                         for n in dim_slots
                     ],
@@ -329,7 +392,7 @@ class RewriteForNumba(ast.NodeTransformer):
                 result = decorated_name
         else:
             if isinstance(dim_slots, int):
-                s = ast.Name(id=f'_arg{dim_slots:02}', ctx=ast.Load())
+                s = ast.Name(id=f"_arg{dim_slots:02}", ctx=ast.Load())
             else:
                 s = dim_slots
             result = ast.Subscript(
@@ -340,18 +403,20 @@ class RewriteForNumba(ast.NodeTransformer):
         digital_encoding = self.digital_encodings.get(attr, None)
         if digital_encoding is not None:
 
-            dictionary = digital_encoding.get('dictionary', None)
+            dictionary = digital_encoding.get("dictionary", None)
             if dictionary is not None:
                 result = ast.Subscript(
-                    value=ast.Name(id=f'__encoding_dict__{pref_topname}__{attr}', ctx=ast.Load()),
+                    value=ast.Name(
+                        id=f"__encoding_dict__{pref_topname}__{attr}", ctx=ast.Load()
+                    ),
                     slice=result,
                     ctx=ctx,
                 )
             else:
-                missing_value = digital_encoding.get('missing_value', None)
+                missing_value = digital_encoding.get("missing_value", None)
                 if missing_value is not None:
-                    scale = digital_encoding.get('scale', 1)
-                    offset = digital_encoding.get('offset', 0)
+                    scale = digital_encoding.get("scale", 1)
+                    offset = digital_encoding.get("offset", 0)
                     result = ast.Call(
                         func=ast.Name("digital_decode", cts=ast.Load()),
                         args=[
@@ -363,13 +428,13 @@ class RewriteForNumba(ast.NodeTransformer):
                         keywords=[],
                     )
                 else:
-                    if (scale := digital_encoding.get('scale', 1)) != 1:
+                    if (scale := digital_encoding.get("scale", 1)) != 1:
                         result = ast.BinOp(
                             left=result,
                             op=ast.Mult(),
                             right=ast.Num(scale),
                         )
-                    if offset := digital_encoding.get('offset', 0):
+                    if offset := digital_encoding.get("offset", 0):
                         result = ast.BinOp(
                             left=result,
                             op=ast.Add(),
@@ -378,19 +443,20 @@ class RewriteForNumba(ast.NodeTransformer):
         self.log_event(f"_replacement({attr}, {topname})", original_node, result)
         return result
 
-
     def visit_Subscript(self, node):
         if isinstance(node.value, ast.Name):
-            if (node.value.id == self.spacename and
-                isinstance(node.slice, ast.Constant) and
-                isinstance(node.slice.value, str)
+            if (
+                node.value.id == self.spacename
+                and isinstance(node.slice, ast.Constant)
+                and isinstance(node.slice.value, str)
             ):
                 self.log_event(f"visit_Subscript(Constant {node.slice.value})")
                 return self._replacement(node.slice.value, node.ctx, node)
-            if (node.value.id == self.rawalias and
-                isinstance(node.slice, ast.Constant) and
-                isinstance(node.slice.value, str) and
-                node.slice.value in self.spacevars
+            if (
+                node.value.id == self.rawalias
+                and isinstance(node.slice, ast.Constant)
+                and isinstance(node.slice.value, str)
+                and node.slice.value in self.spacevars
             ):
                 result = ast.Subscript(
                     value=ast.Name(id=self.rawname, ctx=ast.Load()),
@@ -429,7 +495,7 @@ class RewriteForNumba(ast.NodeTransformer):
         if attr not in self.spacevars:
             self.log_event(f"visit_Name(no change)", node)
             return node
-        if self.spacename == '':
+        if self.spacename == "":
             result = ast.Subscript(
                 value=ast.Name(id=self.rawname, ctx=ast.Load()),
                 slice=ast.Constant(self.spacevars[attr]),
@@ -450,10 +516,7 @@ class RewriteForNumba(ast.NodeTransformer):
                 operand=bool_wrap(self.visit(node.operand)),
             )
         else:
-            return ast.UnaryOp(
-                op=node.op,
-                operand=self.visit(node.operand)
-            )
+            return ast.UnaryOp(op=node.op, operand=self.visit(node.operand))
 
     def visit_BinOp(self, node):
         # convert bitwise binops:
@@ -484,13 +547,15 @@ class RewriteForNumba(ast.NodeTransformer):
 
         result = None
         # implement ActivitySim's "reverse" skims
-        if isinstance(node.func, ast.Attribute) and node.func.attr == 'reverse':
+        if isinstance(node.func, ast.Attribute) and node.func.attr == "reverse":
             if isinstance(node.func.value, ast.Name):
                 if node.func.value.id == self.spacename:
-                    if len(node.args)==1 and isinstance(node.args[0], ast.Constant):
-                        result = self._replacement(node.args[0].value, node.func.ctx, None, transpose_lead=True)
+                    if len(node.args) == 1 and isinstance(node.args[0], ast.Constant):
+                        result = self._replacement(
+                            node.args[0].value, node.func.ctx, None, transpose_lead=True
+                        )
         # handle clip as a method
-        if isinstance(node.func, ast.Attribute) and node.func.attr == 'clip':
+        if isinstance(node.func, ast.Attribute) and node.func.attr == "clip":
             if len(node.args) == 1 and len(node.keywords) == 0:
                 # single positional arg becomes max
                 result = ast.Call(
@@ -500,18 +565,24 @@ class RewriteForNumba(ast.NodeTransformer):
                 )
             elif len(node.args) == 0 and len(node.keywords) == 1:
                 # single keyword argument, what is it?
-                if node.keywords[0].arg in ('upper', 'max'):
+                if node.keywords[0].arg in ("upper", "max"):
                     # becomes min
                     result = ast.Call(
                         func=ast.Name("min", cts=ast.Load()),
-                        args=[self.visit(node.func.value), self.visit(node.keywords[0].value)],
+                        args=[
+                            self.visit(node.func.value),
+                            self.visit(node.keywords[0].value),
+                        ],
                         keywords=[],
                     )
-                elif node.keywords[0].arg in ('lower', 'min'):
+                elif node.keywords[0].arg in ("lower", "min"):
                     # becomes max
                     result = ast.Call(
                         func=ast.Name("max", cts=ast.Load()),
-                        args=[self.visit(node.func.value), self.visit(node.keywords[0].value)],
+                        args=[
+                            self.visit(node.func.value),
+                            self.visit(node.keywords[0].value),
+                        ],
                         keywords=[],
                     )
             elif len(node.args) == 2 and len(node.keywords) == 0:
@@ -539,7 +610,7 @@ class RewriteForNumba(ast.NodeTransformer):
                     keywords=[self.visit(i) for i in node.keywords],
                 )
         # move x.apply(func, **kwargs) to be func(x, **kwargs)
-        if isinstance(node.func, ast.Attribute) and node.func.attr == 'apply':
+        if isinstance(node.func, ast.Attribute) and node.func.attr == "apply":
             apply_args = [self.visit(node.func.value)]
             assert len(node.args) == 1
             apply_func = self.visit(node.args[0])
@@ -549,12 +620,16 @@ class RewriteForNumba(ast.NodeTransformer):
                 keywords=[self.visit(i) for i in node.keywords],
             )
         # implement ActivitySim's "max" skims
-        if isinstance(node.func, ast.Attribute) and node.func.attr == 'max':
+        if isinstance(node.func, ast.Attribute) and node.func.attr == "max":
             if isinstance(node.func.value, ast.Name):
                 if node.func.value.id == self.spacename:
-                    if len(node.args)==1 and isinstance(node.args[0], ast.Constant):
-                        forward = self._replacement(node.args[0].value, node.func.ctx, None)
-                        backward = self._replacement(node.args[0].value, node.func.ctx, None, transpose_lead=True)
+                    if len(node.args) == 1 and isinstance(node.args[0], ast.Constant):
+                        forward = self._replacement(
+                            node.args[0].value, node.func.ctx, None
+                        )
+                        backward = self._replacement(
+                            node.args[0].value, node.func.ctx, None, transpose_lead=True
+                        )
                         result = ast.Call(
                             func=ast.Name("max", ctx=ast.Load()),
                             # func=ast.Attribute(
@@ -565,7 +640,7 @@ class RewriteForNumba(ast.NodeTransformer):
                             keywords=[],
                         )
         # change `x.astype(int, **kwargs)` to `int(x, **kwargs)`
-        if isinstance(node.func, ast.Attribute) and node.func.attr == 'astype':
+        if isinstance(node.func, ast.Attribute) and node.func.attr == "astype":
             apply_args = [self.visit(node.func.value)]
             assert len(node.args) == 1
             apply_func = self.visit(node.args[0])
@@ -589,14 +664,14 @@ class RewriteForNumba(ast.NodeTransformer):
 
 
 def expression_for_numba(
-        expr,
-        spacename,
-        dim_slots,
-        spacevars=None,
-        rawname='_inputs',
-        rawalias="____",
-        digital_encodings=None,
-        prefer_name=None,
+    expr,
+    spacename,
+    dim_slots,
+    spacevars=None,
+    rawname="_inputs",
+    rawalias="____",
+    digital_encodings=None,
+    prefer_name=None,
 ):
     return ast.unparse(
         RewriteForNumba(
@@ -607,9 +682,7 @@ def expression_for_numba(
             rawalias,
             digital_encodings,
             prefer_name,
-        ).visit(
-            ast.parse(expr)
-        )
+        ).visit(ast.parse(expr))
     )
 
 
@@ -625,7 +698,9 @@ class Asterize:
             if isinstance(new_tree.body[0], ast.Assign):
                 a = new_tree.body[0]
                 if not len(a.targets) == 1 or not isinstance(a.targets[0], ast.Name):
-                    raise ValueError(f"only one simple named assignment target can be given: {expr}")
+                    raise ValueError(
+                        f"only one simple named assignment target can be given: {expr}"
+                    )
                 target = a.targets[0].id
                 new_tree = a.value
             result = ast.unparse(new_tree)
@@ -636,9 +711,11 @@ class Asterize:
 def SimpleSplitter(x):
     if "=" in x:
         s = x.split("=")
-        if len(s)==2:
+        if len(s) == 2:
             return s[0].strip(), s[1].strip()
         else:
-            raise ValueError(f"only one simple named assignment target can be given: {x}")
+            raise ValueError(
+                f"only one simple named assignment target can be given: {x}"
+            )
     else:
         return None, x

@@ -1,46 +1,57 @@
-import io
-import os
-import textwrap
-import sys
+import base64
+import hashlib
 import importlib
 import inspect
-import re
-import hashlib
-import base64
-
-import dask
-import numpy as np
-import xarray as xr
-import numba as nb
-import pandas as pd
-import pyarrow as pa
-import dask.array as da
-import warnings
+import io
 import logging
+import os
+import re
+import sys
+import textwrap
 import time
+import warnings
 from collections.abc import Sequence
 
+import dask
+import dask.array as da
+import numba as nb
+import numpy as np
+import pandas as pd
+import pyarrow as pa
+import xarray as xr
 
-from .aster import expression_for_numba, extract_all_name_tokens, extract_names_2
-from .maths import piece, hard_sigmoid, transpose_leading, clip
-from .table import Table
-from .filewrite import rewrite, blacken
-from .shared_memory import *
-from .dataset import Dataset
-from .relationships import DataTree
 from . import __version__
+from .aster import expression_for_numba, extract_all_name_tokens, extract_names_2
+from .dataset import Dataset
+from .filewrite import blacken, rewrite
+from .maths import clip, hard_sigmoid, piece, transpose_leading
+from .relationships import DataTree
+from .shared_memory import *
+from .table import Table
 
 logger = logging.getLogger("sharrow")
 
 well_known_names = {
-    'nb', 'np', 'pd', 'xr', 'pa',
-    'log', 'exp', 'log1p', 'expm1', 'max', 'min',
-    'piece', 'hard_sigmoid', 'transpose_leading', 'clip',
+    "nb",
+    "np",
+    "pd",
+    "xr",
+    "pa",
+    "log",
+    "exp",
+    "log1p",
+    "expm1",
+    "max",
+    "min",
+    "piece",
+    "hard_sigmoid",
+    "transpose_leading",
+    "clip",
 }
 
 
 def one_based(n):
-    return pd.RangeIndex(1, n+1)
+    return pd.RangeIndex(1, n + 1)
 
 
 def zero_based(n):
@@ -66,7 +77,7 @@ def clean(s):
     """
     if not isinstance(s, str):
         s = f"{type(s)}-{s}"
-    cleaned = re.sub('\W|^(?=\d)','_', s)
+    cleaned = re.sub("\W|^(?=\d)", "_", s)
     if cleaned != s or len(cleaned) > 120:
         # digest size 15 creates a 24 character base32 string
         h = base64.b32encode(
@@ -92,9 +103,15 @@ def _flip_flop_def(v):
     else:
         return v
 
-well_known_names |= {'_args', '_inputs', '_outputs', }
+
+well_known_names |= {
+    "_args",
+    "_inputs",
+    "_outputs",
+}
 ARG_NAMES = {f"_arg{n:02}" for n in range(100)}
 well_known_names |= ARG_NAMES
+
 
 def filter_name_tokens(expr, matchable_names=None):
     name_tokens = extract_all_name_tokens(expr)
@@ -110,7 +127,7 @@ def coerce_to_range_index(idx):
         return idx
     if isinstance(idx, (pd.Int64Index, pd.Float64Index, pd.UInt64Index)):
         if idx.is_monotonic_increasing and idx[-1] - idx[0] == idx.size - 1:
-            return pd.RangeIndex(idx[0], idx[0]+idx.size)
+            return pd.RangeIndex(idx[0], idx[0] + idx.size)
     return idx
 
 
@@ -128,11 +145,10 @@ def {fname}(
 """
 
 
-
 IRUNNER_1D_TEMPLATE = """
 @nb.jit(cache=True, parallel=True, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath})
 def irunner(
-    argshape, 
+    argshape,
     {joined_namespace_names}
     dtype=np.{dtype},
 ):
@@ -148,8 +164,8 @@ def irunner(
 
 IRUNNER_2D_TEMPLATE = """
 @nb.jit(cache=True, parallel=True, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath})
-def irunner( 
-    argshape, 
+def irunner(
+    argshape,
     {joined_namespace_names}
     dtype=np.{dtype},
 ):
@@ -168,7 +184,7 @@ def irunner(
 IDOTTER_1D_TEMPLATE = """
 @nb.jit(cache=True, parallel=True, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath})
 def idotter(
-    argshape, 
+    argshape,
     {joined_namespace_names}
     dtype=np.{dtype},
     dotarray=None,
@@ -193,7 +209,7 @@ def idotter(
 IDOTTER_2D_TEMPLATE = """
 @nb.jit(cache=True, parallel=True, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath})
 def idotter(
-    argshape, 
+    argshape,
     {joined_namespace_names}
     dtype=np.{dtype},
     dotarray=None,
@@ -220,7 +236,7 @@ def idotter(
 ILINER_1D_TEMPLATE = """
 @nb.jit(cache=True, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath})
 def linemaker(
-    intermediate, j0, 
+    intermediate, j0,
     {joined_namespace_names}
 ):
             {meta_code_stack_dot}
@@ -230,7 +246,7 @@ def linemaker(
 ILINER_2D_TEMPLATE = """
 @nb.jit(cache=True, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath})
 def linemaker(
-    intermediate, j0, j1, 
+    intermediate, j0, j1,
     {joined_namespace_names}
 ):
             {meta_code_stack_dot}
@@ -320,7 +336,7 @@ def _sample_choices_maker_counted(
     for a in range(n_alts):
         z += prob_array[a]
         if s < sample_size and z > random_points[s]:
-            unique_s += 1            
+            unique_s += 1
         while s < sample_size and z > random_points[s]:
             out_choices[unique_s] = a
             out_choice_probs[unique_s] = prob_array[a]
@@ -349,7 +365,7 @@ def _sample_choices_maker_counted(
 
 @nb.jit(cache=True, parallel=True, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath})
 def mnl_transform(
-    argshape, 
+    argshape,
     {joined_namespace_names}
     dtype=np.{dtype},
     dotarray=None,
@@ -401,29 +417,24 @@ def mnl_transform(
 """
 
 
-
-
-
-
 class RFlow:
-
     def __new__(
-            cls,
-            shared_data,
-            defs,
-            error_model='numpy',
-            cache_dir=None,
-            name=None,
-            dtype="float32",
-            boundscheck=False,
-            nopython=True,
-            fastmath=True,
-            parallel=True,
-            readme=None,
-            flow_library=None,
-            extra_hash_data=(),
-            write_hash_audit=True,
-            hashing_level=1,
+        cls,
+        shared_data,
+        defs,
+        error_model="numpy",
+        cache_dir=None,
+        name=None,
+        dtype="float32",
+        boundscheck=False,
+        nopython=True,
+        fastmath=True,
+        parallel=True,
+        readme=None,
+        flow_library=None,
+        extra_hash_data=(),
+        write_hash_audit=True,
+        hashing_level=1,
     ):
         assert isinstance(shared_data, DataTree)
         shared_data.digitize_relationships(inplace=True)
@@ -465,16 +476,16 @@ class RFlow:
         return self
 
     def __initialize_1(
-            self,
-            shared_data,
-            defs,
-            cache_dir=None,
-            extra_hash_data=(),
-            error_model='numpy',
-            boundscheck=False,
-            nopython=True,
-            fastmath=True,
-            hashing_level=1,
+        self,
+        shared_data,
+        defs,
+        cache_dir=None,
+        extra_hash_data=(),
+        error_model="numpy",
+        boundscheck=False,
+        nopython=True,
+        fastmath=True,
+        hashing_level=1,
     ):
         """
         Initialize up to the flow_hash
@@ -501,6 +512,7 @@ class RFlow:
         """
         if cache_dir is None:
             import tempfile
+
             self.temp_cache_dir = tempfile.TemporaryDirectory()
             self.cache_dir = self.temp_cache_dir.name
         else:
@@ -516,8 +528,12 @@ class RFlow:
             plain_names, attribute_pairs, subscript_pairs = extract_names_2(expr)
             all_raw_names |= plain_names
             if self.shared_data.root_node_name:
-                all_raw_names |= attribute_pairs.get(self.shared_data.root_node_name, set())
-                all_raw_names |= subscript_pairs.get(self.shared_data.root_node_name, set())
+                all_raw_names |= attribute_pairs.get(
+                    self.shared_data.root_node_name, set()
+                )
+                all_raw_names |= subscript_pairs.get(
+                    self.shared_data.root_node_name, set()
+                )
 
         index_slots = {i: n for n, i in enumerate(sorted(self.shared_data.dims))}
         self.arg_name_positions = index_slots
@@ -581,16 +597,18 @@ class RFlow:
                 parts = k.split("__")
                 if len(parts) > 2:
                     try:
-                        digital_encoding = self.shared_data.subspaces[parts[1]]["__".join(parts[2:])].attrs['digital_encoding']
+                        digital_encoding = self.shared_data.subspaces[parts[1]][
+                            "__".join(parts[2:])
+                        ].attrs["digital_encoding"]
                     except (AttributeError, KeyError) as err:
                         pass
                     else:
                         if digital_encoding:
                             for de_k in sorted(digital_encoding.keys()):
                                 de_v = digital_encoding[de_k]
-                                if de_k == 'dictionary':
+                                if de_k == "dictionary":
                                     self.encoding_dictionaries[k] = de_v
-                                _flow_hash_push((k, 'digital_encoding', de_k, de_v))
+                                _flow_hash_push((k, "digital_encoding", de_k, de_v))
         for k in extra_hash_data:
             _flow_hash_push(k)
 
@@ -605,12 +623,12 @@ class RFlow:
         return {i: n for n, i in enumerate(sorted(self.shared_data.dims))}
 
     def init_sub_funcs(
-            self,
-            defs,
-            error_model='numpy',
-            boundscheck=False,
-            nopython=True,
-            fastmath=True,
+        self,
+        defs,
+        error_model="numpy",
+        boundscheck=False,
+        nopython=True,
+        fastmath=True,
     ):
         func_code = ""
         all_name_tokens = set()
@@ -625,9 +643,13 @@ class RFlow:
                 dim_slots = {}
                 for k1 in spacearrays.keys():
                     try:
-                        toks = self.shared_data._arg_tokenizer(spacename, spacearray=spacearrays._variables[k1])
+                        toks = self.shared_data._arg_tokenizer(
+                            spacename, spacearray=spacearrays._variables[k1]
+                        )
                     except:
-                        toks = self.shared_data._arg_tokenizer(spacename, spacearray=spacearrays[k1])
+                        toks = self.shared_data._arg_tokenizer(
+                            spacename, spacearray=spacearrays[k1]
+                        )
                     dim_slots[k1] = toks
                 try:
                     digital_encodings = spacearrays.digital_encodings
@@ -650,13 +672,12 @@ class RFlow:
                     digital_encodings = {}
                 meta_data[spacename] = (dim_slots, digital_encodings)
 
-
         # write individual function files for each expression
         for n, (k, expr) in enumerate(defs.items()):
             expr = str(expr).lstrip()
             init_expr = expr
             for spacename, spacearrays in self.shared_data.subspaces.items():
-                if spacename == '':
+                if spacename == "":
                     expr = expression_for_numba(
                         expr,
                         spacename,
@@ -713,10 +734,10 @@ class RFlow:
             # now find instances where an identifier is previously created in this flow.
             expr = expression_for_numba(
                 expr,
-                '',
+                "",
                 (),
                 self.output_name_positions,
-                '_outputs',
+                "_outputs",
             )
             if (k == init_expr) and (init_expr == expr) and k.isidentifier():
                 logger.error(f"unable to rewrite '{k}' to itself")
@@ -736,10 +757,14 @@ class RFlow:
                 argtokens=argtokens_,
                 nametokens=", ".join(sorted(f_name_tokens)),
                 error_model=error_model,
-                extra_imports="\n".join([
-                    "from .extra_funcs import *" if self.shared_data.extra_funcs else "",
-                    "from .extra_vars import *" if self._used_extra_vars else ""
-                ]),
+                extra_imports="\n".join(
+                    [
+                        "from .extra_funcs import *"
+                        if self.shared_data.extra_funcs
+                        else "",
+                        "from .extra_vars import *" if self._used_extra_vars else "",
+                    ]
+                ),
                 boundscheck=boundscheck,
                 nopython=nopython,
                 fastmath=fastmath,
@@ -750,20 +775,19 @@ class RFlow:
 
         return blacken(func_code), all_name_tokens
 
-
     def __initialize_2(
-            self,
-            defs,
-            error_model='numpy',
-            name=None,
-            dtype="float32",
-            boundscheck=False,
-            nopython=True,
-            fastmath=True,
-            readme=None,
-            parallel=True,
-            extra_hash_data=(),
-            write_hash_audit=True,
+        self,
+        defs,
+        error_model="numpy",
+        name=None,
+        dtype="float32",
+        boundscheck=False,
+        nopython=True,
+        fastmath=True,
+        readme=None,
+        parallel=True,
+        extra_hash_data=(),
+        write_hash_audit=True,
     ):
         """
 
@@ -804,16 +828,17 @@ class RFlow:
                 parts = k.split("__")
                 if len(parts) > 2:
                     try:
-                        digital_encoding = self.shared_data.subspaces[parts[1]]["__".join(parts[2:])].attrs['digital_encoding']
+                        digital_encoding = self.shared_data.subspaces[parts[1]][
+                            "__".join(parts[2:])
+                        ].attrs["digital_encoding"]
                     except (AttributeError, KeyError) as err:
                         pass
                     else:
                         if digital_encoding:
                             for de_k in sorted(digital_encoding.keys()):
                                 de_v = digital_encoding[de_k]
-                                if de_k == 'dictionary':
+                                if de_k == "dictionary":
                                     self.encoding_dictionaries[k] = de_v
-
 
         # assign flow name based on hash unless otherwise given
         if name is None:
@@ -826,7 +851,7 @@ class RFlow:
         # if an existing __init__ file matches the hash, just use it
         init_file = os.path.join(self.cache_dir, self.name, f"__init__.py")
         if os.path.isfile(init_file):
-            with open(init_file, 'rt') as f:
+            with open(init_file, "rt") as f:
                 content = f.read()
             s = re.search("""flow_hash = ['"](.*)['"]""", content)
         else:
@@ -878,7 +903,9 @@ class RFlow:
                     if isinstance(x_var, (float, int, str)):
                         buffer.write(f"{x_name} = {x_var!r}\n")
                     else:
-                        buffer.write(f"{x_name} = pickle.loads({repr(pickle.dumps(x_var))})\n")
+                        buffer.write(
+                            f"{x_name} = pickle.loads({repr(pickle.dumps(x_var))})\n"
+                        )
                         dependencies.add("import pickle")
                 with io.StringIO() as x_code:
                     x_code.write(f"\n")
@@ -895,7 +922,9 @@ class RFlow:
                     import pickle
                 buffer = io.StringIO()
                 for x_name, x_dict in self.encoding_dictionaries.items():
-                    buffer.write(f"__encoding_dict{x_name} = pickle.loads({repr(pickle.dumps(x_dict))})\n")
+                    buffer.write(
+                        f"__encoding_dict{x_name} = pickle.loads({repr(pickle.dumps(x_dict))})\n"
+                    )
                 with io.StringIO() as x_code:
                     x_code.write(f"\n")
                     x_code.write(buffer.getvalue())
@@ -904,18 +933,24 @@ class RFlow:
 
             # write the master module for this flow
             os.makedirs(os.path.join(self.cache_dir, self.name), exist_ok=True)
-            with rewrite(os.path.join(self.cache_dir, self.name, f"__init__.py"), 'wt') as f_code:
+            with rewrite(
+                os.path.join(self.cache_dir, self.name, f"__init__.py"), "wt"
+            ) as f_code:
 
-                f_code.write(textwrap.dedent(f"""
+                f_code.write(
+                    textwrap.dedent(
+                        f"""
                 # this module generated automatically using sharrow version {__version__}
                 # generation time: {time.strftime('%d %B %Y %I:%M:%S %p')}
-                """)[1:])
+                """
+                    )[1:]
+                )
 
                 if readme:
                     f_code.write(
                         textwrap.indent(
                             textwrap.dedent(readme),
-                            '# ',
+                            "# ",
                             lambda line: True,
                         )
                     )
@@ -973,12 +1008,22 @@ class RFlow:
                         f_args_j = ", ".join([f"j{argn[-1]}" for argn in f_arg_tokens])
                         if f_args_j:
                             f_args_j += ", "
-                        meta_code.append(f"result[{js}, {n}] = {clean(k)}({f_args_j}result[{js}], {f_name_tokens})")
-                        meta_code_dot.append(f"intermediate[{n}] = {clean(k)}({f_args_j}intermediate, {f_name_tokens})")
-                    meta_code_stack = textwrap.indent("\n".join(meta_code), ' ' * 12).lstrip()
-                    meta_code_stack_dot = textwrap.indent("\n".join(meta_code_dot), ' ' * 12).lstrip()
+                        meta_code.append(
+                            f"result[{js}, {n}] = {clean(k)}({f_args_j}result[{js}], {f_name_tokens})"
+                        )
+                        meta_code_dot.append(
+                            f"intermediate[{n}] = {clean(k)}({f_args_j}intermediate, {f_name_tokens})"
+                        )
+                    meta_code_stack = textwrap.indent(
+                        "\n".join(meta_code), " " * 12
+                    ).lstrip()
+                    meta_code_stack_dot = textwrap.indent(
+                        "\n".join(meta_code_dot), " " * 12
+                    ).lstrip()
                     len_self_raw_functions = len(self._raw_functions)
-                    joined_namespace_names = "\n    ".join(f'{nn},' for nn in self._namespace_names)
+                    joined_namespace_names = "\n    ".join(
+                        f"{nn}," for nn in self._namespace_names
+                    )
                     linefeed = "\n                           "
                     if n_root_dims == 1:
                         meta_template = IRUNNER_1D_TEMPLATE.format(**locals())
@@ -1001,8 +1046,12 @@ class RFlow:
                     mnl_template = ""
                     meta_code = []
                     meta_code_dot = []
-                    meta_args = ", ".join([f"_arg{n:02}" for n in self.arg_name_positions.values()])
-                    meta_args_j = ", ".join([f"_arg{n:02}[j]" for n in self.arg_name_positions.values()])
+                    meta_args = ", ".join(
+                        [f"_arg{n:02}" for n in self.arg_name_positions.values()]
+                    )
+                    meta_args_j = ", ".join(
+                        [f"_arg{n:02}[j]" for n in self.arg_name_positions.values()]
+                    )
                     # meta_args_explode = textwrap.indent(
                     #     "\n".join([f"_arg{n:02} = argarray[:,{n}]" for n in self.arg_name_positions.values()]),
                     #     ' ' * 20,
@@ -1014,16 +1063,22 @@ class RFlow:
                         f_args_j = ", ".join([f"{argn}[j]" for argn in f_arg_tokens])
                         if f_args_j:
                             f_args_j += ", "
-                        meta_code.append \
-                            (f"result[j, {n}] = {clean(k)}({f_args_j}result[j], {f_name_tokens})")
-                        meta_code_dot.append \
-                            (f"intermediate[{n}] = {clean(k)}({f_args_j}intermediate, {f_name_tokens})")
-                    meta_code_stack = textwrap.indent("\n".join(meta_code), ' '*32).lstrip()
-                    meta_code_stack_dot = textwrap.indent("\n".join(meta_code_dot), ' '*36).lstrip()
+                        meta_code.append(
+                            f"result[j, {n}] = {clean(k)}({f_args_j}result[j], {f_name_tokens})"
+                        )
+                        meta_code_dot.append(
+                            f"intermediate[{n}] = {clean(k)}({f_args_j}intermediate, {f_name_tokens})"
+                        )
+                    meta_code_stack = textwrap.indent(
+                        "\n".join(meta_code), " " * 32
+                    ).lstrip()
+                    meta_code_stack_dot = textwrap.indent(
+                        "\n".join(meta_code_dot), " " * 36
+                    ).lstrip()
                     linefeed = "\n                           "
                     meta_template = f"""
                     @nb.jit(cache=True, parallel=True, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath})
-                    def runner({meta_args}, 
+                    def runner({meta_args},
                                {"".join(f"{j}, {linefeed}" for j in self._namespace_names)}dtype=np.{dtype}, min_shape_0=0,
                     ):
                         out_size = max(_arg00.shape[0], min_shape_0)
@@ -1042,8 +1097,8 @@ class RFlow:
                     if parallel:
                         meta_template_dot = f"""
                         @nb.jit(cache=True, parallel=True, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath})
-                        def dotter({meta_args}, 
-                                   {"".join(f"{j}, {linefeed}" for j in self._namespace_names)}dtype=np.{dtype}, min_shape_0=0, dotarray=None, 
+                        def dotter({meta_args},
+                                   {"".join(f"{j}, {linefeed}" for j in self._namespace_names)}dtype=np.{dtype}, min_shape_0=0, dotarray=None,
                         ):
                             out_size = max(_arg00.shape[0], min_shape_0)
                             if dotarray is None:
@@ -1065,8 +1120,8 @@ class RFlow:
                     else:
                         meta_template_dot = f"""
                             @nb.jit(cache=True, parallel=False, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath})
-                            def dotter({meta_args}, 
-                                       {"".join(f"{j}, {linefeed}" for j in self._namespace_names)}dtype=np.{dtype}, min_shape_0=0, dotarray=None, 
+                            def dotter({meta_args},
+                                       {"".join(f"{j}, {linefeed}" for j in self._namespace_names)}dtype=np.{dtype}, min_shape_0=0, dotarray=None,
                             ):
                                 out_size = max(_arg00.shape[0], min_shape_0)
                                 if dotarray is None:
@@ -1079,7 +1134,6 @@ class RFlow:
                                     np.dot(intermediate, dotarray, out=result[j,:])
                                 return result
                         """
-
 
                 f_code.write(blacken(textwrap.dedent(line_template)))
                 f_code.write("\n\n")
@@ -1095,12 +1149,14 @@ class RFlow:
                     f_code.write(self.flow_hash_audit)
                     f_code.write("]\n")
                 f_code.write("\n\n")
-                f_code.write("# Greetings, tinkerer!  The `flow_hash` included here is a safety \n"
-                             "# measure to prevent unknowing users creating a mess by modifying \n"
-                             "# the code in this module so that it no longer matches the expected \n"
-                             "# variable definitions. If you want to modify this code, you should \n"
-                             "# delete this hash to allow the code to run without any checks, but \n"
-                             "# you do so at your own risk. \n")
+                f_code.write(
+                    "# Greetings, tinkerer!  The `flow_hash` included here is a safety \n"
+                    "# measure to prevent unknowing users creating a mess by modifying \n"
+                    "# the code in this module so that it no longer matches the expected \n"
+                    "# variable definitions. If you want to modify this code, you should \n"
+                    "# delete this hash to allow the code to run without any checks, but \n"
+                    "# you do so at your own risk. \n"
+                )
                 f_code.write(f"flow_hash = {self.flow_hash!r}\n")
 
         if str(self.cache_dir) not in sys.path:
@@ -1110,11 +1166,11 @@ class RFlow:
         logger.debug(f"importing {self.name}")
         module = importlib.import_module(self.name)
         sys.path = sys.path[1:]
-        self._runner = getattr(module, 'runner', None)
-        self._dotter = getattr(module, 'dotter', None)
-        self._irunner = getattr(module, 'irunner', None)
-        self._imnl = getattr(module, 'mnl_transform', None)
-        self._idotter = getattr(module, 'idotter', None)
+        self._runner = getattr(module, "runner", None)
+        self._dotter = getattr(module, "dotter", None)
+        self._irunner = getattr(module, "irunner", None)
+        self._imnl = getattr(module, "mnl_transform", None)
+        self._idotter = getattr(module, "idotter", None)
         if not writing:
             self.function_names = module.function_names
             self.output_name_positions = module.output_name_positions
@@ -1122,13 +1178,13 @@ class RFlow:
     def load_raw(self, rg, args, runner=None, dtype=None, dot=None):
         assert isinstance(rg, DataTree)
         with warnings.catch_warnings():
-            warnings.filterwarnings('ignore', category=nb.NumbaExperimentalFeatureWarning)
+            warnings.filterwarnings(
+                "ignore", category=nb.NumbaExperimentalFeatureWarning
+            )
             assembled_args = [args.get(k) for k in self.arg_name_positions.keys()]
             for aa in assembled_args:
-                if aa.dtype.kind != 'i':
-                    warnings.warn(
-                        "position arguments are not all integers"
-                    )
+                if aa.dtype.kind != "i":
+                    warnings.warn("position arguments are not all integers")
             try:
                 if runner is None:
                     if dot is None:
@@ -1140,19 +1196,19 @@ class RFlow:
                 named_args = inspect.getfullargspec(runner_.py_func).args
                 arguments = []
                 for arg in named_args:
-                    if arg in {'dtype', 'dotarray', 'inputarray', 'argarray'}:
+                    if arg in {"dtype", "dotarray", "inputarray", "argarray"}:
                         continue
-                    if arg.startswith('_arg'):
+                    if arg.startswith("_arg"):
                         continue
                     arguments.append(np.asarray(rg.get_named_array(arg)))
                 kwargs = {}
                 if dtype is not None:
-                    kwargs['dtype'] = dtype
+                    kwargs["dtype"] = dtype
                 # else:
                 #     kwargs['dtype'] = np.float64
                 if dot is not None:
-                    kwargs['dotarray'] = dot
-                #logger.debug(f"load_raw calling runner with {assembled_args.shape=}, {assembled_inputs.shape=}")
+                    kwargs["dotarray"] = dot
+                # logger.debug(f"load_raw calling runner with {assembled_args.shape=}, {assembled_inputs.shape=}")
                 return runner_(*assembled_args, *arguments, **kwargs)
             except nb.TypingError as err:
                 _raw_functions = getattr(self, "_raw_functions", {})
@@ -1161,6 +1217,7 @@ class RFlow:
                     logger.error(f"{k} = {v[0]} = {v[1]}")
                 if "NameError:" in err.args[0]:
                     import re
+
                     problem = re.search("NameError: (.*)\x1b", err.args[0])
                     if problem:
                         raise NameError(problem.group(1)) from err
@@ -1176,10 +1233,14 @@ class RFlow:
                 else:
                     raise err
 
-    def iload_raw(self, rg, runner=None, dtype=None, dot=None, mnl=None, pick_counted=False):
+    def iload_raw(
+        self, rg, runner=None, dtype=None, dot=None, mnl=None, pick_counted=False
+    ):
         assert isinstance(rg, DataTree)
         with warnings.catch_warnings():
-            warnings.filterwarnings('ignore', category=nb.NumbaExperimentalFeatureWarning)
+            warnings.filterwarnings(
+                "ignore", category=nb.NumbaExperimentalFeatureWarning
+            )
             try:
                 if runner is None:
                     if mnl is not None:
@@ -1193,20 +1254,26 @@ class RFlow:
                 named_args = inspect.getfullargspec(runner_.py_func).args
                 arguments = []
                 for arg in named_args:
-                    if arg in {'dtype', 'dotarray', 'argshape', 'random_draws', 'pick_counted'}:
+                    if arg in {
+                        "dtype",
+                        "dotarray",
+                        "argshape",
+                        "random_draws",
+                        "pick_counted",
+                    }:
                         continue
                     arguments.append(np.asarray(rg.get_named_array(arg)))
                 kwargs = {}
                 if dtype is not None:
-                    kwargs['dtype'] = dtype
+                    kwargs["dtype"] = dtype
                 if dot is not None:
-                    kwargs['dotarray'] = dot
+                    kwargs["dotarray"] = dot
                 if mnl is not None:
-                    kwargs['random_draws'] = mnl
-                    kwargs['pick_counted'] = pick_counted
+                    kwargs["random_draws"] = mnl
+                    kwargs["pick_counted"] = pick_counted
                 tree_root_dims = rg.root_dataset.dims
                 argshape = [tree_root_dims[i] for i in sorted(tree_root_dims)]
-                #logger.debug(f"load_raw calling runner with {assembled_args.shape=}, {assembled_inputs.shape=}")
+                # logger.debug(f"load_raw calling runner with {assembled_args.shape=}, {assembled_inputs.shape=}")
                 return runner_(np.asarray(argshape), *arguments, **kwargs)
             except nb.TypingError as err:
                 _raw_functions = getattr(self, "_raw_functions", {})
@@ -1215,6 +1282,7 @@ class RFlow:
                     logger.error(f"{k} = {v[0]} = {v[1]}")
                 if "NameError:" in err.args[0]:
                     import re
+
                     problem = re.search("NameError: (.*)\x1b", err.args[0])
                     if problem:
                         raise NameError(problem.group(1)) from err
@@ -1231,19 +1299,19 @@ class RFlow:
                     raise err
 
     def load(
-            self,
-            source=None,
-            as_dataframe=False,
-            as_dataarray=False,
-            as_table=False,
-            runner=None,
-            dtype=None,
-            dot=None,
-            return_indexes=False,
-            use_indexes_cache=True,
-            mnl_draws=None,
-            pick_counted=False,
-            dim_order=None,
+        self,
+        source=None,
+        as_dataframe=False,
+        as_dataarray=False,
+        as_table=False,
+        runner=None,
+        dtype=None,
+        dot=None,
+        return_indexes=False,
+        use_indexes_cache=True,
+        mnl_draws=None,
+        pick_counted=False,
+        dim_order=None,
     ):
         """
         Compute the flow outputs.
@@ -1279,7 +1347,11 @@ class RFlow:
                 result = self.iload_raw(source, runner=runner, dtype=dtype, dot=dot)
             else:
                 result, result_p, pick_count = self.iload_raw(
-                    source, runner=runner, dtype=dtype, dot=dot, mnl=mnl_draws,
+                    source,
+                    runner=runner,
+                    dtype=dtype,
+                    dot=dot,
+                    mnl=mnl_draws,
                     pick_counted=pick_counted,
                 )
             indexes_dict = None
@@ -1287,12 +1359,18 @@ class RFlow:
             raise RuntimeError("please digitize")
             indexes_dict = source.get_indexes(use_cache=use_indexes_cache)
             # TODO only compute and use required indexes
-            result = self.load_raw(source, indexes_dict, runner=runner, dtype=dtype, dot=dot)
+            result = self.load_raw(
+                source, indexes_dict, runner=runner, dtype=dtype, dot=dot
+            )
         if as_dataframe:
-            index = getattr(source.root_dataset, 'index', None)
-            result = pd.DataFrame(result, index=index, columns=list(self._raw_functions.keys()))
+            index = getattr(source.root_dataset, "index", None)
+            result = pd.DataFrame(
+                result, index=index, columns=list(self._raw_functions.keys())
+            )
         elif as_table:
-            result = Table({k: result[:, n] for n, k in enumerate(self._raw_functions.keys())})
+            result = Table(
+                {k: result[:, n] for n, k in enumerate(self._raw_functions.keys())}
+            )
         elif as_dataarray:
             if dot is None:
                 result = xr.DataArray(
@@ -1308,7 +1386,9 @@ class RFlow:
                     coords=source.root_dataset.coords,
                 )
             else:
-                raise NotImplementedError("cannot format as DataArray with multi-dimensional dot array")
+                raise NotImplementedError(
+                    "cannot format as DataArray with multi-dimensional dot array"
+                )
         if return_indexes:
             return result, indexes_dict
         if result_p is not None:
@@ -1360,17 +1440,17 @@ class RFlow:
         cmds.append(f"function_names = {self.function_names!r}")
         return "\n".join(cmds)
 
-    def show_code(self, linenos='inline'):
-        from pygments import highlight
-        from pygments.lexers.python import PythonLexer
-        from pygments.formatters.html import HtmlFormatter
+    def show_code(self, linenos="inline"):
         from IPython.display import HTML
+        from pygments import highlight
+        from pygments.formatters.html import HtmlFormatter
+        from pygments.lexers.python import PythonLexer
+
         codefile = os.path.join(self.cache_dir, self.name, f"__init__.py")
-        with open(codefile, 'rt') as f_code:
+        with open(codefile, "rt") as f_code:
             code = f_code.read()
         pretty = highlight(code, PythonLexer(), HtmlFormatter(linenos=linenos))
-        css = HtmlFormatter().get_style_defs('.highlight')
+        css = HtmlFormatter().get_style_defs(".highlight")
         bbedit_url = f"x-bbedit://open?url=file://{codefile}"
         bb_link = f'<a href="{bbedit_url}">{codefile}</a>'
         return HTML(f"<style>{css}</style><p>{bb_link}</p>{pretty}")
-

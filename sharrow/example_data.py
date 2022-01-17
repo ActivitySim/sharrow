@@ -1,5 +1,6 @@
 import os
 
+import numpy as np
 import pandas as pd
 
 
@@ -60,3 +61,28 @@ def get_data():
         result = Dict(result)
         result.freeze()
     return result
+
+
+def get_tour_mode_choice_spec(purpose="work"):
+    filename = os.path.join(
+        os.path.dirname(__file__), "example_data", "tour_mode_choice_spec.csv"
+    )
+    coeffs_filename = os.path.join(
+        os.path.dirname(__file__), "example_data", "tour_mode_choice_coefs.csv"
+    )
+    coeffs_template_filename = os.path.join(
+        os.path.dirname(__file__), "example_data", "tour_mode_choice_coef_template.csv"
+    )
+    spec = pd.read_csv(filename, comment="#")
+    coefs = pd.read_csv(coeffs_filename, index_col="coefficient_name", comment="#")
+    template = pd.read_csv(
+        coeffs_template_filename, index_col="coefficient_name", comment="#"
+    )
+    spec_numeric = (
+        spec.iloc[:, 3:]
+        .applymap(lambda i: template[purpose].get(i, i))
+        .applymap(lambda i: coefs.value.get(i, i))
+        .astype(np.float32)
+        .fillna(0)
+    )
+    return pd.concat([spec.iloc[:, :3], spec_numeric], axis=1)

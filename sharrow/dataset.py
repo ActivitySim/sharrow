@@ -1,53 +1,58 @@
-import io
-import os
-import textwrap
-import sys
+import base64
+import hashlib
 import importlib
 import inspect
+import io
+import logging
+import os
 import re
-import hashlib
-import base64
+import sys
+import textwrap
+import time
+import warnings
+from collections.abc import Sequence
+from typing import Any, Dict, Hashable, Mapping, Sequence
 
 import dask
-import numpy as np
-import xarray as xr
+import dask.array as da
 import numba as nb
+import numpy as np
 import pandas as pd
 import pyarrow as pa
-import dask.array as da
-import warnings
-import logging
+import xarray as xr
+
 import sharrow
-import time
-from collections.abc import Sequence
 
-from typing import (
-    Any,
-    Dict,
-    Hashable,
-    Mapping,
-    Sequence,
-)
-
-
-from .aster import expression_for_numba, extract_all_name_tokens, extract_names_2
-from .maths import piece, hard_sigmoid, transpose_leading, clip
-from .table import Table
-from .filewrite import rewrite
-from .shared_memory import *
 from . import __version__
+from .aster import expression_for_numba, extract_all_name_tokens, extract_names_2
+from .filewrite import rewrite
+from .maths import clip, hard_sigmoid, piece, transpose_leading
+from .shared_memory import *
+from .table import Table
 
 logger = logging.getLogger("sharrow")
 
 well_known_names = {
-    'nb', 'np', 'pd', 'xr', 'pa',
-    'log', 'exp', 'log1p', 'expm1', 'max', 'min',
-    'piece', 'hard_sigmoid', 'transpose_leading', 'clip',
+    "nb",
+    "np",
+    "pd",
+    "xr",
+    "pa",
+    "log",
+    "exp",
+    "log1p",
+    "expm1",
+    "max",
+    "min",
+    "piece",
+    "hard_sigmoid",
+    "transpose_leading",
+    "clip",
 }
 
 
 def one_based(n):
-    return pd.RangeIndex(1, n+1)
+    return pd.RangeIndex(1, n + 1)
 
 
 def zero_based(n):
@@ -73,7 +78,7 @@ def clean(s):
     """
     if not isinstance(s, str):
         s = f"{type(s)}-{s}"
-    cleaned = re.sub('\W|^(?=\d)','_', s)
+    cleaned = re.sub("\W|^(?=\d)", "_", s)
     if cleaned != s or len(cleaned) > 120:
         # digest size 15 creates a 24 character base32 string
         h = base64.b32encode(
@@ -88,13 +93,12 @@ def coerce_to_range_index(idx):
         return idx
     if isinstance(idx, (pd.Int64Index, pd.Float64Index, pd.UInt64Index)):
         if idx.is_monotonic_increasing and idx[-1] - idx[0] == idx.size - 1:
-            return pd.RangeIndex(idx[0], idx[0]+idx.size)
+            return pd.RangeIndex(idx[0], idx[0] + idx.size)
     return idx
 
 
 def is_dict_like(value: Any) -> bool:
     return hasattr(value, "keys") and hasattr(value, "__getitem__")
-
 
 
 class _LocIndexer:
@@ -137,34 +141,33 @@ class _iLocIndexer:
 
 class Dataset(xr.Dataset):
 
-
     __slots__ = (
-        '_shared_memory_key_',
-        '_shared_memory_objs_',
-        '_shared_memory_owned_',
-        '__global_shared_memory_pool'
+        "_shared_memory_key_",
+        "_shared_memory_objs_",
+        "_shared_memory_owned_",
+        "__global_shared_memory_pool",
     )
 
     def __init__(self, *args, **kwargs):
         super(Dataset, self).__init__(*args, **kwargs)
-        if len(args) == 1 and len(kwargs)==0 and isinstance(args[0], xr.Dataset):
+        if len(args) == 1 and len(kwargs) == 0 and isinstance(args[0], xr.Dataset):
             self.attrs = args[0].attrs
 
     @classmethod
     def construct(cls, source):
         if isinstance(source, pd.DataFrame):
             source = cls.from_dataframe(source)
-            #source = cls.from_dataframe_fast(source) # older xarray was slow
+            # source = cls.from_dataframe_fast(source) # older xarray was slow
         elif isinstance(source, (Table, pa.Table)):
             source = cls.from_table(source)
         elif isinstance(source, (pa.Table)):
             source = cls.from_table(source)
         elif isinstance(source, cls):
-            pass # don't do the superclass things
+            pass  # don't do the superclass things
         elif isinstance(source, xr.Dataset):
             source = cls(source)
         elif isinstance(source, Sequence) and all(isinstance(i, str) for i in source):
-            source = cls.from_table(pa.table({i:[] for i in source}))
+            source = cls.from_table(pa.table({i: [] for i in source}))
         else:
             raise TypeError(f"source cannot be type {type(source)}")
         return source
@@ -179,7 +182,10 @@ class Dataset(xr.Dataset):
 
     @classmethod
     def from_table(
-        cls, tbl, index_name="index", index=None,
+        cls,
+        tbl,
+        index_name="index",
+        index=None,
     ):
         """
         Convert a pyarrow.Table into an xarray.Dataset
@@ -233,7 +239,11 @@ class Dataset(xr.Dataset):
 
     @classmethod
     def from_omx(
-        cls, omx, index_names=("otaz", "dtaz"), indexes="one-based", renames=None,
+        cls,
+        omx,
+        index_names=("otaz", "dtaz"),
+        indexes="one-based",
+        renames=None,
     ):
         # handle both larch.OMX and openmatrix.open_file versions
         if "larch" in type(omx).__module__:
@@ -276,13 +286,13 @@ class Dataset(xr.Dataset):
 
     @classmethod
     def from_omx_3d(
-            cls,
-            omx,
-            index_names=("otaz", "dtaz", "time_period"),
-            indexes=None,
-            *,
-            time_periods=None,
-            time_period_sep="__",
+        cls,
+        omx,
+        index_names=("otaz", "dtaz", "time_period"),
+        indexes=None,
+        *,
+        time_periods=None,
+        time_period_sep="__",
     ):
         # handle both larch.OMX and openmatrix.open_file versions
         if "larch" in type(omx).__module__:
@@ -309,7 +319,9 @@ class Dataset(xr.Dataset):
         elif indexes in set(omx_lookup._v_children):
             ranger = None
         else:
-            raise NotImplementedError("only one-based, zero-based, and named indexes are implemented")
+            raise NotImplementedError(
+                "only one-based, zero-based, and named indexes are implemented"
+            )
         if ranger is not None:
             r1 = ranger(n1)
             r2 = ranger(n2)
@@ -347,7 +359,11 @@ class Dataset(xr.Dataset):
 
     @classmethod
     def from_amx(
-        cls, amx, index_names=("otaz", "dtaz"), indexes="one-based", renames=None,
+        cls,
+        amx,
+        index_names=("otaz", "dtaz"),
+        indexes="one-based",
+        renames=None,
     ):
         arrays = {}
         if renames is None:
@@ -686,7 +702,6 @@ class Dataset(xr.Dataset):
                 )
         return self.drop_dims([i for i in all_dims if i not in keep_dims])
 
-
     ### Pro
 
     @property
@@ -706,9 +721,10 @@ class Dataset(xr.Dataset):
         """
         return _iLocIndexer(self)
 
-
     @classmethod
-    def from_dataframe_fast(cls, dataframe: pd.DataFrame, sparse: bool = False) -> "Dataset":
+    def from_dataframe_fast(
+        cls, dataframe: pd.DataFrame, sparse: bool = False
+    ) -> "Dataset":
         """Convert a pandas.DataFrame into an xarray.Dataset
 
         Each column will be converted into an independent variable in the
@@ -760,8 +776,7 @@ class Dataset(xr.Dataset):
         # TODO: allow users to control how this casting happens, e.g., by
         # forwarding arguments to pandas.Series.to_numpy?
         arrays = {
-            k: xr.DataArray(np.asarray(v), dims=dims)
-            for k, v in dataframe.items()
+            k: xr.DataArray(np.asarray(v), dims=dims) for k, v in dataframe.items()
         }
 
         return cls(arrays).assign_coords({index_name: dataframe.index})
@@ -824,12 +839,14 @@ class Dataset(xr.Dataset):
         logger.info(f"sharrow.Dataset.to_shared_memory({key})")
         if key is None:
             import random
+
             key = random.randbytes(4).hex()
         self._shared_memory_key_ = key
         self._shared_memory_owned_ = False
         self._shared_memory_objs_ = []
         import pickle
-        from multiprocessing.shared_memory import SharedMemory, ShareableList
+        from multiprocessing.shared_memory import ShareableList, SharedMemory
+
         wrappers = []
         sizes = []
         names = []
@@ -837,16 +854,18 @@ class Dataset(xr.Dataset):
 
         def emit(k, a, is_coord):
             nonlocal names, wrappers, sizes, position
-            wrappers.append({
-                'dims': a.dims,
-                'name': a.name,
-                'attrs': a.attrs,
-                'dtype': a.dtype,
-                'shape': a.shape,
-                'coord': is_coord,
-                'nbytes': a.nbytes,
-                'position': position,
-            })
+            wrappers.append(
+                {
+                    "dims": a.dims,
+                    "name": a.name,
+                    "attrs": a.attrs,
+                    "dtype": a.dtype,
+                    "shape": a.shape,
+                    "coord": is_coord,
+                    "nbytes": a.nbytes,
+                    "position": position,
+                }
+            )
             sizes.append(a.nbytes)
             names.append(k)
             position += a.nbytes
@@ -854,7 +873,8 @@ class Dataset(xr.Dataset):
         for k, a in self.coords.items():
             emit(k, a, True)
         for k in self.variables:
-            if k in names: continue
+            if k in names:
+                continue
             a = self[k]
             emit(k, a, False)
 
@@ -876,18 +896,20 @@ class Dataset(xr.Dataset):
 
         tasks = []
         for w in wrappers:
-            _size = w['nbytes']
-            _name = w['name']
-            _pos = w['position']
+            _size = w["nbytes"]
+            _name = w["name"]
+            _pos = w["position"]
             a = self[_name]
-            mem_arr = np.ndarray(shape=a.shape, dtype=a.dtype, buffer=buffer[_pos:_pos+_size])
+            mem_arr = np.ndarray(
+                shape=a.shape, dtype=a.dtype, buffer=buffer[_pos : _pos + _size]
+            )
             if isinstance(a, xr.DataArray) and isinstance(a.data, da.Array):
                 tasks.append(da.store(a.data, mem_arr, lock=False, compute=False))
-                #tasks.append(read_chunk(key, _size, _pos, a.data))
+                # tasks.append(read_chunk(key, _size, _pos, a.data))
             else:
                 mem_arr[:] = a[:]
         if tasks:
-            dask.compute(tasks, scheduler='threads')
+            dask.compute(tasks, scheduler="threads")
 
         if key.startswith("memmap:"):
             mem.flush()
@@ -921,7 +943,9 @@ class Dataset(xr.Dataset):
         Dataset
         """
         import pickle
+
         from xarray import DataArray
+
         _shared_memory_objs_ = []
 
         shr_list = read_shared_list(key)
@@ -941,13 +965,15 @@ class Dataset(xr.Dataset):
 
         for w in shr_list:
             t = pickle.loads(w)
-            shape = t.pop('shape')
-            dtype = t.pop('dtype')
-            name = t.pop('name')
-            coord = t.pop('coord', False)
-            position = t.pop('position')
-            nbytes = t.pop('nbytes')
-            mem_arr = np.ndarray(shape, dtype=dtype, buffer=buffer[position:position+nbytes])
+            shape = t.pop("shape")
+            dtype = t.pop("dtype")
+            name = t.pop("name")
+            coord = t.pop("coord", False)
+            position = t.pop("position")
+            nbytes = t.pop("nbytes")
+            mem_arr = np.ndarray(
+                shape, dtype=dtype, buffer=buffer[position : position + nbytes]
+            )
             content[name] = DataArray(mem_arr, **t)
 
         self = cls(content)
@@ -986,7 +1012,8 @@ class Dataset(xr.Dataset):
         int
         """
         import pickle
-        from multiprocessing.shared_memory import SharedMemory, ShareableList
+        from multiprocessing.shared_memory import ShareableList, SharedMemory
+
         _shared_memory_key_ = key
         memsize = 0
         try:
@@ -1005,14 +1032,14 @@ class Dataset(xr.Dataset):
 
     @classmethod
     def from_omx_3d(
-            cls,
-            omx,
-            index_names=("otaz", "dtaz", "time_period"),
-            indexes=None,
-            *,
-            time_periods=None,
-            time_period_sep="__",
-            max_float_precision=32,
+        cls,
+        omx,
+        index_names=("otaz", "dtaz", "time_period"),
+        indexes=None,
+        *,
+        time_periods=None,
+        time_period_sep="__",
+        max_float_precision=32,
     ):
         if not isinstance(omx, (list, tuple)):
             omx = [omx]
@@ -1054,7 +1081,9 @@ class Dataset(xr.Dataset):
         elif indexes in set(omx_lookup._v_children):
             ranger = None
         else:
-            raise NotImplementedError("only one-based, zero-based, and named indexes are implemented")
+            raise NotImplementedError(
+                "only one-based, zero-based, and named indexes are implemented"
+            )
         if ranger is not None:
             r1 = ranger(n1)
             r2 = ranger(n2)
@@ -1074,7 +1103,9 @@ class Dataset(xr.Dataset):
                 base_k, time_k = k.split(time_period_sep, 1)
                 if base_k not in pending_3d:
                     pending_3d[base_k] = [None] * len(time_periods)
-                pending_3d[base_k][time_periods_map[time_k]] = dask.array.from_array(omx_data[omx_data_map[k]][k])
+                pending_3d[base_k][time_periods_map[time_k]] = dask.array.from_array(
+                    omx_data[omx_data_map[k]][k]
+                )
             else:
                 content[k] = xr.DataArray(
                     dask.array.from_array(omx_data[omx_data_map[k]][k]),
@@ -1093,7 +1124,10 @@ class Dataset(xr.Dataset):
                     break
             if prototype is None:
                 raise ValueError("no prototype")
-            darrs_ = [(i if i is not None else dask.array.zeros_like(prototype)) for i in darrs]
+            darrs_ = [
+                (i if i is not None else dask.array.zeros_like(prototype))
+                for i in darrs
+            ]
             content[base_k] = xr.DataArray(
                 dask.array.stack(darrs_, axis=-1),
                 dims=index_names,
@@ -1105,7 +1139,7 @@ class Dataset(xr.Dataset):
             )
         for i in content:
             if np.issubdtype(content[i].dtype, np.floating):
-                if content[i].dtype.itemsize > max_float_precision/8:
+                if content[i].dtype.itemsize > max_float_precision / 8:
                     content[i] = content[i].astype(f"float{max_float_precision}")
         return cls(content)
 
@@ -1126,7 +1160,7 @@ class Dataset(xr.Dataset):
         """
         for i in self:
             if np.issubdtype(self[i].dtype, np.floating):
-                if self[i].dtype.itemsize > p/8:
+                if self[i].dtype.itemsize > p / 8:
                     self[i] = self[i].astype(f"float{p}")
         return self
 
@@ -1141,13 +1175,14 @@ class Dataset(xr.Dataset):
                 k_attrs = self._variables[k].attrs
             except:
                 k_attrs = self[k].attrs
-            if 'digital_encoding' in k_attrs:
-                result[k] = k_attrs['digital_encoding']
+            if "digital_encoding" in k_attrs:
+                result[k] = k_attrs["digital_encoding"]
         return result
 
     def set_digital_encoding(self, name, *args, **kwargs):
         logger.info(f"set_digital_encoding({name})")
         from .digital_encoding import array_encode
+
         result = self.copy()
         result[name] = array_encode(self[name], *args, **kwargs)
         return result
@@ -1169,7 +1204,10 @@ class Dataset(xr.Dataset):
 
     def rename_dims_and_coords(self, dims_dict=None, **dims_kwargs):
         from xarray.core.utils import either_dict_or_kwargs
-        dims_dict = either_dict_or_kwargs(dims_dict, dims_kwargs, "rename_dims_and_coords")
+
+        dims_dict = either_dict_or_kwargs(
+            dims_dict, dims_kwargs, "rename_dims_and_coords"
+        )
         out = self.rename_dims(dims_dict)
         coords_dict = {}
         for k in out.coords:
@@ -1179,8 +1217,15 @@ class Dataset(xr.Dataset):
 
     def rename_or_ignore(self, dims_dict=None, **dims_kwargs):
         from xarray.core.utils import either_dict_or_kwargs
-        dims_dict = either_dict_or_kwargs(dims_dict, dims_kwargs, "rename_dims_and_coords")
-        dims_dict = {k: v for (k, v) in dims_dict.items() if (k in self.dims or k in self._variables)}
+
+        dims_dict = either_dict_or_kwargs(
+            dims_dict, dims_kwargs, "rename_dims_and_coords"
+        )
+        dims_dict = {
+            k: v
+            for (k, v) in dims_dict.items()
+            if (k in self.dims or k in self._variables)
+        }
         return self.rename(dims_dict)
 
     def explode(self):
@@ -1237,7 +1282,7 @@ class Dataset(xr.Dataset):
 
 def filter_name_tokens(expr, matchable_names=None):
     name_tokens = extract_all_name_tokens(expr)
-    name_tokens -= {'_args', '_inputs', '_outputs', 'np'}
+    name_tokens -= {"_args", "_inputs", "_outputs", "np"}
     name_tokens -= well_known_names
     if matchable_names:
         name_tokens &= matchable_names
@@ -1245,7 +1290,7 @@ def filter_name_tokens(expr, matchable_names=None):
 
 
 def _dyno(k, v):
-    if isinstance(v, str) and v[0]=="@":
+    if isinstance(v, str) and v[0] == "@":
         return f"__dynamic_{k}{v}"
     elif v is None:
         return f"__dynamic_{k}"
@@ -1258,4 +1303,3 @@ def _flip_flop_def(v):
         return v.split("# sharrow:", 1)[1].strip()
     else:
         return v
-

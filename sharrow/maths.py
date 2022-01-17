@@ -1,6 +1,6 @@
-
 import numba as nb
 import numpy as np
+
 
 @nb.njit(cache=True)
 def piece(x, low_bound, high_bound=None):
@@ -37,15 +37,15 @@ def piece(x, low_bound, high_bound=None):
     else:
         if high_bound is None:
             if x > low_bound:
-                return x-low_bound
+                return x - low_bound
             else:
                 return 0.0
         else:
             if x > low_bound:
                 if x < high_bound:
-                    return x-low_bound
+                    return x - low_bound
                 else:
-                    return high_bound-low_bound
+                    return high_bound - low_bound
             else:
                 return 0.0
 
@@ -72,13 +72,13 @@ def hard_sigmoid(x, zero_bound, one_bound):
             return 0.0
         if x >= one_bound:
             return 1.0
-        return (x-zero_bound) / (one_bound-zero_bound)
+        return (x - zero_bound) / (one_bound - zero_bound)
     else:
         if x >= zero_bound:
             return 0.0
         if x <= one_bound:
             return 1.0
-        return (zero_bound-x) / (zero_bound-one_bound)
+        return (zero_bound - x) / (zero_bound - one_bound)
 
 
 @nb.njit(cache=True)
@@ -86,11 +86,11 @@ def transpose_leading(j):
     if j.ndim == 2:
         return j.transpose()
     elif j.ndim == 3:
-        return j.transpose(1,0,2)
+        return j.transpose(1, 0, 2)
     elif j.ndim == 4:
-        return j.transpose(1,0,2,3)
+        return j.transpose(1, 0, 2, 3)
     elif j.ndim == 5:
-        return j.transpose(1,0,2,3,4)
+        return j.transpose(1, 0, 2, 3, 4)
     else:
         raise ValueError("too many dims for transpose")
 

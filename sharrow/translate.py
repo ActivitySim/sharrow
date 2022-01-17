@@ -1,21 +1,25 @@
+import logging
+
+import numpy as np
 import pandas as pd
 import xarray as xr
-import numpy as np
-import logging
 from larch import OMX
+
 from sharrow.dataset import Dataset
+
 from .dataset import one_based, zero_based
 
 logger = logging.getLogger("sharrow.translate")
 
+
 def omx_to_zarr(
-        omx_filenames,
-        zarr_directory,
-        index_names=("otaz", "dtaz", "time_period"),
-        indexes=None,
-        *,
-        time_periods=None,
-        time_period_sep="__",
+    omx_filenames,
+    zarr_directory,
+    index_names=("otaz", "dtaz", "time_period"),
+    indexes=None,
+    *,
+    time_periods=None,
+    time_period_sep="__",
 ):
 
     bucket = {}
@@ -45,7 +49,9 @@ def omx_to_zarr(
         elif indexes in set(omx_lookup._v_children):
             ranger = None
         else:
-            raise NotImplementedError("only one-based, zero-based, and named indexes are implemented")
+            raise NotImplementedError(
+                "only one-based, zero-based, and named indexes are implemented"
+            )
         if ranger is not None:
             r1 = ranger(n1)
             r2 = ranger(n2)

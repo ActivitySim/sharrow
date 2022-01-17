@@ -1,11 +1,13 @@
+import os
+
 import numpy as np
 import pandas as pd
 import pyarrow as pa
-import os
-import yaml
 import pyarrow.feather as pf
+import yaml
 
 from .aster import Asterize
+
 
 def _getsize(pa_array):
     if pa_array.null_count:
@@ -16,7 +18,6 @@ def _getsize(pa_array):
     except ValueError:
         # Non-fixed width type
         return 1_000_000
-
 
 
 class Table:
@@ -129,6 +130,7 @@ class Table:
             limited legacy format
         """
         import pyarrow.feather as pf
+
         return pf.write_feather(
             self._table,
             dest,
@@ -141,6 +143,7 @@ class Table:
     @classmethod
     def from_feather(cls, source, columns=None, memory_map=True):
         import pyarrow.feather as pf
+
         t = pf.read_table(source, columns=columns, memory_map=memory_map)
         return cls(t)
 
@@ -152,12 +155,15 @@ class Table:
 
     def __dir__(self):
         return dir(self._table) + [
-            'eval',
-            'concat',
+            "eval",
+            "concat",
         ]
 
-    def eval(self, expression, inplace=False, target=None, local_dict=None, nopython=True):
+    def eval(
+        self, expression, inplace=False, target=None, local_dict=None, nopython=True
+    ):
         import numexpr as ne
+
         if isinstance(expression, str):
             try:
                 num = float(expression.split("#")[0].strip())
@@ -169,7 +175,9 @@ class Table:
                 else:
                     if not target:
                         raise ValueError("cannot assign inplace without a target name")
-                    self._table = self._table.append_column(target, np.full(len(self), num))
+                    self._table = self._table.append_column(
+                        target, np.full(len(self), num)
+                    )
                     return
             if target is not False:
                 ex_target, ex_value = self._revise(expression)
@@ -207,13 +215,17 @@ class Table:
                 else:
                     # wide or small tables, just go for broke
                     expression_val = ne.evaluate(
-                        ex_value, self._table, local_dict or globals(),
+                        ex_value,
+                        self._table,
+                        local_dict or globals(),
                     )
             except Exception as err:
                 if nopython:
                     raise type(err)(f"({expression}) {err!s}") from err
                 expression_val = eval(
-                    ex_value, self._globals, self._table,
+                    ex_value,
+                    self._globals,
+                    self._table,
                 )
             if not inplace:
                 return np.asarray(expression_val)
@@ -245,7 +257,7 @@ class Table:
                 stopper = blockname
             else:
                 qlog = os.path.join(path, "quilt.log")
-                with open(qlog, 'rt') as logreader:
+                with open(qlog, "rt") as logreader:
                     existing_info = yaml.safe_load(logreader)
                 for stopper, block in enumerate(existing_info):
                     if block.get("name", None) == blockname:
@@ -280,10 +292,9 @@ class Table:
                 n += 1
         if builder is not None:
             metadata = builder.schema.metadata
-            metadata[b'quilt_number'] = f"{n}".encode('utf8')
+            metadata[b"quilt_number"] = f"{n}".encode("utf8")
             return builder.replace_schema_metadata(metadata)
         return None
-
 
     def to_quilt(self, path, blockname=None):
         if not os.path.exists(path):
@@ -295,14 +306,14 @@ class Table:
             ex_cols = []
             max_block = -1
         else:
-            with open(qlog, 'rt') as logreader:
+            with open(qlog, "rt") as logreader:
                 existing_info = yaml.safe_load(logreader)
-            ex_rows = sum(block.get('rows', 0) for block in existing_info)
-            ex_cols = sum((block.get('cols', []) for block in existing_info), [])
-            max_block = max(block['block'] for block in existing_info)
+            ex_rows = sum(block.get("rows", 0) for block in existing_info)
+            ex_cols = sum((block.get("cols", []) for block in existing_info), [])
+            max_block = max(block["block"] for block in existing_info)
 
-        with open(qlog, 'a') as f:
-            quilt_number = max_block+1
+        with open(qlog, "a") as f:
+            quilt_number = max_block + 1
             f.write(f"- block: {quilt_number}\n")
             if blockname is not None:
                 f.write(f"  name: {blockname}\n")
@@ -350,4 +361,3 @@ def concat_tables(tables):
             t = t._table
         _tables.append(t)
     return Table(pa.concat_tables(_tables))
-

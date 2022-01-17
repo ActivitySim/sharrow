@@ -11,3 +11,5 @@ build-backend = "setuptools.build_meta"
 fallback_version = "1999"
 write_to = "sharrow/_version.py"
 
+[tool.isort]
+profile = "black"

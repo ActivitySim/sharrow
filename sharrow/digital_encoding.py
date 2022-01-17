@@ -1,15 +1,16 @@
-import numpy as np
 import dask.array as da
+import numpy as np
+
 
 def array_encode(
-        x,
-        missing_value=None,
-        bitwidth=16,
-        min_value=None,
-        max_value=None,
-        scale=None,
-        offset=None,
-        by_dict=False,
+    x,
+    missing_value=None,
+    bitwidth=16,
+    min_value=None,
+    max_value=None,
+    scale=None,
+    offset=None,
+    by_dict=False,
 ):
     """
     Encode a float DataArray into integers.
@@ -43,32 +44,32 @@ def array_encode(
         scale = width / n
     encoded_values = ((x - offset) / scale).astype(f"int{bitwidth}")
     encoded_values = encoded_values.where(x != missing_value, -1)
-    encoded_values.attrs['digital_encoding'] = {
-        'scale': scale,
-        'offset': offset,
-        'missing_value': missing_value,
+    encoded_values.attrs["digital_encoding"] = {
+        "scale": scale,
+        "offset": offset,
+        "missing_value": missing_value,
     }
     return encoded_values
 
 
 def array_decode(x, digital_encoding=None):
     if digital_encoding is None:
-        if 'digital_encoding' not in x.attrs:
+        if "digital_encoding" not in x.attrs:
             return x
-        digital_encoding = x.attrs['digital_encoding']
-    dictionary = digital_encoding.get('dictionary', None)
+        digital_encoding = x.attrs["digital_encoding"]
+    dictionary = digital_encoding.get("dictionary", None)
     if dictionary is not None:
         result = x.copy()
         result.data = dictionary[x.to_numpy()]
-        result.attrs.pop('digital_encoding', None)
+        result.attrs.pop("digital_encoding", None)
         return result
-    scale = digital_encoding.get('scale', 1)
-    offset = digital_encoding.get('offset', 0)
-    missing_value = digital_encoding.get('missing_value', None)
+    scale = digital_encoding.get("scale", 1)
+    offset = digital_encoding.get("offset", 0)
+    missing_value = digital_encoding.get("missing_value", None)
     result = x * scale + offset
     if missing_value is not None:
-        result = result.where(x>=0, missing_value)
-    result.attrs.pop('digital_encoding', None)
+        result = result.where(x >= 0, missing_value)
+    result.attrs.pop("digital_encoding", None)
     return result
 
 
@@ -116,22 +117,22 @@ def find_bins(values, final_width=255):
 
 def digitize_by_dictionary(arr, bitwidth=8):
     result = arr.copy()
-    bins = find_bins(arr, final_width=1<<bitwidth)
-    bin_edges = (bins[1:] - bins[:-1])/2 + bins[:-1]
+    bins = find_bins(arr, final_width=1 << bitwidth)
+    bin_edges = (bins[1:] - bins[:-1]) / 2 + bins[:-1]
     try:
         arr_data = arr.data
     except:
         pass
     else:
         if isinstance(arr_data, da.Array):
-            result.data = da.digitize(arr_data, bin_edges).astype(f'uint{bitwidth}')
-            result.attrs['digital_encoding'] = {
-                'dictionary': bins,
+            result.data = da.digitize(arr_data, bin_edges).astype(f"uint{bitwidth}")
+            result.attrs["digital_encoding"] = {
+                "dictionary": bins,
             }
             return result
     # fall back to numpy digitize
-    result.data = np.digitize(arr, bin_edges).astype(f'uint{bitwidth}')
-    result.attrs['digital_encoding'] = {
-        'dictionary': bins,
+    result.data = np.digitize(arr, bin_edges).astype(f"uint{bitwidth}")
+    result.attrs["digital_encoding"] = {
+        "dictionary": bins,
     }
     return result

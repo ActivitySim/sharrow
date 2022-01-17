@@ -1,6 +1,6 @@
+import numpy as np
 import pandas as pd
 import xarray as xr
-import numpy as np
 
 
 def _iat(source, *, _names=None, _load=False, _index_name=None, **idxs):
@@ -76,11 +76,7 @@ def igather(source, positions):
     return result
 
 
-
-
-
 class DatasetWrapper:
-
     def __init__(self, dataset, orig_key, dest_key, time_key=None):
         """
 
@@ -112,20 +108,26 @@ class DatasetWrapper:
         -------
         self (to facilitate chaining)
         """
-        assert self.orig_key in df, f"orig_key '{self.orig_key}' not in df columns: {list(df.columns)}"
-        assert self.dest_key in df, f"dest_key '{self.dest_key}' not in df columns: {list(df.columns)}"
+        assert (
+            self.orig_key in df
+        ), f"orig_key '{self.orig_key}' not in df columns: {list(df.columns)}"
+        assert (
+            self.dest_key in df
+        ), f"dest_key '{self.dest_key}' not in df columns: {list(df.columns)}"
         if self.time_key:
-            assert self.time_key in df, f"time_key '{self.time_key}' not in df columns: {list(df.columns)}"
+            assert (
+                self.time_key in df
+            ), f"time_key '{self.time_key}' not in df columns: {list(df.columns)}"
         self.df = df
 
         # TODO allow non-1 offsets
         positions = {
-            'otaz': df[self.orig_key] - 1,
-            'dtaz': df[self.dest_key] - 1,
+            "otaz": df[self.orig_key] - 1,
+            "dtaz": df[self.dest_key] - 1,
         }
         if self.time_key:
-            time_map = {j: i for i, j in enumerate(self.dataset.indexes['time_period'])}
-            positions['time_period'] = pd.Series(
+            time_map = {j: i for i, j in enumerate(self.dataset.indexes["time_period"])}
+            positions["time_period"] = pd.Series(
                 np.vectorize(time_map.get)(df[self.time_key]),
                 index=df.index,
             )
@@ -155,7 +157,7 @@ class DatasetWrapper:
 
         assert self.df is not None, "Call set_df first"
         if reverse:
-            x = self.positions.rename(columns={'otaz': 'dtaz', 'dtaz': 'otaz'})
+            x = self.positions.rename(columns={"otaz": "dtaz", "dtaz": "otaz"})
         else:
             x = self.positions
 
@@ -177,4 +179,3 @@ class DatasetWrapper:
             A Series of impedances values from the single Skim with specified key, indexed byt orig/dest pair
         """
         return self.lookup(key)
-

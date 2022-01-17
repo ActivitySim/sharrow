@@ -1,7 +1,8 @@
-import os
 import logging
+import os
 
 logger = logging.getLogger("sharrow.omx")
+
 
 def split_omx(source_file, dest_directory, global_lookups=False, n_chunks=None):
     """
@@ -15,7 +16,8 @@ def split_omx(source_file, dest_directory, global_lookups=False, n_chunks=None):
 
     """
     from larch import OMX
-    source = OMX(source_file, mode='r')
+
+    source = OMX(source_file, mode="r")
     os.makedirs(dest_directory, exist_ok=True)
 
     if n_chunks is not None:
@@ -31,7 +33,7 @@ def split_omx(source_file, dest_directory, global_lookups=False, n_chunks=None):
             chunkfiles[n],
         )
         logger.info(f"writing {k} to {newfile}")
-        b = OMX(newfile, mode='a')
+        b = OMX(newfile, mode="a")
         b.add_matrix(k, source.data[k], overwrite=True)
         if global_lookups:
             # todo only write once per file
@@ -48,7 +50,7 @@ def split_omx(source_file, dest_directory, global_lookups=False, n_chunks=None):
                 f"_{k}.omx",
             )
             logger.info(f"writing {newfile}")
-            b = OMX(newfile, mode='w')
+            b = OMX(newfile, mode="w")
             b.shape = source.shape
             b.add_lookup(k, source.lookup[k])
             b.close()

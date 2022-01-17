@@ -3,13 +3,13 @@ import pathlib
 
 import numpy as np
 import pandas as pd
+from numpy.random import SeedSequence, default_rng
+from pytest import approx, fixture, raises
 
 # import pyarrow as pa
 # import pyarrow.feather as pf
 # import larch
-from numpy.random import SeedSequence, default_rng
-from pytest import approx, fixture, raises
-
+import sharrow
 from sharrow import Dataset, DataTree, example_data
 
 
@@ -108,7 +108,8 @@ def test_shared_data_reversible(dataframe_regression):
     dataframe_regression.check(result)
     with raises(AssertionError):
         pd.testing.assert_series_equal(
-            result["round_trip_hov3_time"], result["double_hov3_time"],
+            result["round_trip_hov3_time"],
+            result["double_hov3_time"],
         )
 
 
@@ -146,13 +147,17 @@ def test_shared_data_reversible_by_label(dataframe_regression):
             "round_trip_hov3_time": "dot_skims.HOV3_TIME + odt_skims.HOV3_TIME",
             "double_hov3_time": "odt_skims.HOV3_TIME * 2",
         },
-        extra_hash_data=(1, 2,),
+        extra_hash_data=(
+            1,
+            2,
+        ),
     )
     result = ss.load(tree, as_dataframe=True)
     dataframe_regression.check(result, basename="test_shared_data_reversible")
     with raises(AssertionError):
         pd.testing.assert_series_equal(
-            result["round_trip_hov3_time"], result["double_hov3_time"],
+            result["round_trip_hov3_time"],
+            result["double_hov3_time"],
         )
 
     dtree = tree.digitize_relationships()
@@ -163,7 +168,11 @@ def test_shared_data_reversible_by_label(dataframe_regression):
             "round_trip_hov3_time": "dot_skims.HOV3_TIME + odt_skims.HOV3_TIME",
             "double_hov3_time": "odt_skims.HOV3_TIME * 2",
         },
-        extra_hash_data=(1, 2, 3,),
+        extra_hash_data=(
+            1,
+            2,
+            3,
+        ),
     )
     dresult = dss.load(dtree, as_dataframe=True)
     dataframe_regression.check(dresult, basename="test_shared_data_reversible")
@@ -225,8 +234,14 @@ def test_with_2d_base(dataframe_regression):
     dataframe_regression.check(result.iloc[::83])
 
     dot_result = ss.load(tree, as_dataarray=True, dot=np.ones(6))
-    assert dot_result.dims == ("HHID", "dtaz",)
-    assert dot_result.shape == (5000, 25,)
+    assert dot_result.dims == (
+        "HHID",
+        "dtaz",
+    )
+    assert dot_result.shape == (
+        5000,
+        25,
+    )
 
     check_vs = np.dot(result, np.ones([6])).reshape(5000, 25)
     np.testing.assert_array_almost_equal(check_vs, dot_result.to_numpy())
@@ -257,3 +272,19 @@ def test_shared_memory():
     p.start()
     p.join()
     assert q.get() == target
+
+
+def test_relationship_init():
+    r = sharrow.Relationship.from_string("Aa.bb -> Cc.dd")
+    assert r.parent_data == "Aa"
+    assert r.parent_name == "bb"
+    assert r.child_data == "Cc"
+    assert r.child_name == "dd"
+    assert r.indexing == "position"
+
+    r = sharrow.Relationship.from_string("Ee.ff @ Gg.hh")
+    assert r.parent_data == "Ee"
+    assert r.parent_name == "ff"
+    assert r.child_data == "Gg"
+    assert r.child_name == "hh"
+    assert r.indexing == "label"

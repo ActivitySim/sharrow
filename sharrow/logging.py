@@ -1,11 +1,11 @@
 import logging
 import sys
-from contextlib import contextmanager
 import time
+from contextlib import contextmanager
 
-LOGGER_NAME = 'sharrow'
-FILE_LOG_FORMAT = '%(name)s.%(levelname)s: %(message)s'
-CONSOLE_LOG_FORMAT = '[%(asctime)s] %(name)s.%(levelname)s: %(message)s'
+LOGGER_NAME = "sharrow"
+FILE_LOG_FORMAT = "%(name)s.%(levelname)s: %(message)s"
+CONSOLE_LOG_FORMAT = "[%(asctime)s] %(name)s.%(levelname)s: %(message)s"
 DEFAULT_LOG_LEVEL = logging.DEBUG
 
 
@@ -39,7 +39,9 @@ def log_to_console(level=None):
 
     # avoid creation of multiple stream handlers for logging to console
     for entry in logger.handlers:
-        if (isinstance(entry, logging.StreamHandler)) and (entry.formatter._fmt == CONSOLE_LOG_FORMAT):
+        if (isinstance(entry, logging.StreamHandler)) and (
+            entry.formatter._fmt == CONSOLE_LOG_FORMAT
+        ):
             return logger
 
     console_handler = logging.StreamHandler(stream=sys.stderr)
@@ -60,7 +62,9 @@ def log_to_file(filename, level=None):
 
     # avoid creation of multiple file handlers for logging to the same file
     for entry in logger.handlers:
-        if (isinstance(entry, logging.FileHandler)) and (entry.baseFilename == filename):
+        if (isinstance(entry, logging.FileHandler)) and (
+            entry.baseFilename == filename
+        ):
             return logger
 
     file_handler = logging.FileHandler(filename)
@@ -75,21 +79,24 @@ logger = log = log_to_console()
 
 
 @contextmanager
-def timing_log(label=''):
+def timing_log(label=""):
     start_time = time.time()
     log.critical(f"<TIME BEGINS> {label}")
     try:
         yield
     except:
-        log.critical(f"<TIME ERROR!> {label} <{timesize_stack(time.time() - start_time)}>")
+        log.critical(
+            f"<TIME ERROR!> {label} <{timesize_stack(time.time() - start_time)}>"
+        )
         raise
     else:
-        log.critical(f"< TIME ENDS > {label} <{timesize_stack(time.time() - start_time)}>")
+        log.critical(
+            f"< TIME ENDS > {label} <{timesize_stack(time.time() - start_time)}>"
+        )
 
 
 class TimingLog:
-
-    def __init__(self, label='', log=None, level=50):
+    def __init__(self, label="", log=None, level=50):
         global logger
         if log is None:
             log = logger
@@ -97,7 +104,7 @@ class TimingLog:
         self.log = log
         self.level = level
         self.split_time = None
-        self.current_task = ''
+        self.current_task = ""
 
     def __enter__(self):
         self.start_time = time.time()
@@ -107,17 +114,29 @@ class TimingLog:
     def __exit__(self, exc_type, exc_value, traceback):
         now = time.time()
         if self.split_time is not None:
-            self.log.log(self.level, f"<SPLIT> {self.label} / Final <{timesize_stack(now - self.split_time)}>")
+            self.log.log(
+                self.level,
+                f"<SPLIT> {self.label} / Final <{timesize_stack(now - self.split_time)}>",
+            )
         if exc_type is None:
-            self.log.log(self.level, f"<-END-> {self.label} <{timesize_stack(now - self.start_time)}>")
+            self.log.log(
+                self.level,
+                f"<-END-> {self.label} <{timesize_stack(now - self.start_time)}>",
+            )
         else:
-            self.log.log(self.level, f"<ERROR> {self.label} <{timesize_stack(now - self.start_time)}>")
+            self.log.log(
+                self.level,
+                f"<ERROR> {self.label} <{timesize_stack(now - self.start_time)}>",
+            )
 
-    def split(self, note=''):
+    def split(self, note=""):
         if self.split_time is None:
             self.split_time = self.start_time
         now = time.time()
         if note:
             note = " / " + note
-        self.log.log(self.level, f"<SPLIT> {self.label}{note} <{timesize_stack(now - self.split_time)}>")
+        self.log.log(
+            self.level,
+            f"<SPLIT> {self.label}{note} <{timesize_stack(now - self.split_time)}>",
+        )
         self.split_time = now

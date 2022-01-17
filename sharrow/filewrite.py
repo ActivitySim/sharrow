@@ -1,8 +1,9 @@
-import os
+import base64
 import contextlib
 import filecmp
-import base64
+import os
 import uuid
+
 from filelock import FileLock, Timeout
 
 
@@ -19,18 +20,20 @@ def blacken(code):
         return code
     except Exception as err:
         import warnings
+
         warnings.warn(f"error in blacken: {err!r}")
         return code
 
+
 @contextlib.contextmanager
-def rewrite(pth, mode='wt'):
+def rewrite(pth, mode="wt"):
     if not os.path.exists(pth):
         with open(pth, mode) as f:
             yield f
     else:
         unique_id = base64.b32encode(uuid.uuid4().bytes)[:26].decode()
         pth_, pth_ext = os.path.splitext(pth)
-        temp_file = pth_+"_temp_"+unique_id+pth_ext
+        temp_file = pth_ + "_temp_" + unique_id + pth_ext
         with open(temp_file, mode) as f:
             yield f
         lock_path = pth + ".lock"
