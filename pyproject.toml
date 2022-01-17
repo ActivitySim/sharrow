@@ -13,3 +13,15 @@ write_to = "sharrow/_version.py"
 
 [tool.isort]
 profile = "black"
+skip_gitignore = true
+float_to_top = true
+default_section = "THIRDPARTY"
+known_first_party = "sharrow"
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "-v --nbmake --disable-warnings"
+testpaths = [
+    "sharrow/tests",
+    "docs",
+]
