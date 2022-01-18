@@ -1472,7 +1472,7 @@ class Flow:
                     coords=source.root_dataset.coords,
                 )
                 result.coords["expressions"] = self.function_names
-            elif dot_collapse:
+            elif dot_collapse and mnl_draws is None:
                 result = xr.DataArray(
                     np.squeeze(result, -1),
                     dims=sorted(source.root_dataset.dims),
@@ -1524,6 +1524,11 @@ class Flow:
                     coords=source.root_dataset.coords,
                 )
             result = source.clean_dim_ordering(result)
+        elif dot_collapse and mnl_draws is None:
+            result = np.squeeze(result, -1)
+        elif mnl_collapse:
+            result = np.squeeze(result, -1)
+            result_p = np.squeeze(result_p, -1)
         if result_p is not None:
             if pick_counted:
                 return result, result_p, pick_count

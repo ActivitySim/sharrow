@@ -4,5 +4,8 @@
 format: jb-book
 root: intro
 chapters:
-- file: walkthrough
-- file: api
+  - file: walkthrough/index
+    sections:
+      - file: walkthrough/one-dim
+      - file: walkthrough/two-dim
+  - file: api
