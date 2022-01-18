@@ -43,7 +43,7 @@ def test_shared_data(dataframe_regression):
             "sov_cost_by_income": "skims.HOV3_TIME",
         }
     )
-    result = ss.load(tree, as_dataframe=True)
+    result = ss._load(tree, as_dataframe=True)
     dataframe_regression.check(result)
 
     ss_undot = tree.setup_flow(
@@ -53,7 +53,7 @@ def test_shared_data(dataframe_regression):
             "sov_cost_by_income": "HOV3_TIME",
         }
     )
-    result = ss_undot.load(tree, as_dataframe=True)
+    result = ss_undot._load(tree, as_dataframe=True)
     dataframe_regression.check(result)
 
     # names that are not valid Python identifiers
@@ -65,7 +65,7 @@ def test_shared_data(dataframe_regression):
             "log1p(sov_cost_by_income)": "log1p(skims.HOV3_TIME)",
         }
     )
-    result2 = s2.load(tree, as_dataframe=True)
+    result2 = s2._load(tree, as_dataframe=True)
     dataframe_regression.check(result2, basename="test_shared_data_2")
 
 
@@ -104,7 +104,7 @@ def test_shared_data_reversible(dataframe_regression):
             "double_hov3_time": "odt_skims.HOV3_TIME * 2",
         }
     )
-    result = ss.load(tree, as_dataframe=True)
+    result = ss._load(tree, as_dataframe=True)
     dataframe_regression.check(result)
     with raises(AssertionError):
         pd.testing.assert_series_equal(
@@ -152,7 +152,7 @@ def test_shared_data_reversible_by_label(dataframe_regression):
             2,
         ),
     )
-    result = ss.load(tree, as_dataframe=True)
+    result = ss._load(tree, as_dataframe=True)
     dataframe_regression.check(result, basename="test_shared_data_reversible")
     with raises(AssertionError):
         pd.testing.assert_series_equal(
@@ -174,7 +174,7 @@ def test_shared_data_reversible_by_label(dataframe_regression):
             3,
         ),
     )
-    dresult = dss.load(dtree, as_dataframe=True)
+    dresult = dss._load(dtree, as_dataframe=True)
     dataframe_regression.check(dresult, basename="test_shared_data_reversible")
 
 
@@ -227,13 +227,13 @@ def test_with_2d_base(dataframe_regression):
             "b_trip_hov3_time": "odt_skims.HOV3_TIME",
         }
     )
-    result = ss.load(tree, as_dataarray=True)
+    result = ss._load(tree, as_dataarray=True)
     assert result.dims == ("HHID", "dtaz", "expressions")
     assert result.shape == (5000, 25, 6)
     result = result.to_dataset("expressions").to_dataframe()
     dataframe_regression.check(result.iloc[::83])
 
-    dot_result = ss.load(tree, as_dataarray=True, dot=np.ones(6))
+    dot_result = ss._load(tree, as_dataarray=True, dot=np.ones(6))
     assert dot_result.dims == (
         "HHID",
         "dtaz",

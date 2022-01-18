@@ -56,7 +56,7 @@ def _iat(source, *, _names=None, _load=False, _index_name=None, **idxs):
     else:
         ds = source
     if _load:
-        ds = ds.load()
+        ds = ds._load()
     return ds.isel(**loaders)
 
 
@@ -76,7 +76,7 @@ def _at(source, *, _names=None, _load=False, _index_name=None, **idxs):
     else:
         ds = source
     if _load:
-        ds = ds.load()
+        ds = ds._load()
     return ds.sel(**loaders)
 
 
@@ -133,6 +133,10 @@ def xgather(source, positions, indexes):
 
 
 class Relationship:
+    """
+    Defines a linkage between datasets in a `DataTree`.
+    """
+
     def __init__(
         self,
         parent_data,
@@ -143,13 +147,24 @@ class Relationship:
         analog=None,
     ):
         self.parent_data = _require_string(parent_data)
+        """str: Name of the parent dataset."""
+
         self.parent_name = _require_string(parent_name)
+        """str: Variable in the parent dataset that references the child dimension."""
+
         self.child_data = _require_string(child_data)
+        """str: Name of the child dataset."""
+
         self.child_name = _require_string(child_name)
+        """str: Dimension in the child dataset that is used by this relationship."""
+
         if indexing not in {"label", "position"}:
             raise ValueError("indexing must be by label or position")
         self.indexing = indexing
+        """str: How the target dimension is used, either by 'label' or 'position'."""
+
         self.analog = analog
+        """str: Original variable that defined label-based relationship before digitization."""
 
     def __eq__(self, other):
         if isinstance(other, self.__class__):
@@ -167,6 +182,22 @@ class Relationship:
 
     @classmethod
     def from_string(cls, s):
+        """
+        Construct a `Relationship` from a string.
+
+        Parameters
+        ----------
+        s : str
+            The relationship definition.
+            To create a label-based relationship, the string should look like
+            "ParentNode.variable_name @ ChildNode.dimension_name".  To create
+            a position-based relationship, give
+            "ParentNode.variable_name -> ChildNode.dimension_name".
+
+        Returns
+        -------
+        Relationship
+        """
         if "->" in s:
             parent, child = s.split("->", 1)
             i = "position"
@@ -189,6 +220,36 @@ class Relationship:
 
 
 class DataTree:
+    """
+    A tree representing linked datasets, from which data can flow.
+
+    Parameters
+    ----------
+    graph : networkx.MultiDiGraph
+    root_node_name : str
+        The name of the node at the root of the tree.
+    extra_funcs : Tuple[Callable]
+        Additional functions that can be called by Flow objects created
+        using this DataTree.  These functions should have defined `__name__`
+        attributes, so they can be called in expressions.
+    extra_vars : Mapping[str,Any], optional
+        Additional named constants that can be referenced by expressions in
+        Flow objects created using this DataTree.
+    cache_dir : Path-like, optional
+        The default directory where Flow objects are created.
+    relationships : Iterable[str or Relationship]
+        The relationship definitions used to define this tree.  All dataset
+        nodes named in these relationships should also be included as
+        keyword arguments for this constructor.
+    force_digitization : bool, default False
+        Whether to automatically digitize all relationships (converting them
+        from label-based to position-based).  Digitization is required to
+        evaluate Flows, but doing so automatically on construction may be
+        inefficient.
+    dim_order : Tuple[str], optional
+        The order of dimensions to use in Flow outputs.  Generally only needed
+        if there are multiple dimensions in the root dataset.
+    """
 
     DatasetType = Dataset
 
@@ -351,6 +412,7 @@ class DataTree:
 
     @property
     def root_node_name(self):
+        """str: The root node for this data tree, which is only ever a parent."""
         if self._root_node_name is None:
             for nodename in self._graph.nodes:
                 if self._graph.in_degree(nodename) == 0:
@@ -370,6 +432,21 @@ class DataTree:
         self._root_node_name = name
 
     def add_relationship(self, *args, **kwargs):
+        """
+        Add a relationship to this DataTree.
+
+        The new relationship will point from a variable in one dataset
+        to a dimension of another dataset in this tree.  Both the parent
+        and the child datasets should already have been added.
+
+        Parameters
+        ----------
+        *args, **kwargs
+            All arguments are passed through to the `Relationship`
+            contructor, unless only a single `str` argument is provided,
+            in which case the `Relationship.from_string` class constructor
+            is used.
+        """
         if len(args) == 1 and isinstance(args[0], Relationship):
             r = args[0]
         elif len(args) == 1 and isinstance(args[0], str):
@@ -418,6 +495,21 @@ class DataTree:
         return Relationship(parent_data=parent, child_data=child, **attrs)
 
     def add_dataset(self, name, dataset, relationships=(), as_root=False):
+        """
+        Add a new Dataset node to this DataTree.
+
+        Parameters
+        ----------
+        name : str
+        dataset : Dataset or pandas.DataFrame
+            Will be coerced into a `Dataset` object if it is not already
+            in that format, using a no-copy process if possible.
+        relationships : Tuple[str or Relationship]
+            Also add these relationships.
+        as_root : bool, default False
+            Set this new node as the root of the tree, displacing any existing
+            root.
+        """
         self._graph.add_node(name, dataset=self.DatasetType.construct(dataset))
         if self.root_node_name is None or as_root:
             self.root_node_name = name
@@ -596,6 +688,7 @@ class DataTree:
 
     @property
     def subspaces(self):
+        """Mapping[str,Dataset] : Direct access to node Dataset objects by name."""
         spaces = {}
         for k in self._graph.nodes:
             s = self._graph.nodes[k].get("dataset", None)
@@ -609,24 +702,6 @@ class DataTree:
             if s is not None:
                 yield (k, s)
 
-    # @property
-    # def namespace(self):
-    #     namespace = globals()
-    #     namespace['piece'] = piece
-    #     namespace['hard_sigmoid'] = hard_sigmoid
-    #     namespace['transpose_leading'] = transpose_leading
-    #     namespace['clip'] = clip
-    #     namespace['log'] = np.log
-    #     namespace['exp'] = np.exp
-    #     namespace['log1p'] = np.log1p
-    #     namespace['expm1'] = np.expm1
-    #     for f in self.extra_funcs:
-    #         namespace[f.__name__] = f
-    #     for spacename, spacearrays in self.subspaces_iter():
-    #         for k, arr in spacearrays.items():
-    #             namespace[f"__{spacename or 'base'}__{k}"] = arr.data
-    #     return namespace
-
     def namespace_names(self):
         namespace = set()
         for spacename, spacearrays in self.subspaces_iter():
@@ -638,6 +713,9 @@ class DataTree:
 
     @property
     def dims(self):
+        """
+        Mapping from dimension names to lengths across all dataset nodes.
+        """
         dims = {}
         for k, v in self.subspaces_iter():
             for name, length in v.dims.items():
@@ -651,6 +729,13 @@ class DataTree:
         return xr.core.utils.Frozen(dims)
 
     def dims_detail(self):
+        """
+        Report on the names and sizes of dimensions in all Dataset nodes.
+
+        Returns
+        -------
+        str
+        """
         s = ""
         for k, v in self.subspaces_iter():
             s += f"\n{k}:"
@@ -659,6 +744,25 @@ class DataTree:
         return s[1:]
 
     def drop_dims(self, dims, inplace=False, ignore_missing_dims=True):
+        """
+        Drop dimensions from all Dataset nodes.
+
+        Parameters
+        ----------
+        dims : str or Iterable[str]
+            One or more named dimensions to drop.
+        inplace : bool, default False
+            Whether to drop dimensions in-place.
+        ignore_missing_dims : bool, default True
+            Simply ignore any dimensions that are not present.
+
+        Returns
+        -------
+        Dataset
+            Returns self if dropping inplace, otherwise returns a copy
+            with dimensions dropped.
+        """
+
         if inplace:
             obj = self
         else:
@@ -716,6 +820,30 @@ class DataTree:
         return result
 
     def replace_datasets(self, other=None, validate=True, redigitize=True, **kwargs):
+        """
+        Replace one or more datasets in the nodes of this tree.
+
+        Parameters
+        ----------
+        other : Mapping[str,Dataset]
+            A dictionary of replacement datasets.
+        validate : bool, default True
+            Raise an error when replacing downstream datasets that
+            are referenced by position, unless the replacement is identically
+            sized.  If validation is deactivated, and an incompatible dataset
+            is placed in this tree, flows that rely on that relationship will
+            give erroneous results or crash with a segfault.
+        redigitize : bool, default True
+            Automatically re-digitize relationships that are label-based and
+            were previously digitized.
+        **kwargs : Mapping[str,Dataset]
+            Alternative format to `other`.
+
+        Returns
+        -------
+        DataTree
+            A new DataTree with data replacements completed.
+        """
         replacements = {}
         if other is not None:
             replacements.update(other)
@@ -749,29 +877,78 @@ class DataTree:
     def setup_flow(
         self,
         definition_spec,
+        *,
         cache_dir=None,
         name=None,
         dtype="float32",
         boundscheck=False,
+        error_model="numpy",
         nopython=True,
         fastmath=True,
         parallel=True,
         readme=None,
         flow_library=None,
         extra_hash_data=(),
+        write_hash_audit=True,
         hashing_level=1,
     ):
         """
+        Set up a new Flow for analysis using the structure of this DataTree.
 
         Parameters
         ----------
         definition_spec : Dict[str,str]
-            Gives the names and definitions for the columns to
-            create in our generated table.
+            Gives the names and expressions that define the variables to
+            create in this new `Flow`.
+        cache_dir : Path-like, optional
+            A location to write out generated python and numba code. If not
+            provided, a unique temporary directory is created.
+        name : str, optional
+            The name of this Flow used for writing out cached files. If not
+            provided, a unique name is generated. If `cache_dir` is given,
+            be sure to avoid name conflicts with other flow's in the same
+            directory.
+        dtype : str, default "float32"
+            The name of the numpy dtype that will be used for the output.
+        boundscheck : bool, default False
+            If True, boundscheck enables bounds checking for array indices, and
+            out of bounds accesses will raise IndexError. The default is to not
+            do bounds checking, which is faster but can produce garbage results
+            or segfaults if there are problems, so try turning this on for
+            debugging if you are getting unexplained errors or crashes.
+        error_model : {'numpy', 'python'}, default 'numpy'
+            The error_model option controls the divide-by-zero behavior. Setting
+            it to ‘python’ causes divide-by-zero to raise exception like
+            CPython. Setting it to ‘numpy’ causes divide-by-zero to set the
+            result to +/-inf or nan.
+        nopython : bool, default True
+            Compile using numba's `nopython` mode.  Provided for debugging only,
+            as there's little point in turning this off for production code, as
+            all the speed benefits of sharrow will be lost.
+        fastmath : bool, default True
+            If true, fastmath enables the use of "fast" floating point transforms,
+            which can improve performance but can result in tiny distortions in
+            results.  See numba docs for details.
+        parallel : bool, default True
+            Enable or disable parallel computation for certain functions.
+        readme : str, optional
+            A string to inject as a comment at the top of the flow Python file.
+        flow_library : Mapping[str,Flow], optional
+            An in-memory cache of precompiled Flow objects.  Using this can result
+            in performance improvements when repeatedly using the same definitions.
+        extra_hash_data : Tuple[Hashable], optional
+            Additional data used for generating the flow hash.  Useful to prevent
+            conflicts when using a flow_library with multiple similar flows.
+        write_hash_audit : bool, default True
+            Writes a hash audit log into a comment in the flow Python file, for
+            debugging purposes.
+        hashing_level : int, default 1
+            Level of detail to write into flow hashes.  Increase detail to avoid
+            hash conflicts for similar flows.
 
         Returns
         -------
-        TableGroupProcessor
+        Flow
         """
         from .flows import Flow
 
@@ -789,6 +966,8 @@ class DataTree:
             flow_library=flow_library,
             extra_hash_data=extra_hash_data,
             hashing_level=hashing_level,
+            error_model=error_model,
+            write_hash_audit=write_hash_audit,
         )
 
     def _spill(self, all_name_tokens=()):
@@ -816,6 +995,21 @@ class DataTree:
     _BY_OFFSET = "digitizedOffset"
 
     def digitize_relationships(self, inplace=False, redigitize=True):
+        """
+        Convert all label-based relationships into position-based.
+
+        Parameters
+        ----------
+        inplace : bool, default False
+        redigitize : bool, default True
+            Re-compute position-based relationships from labels, even
+            if the relationship had previously been digitized.
+
+        Returns
+        -------
+        DataTree or None
+            Only returns a copy if not digitizing in-place.
+        """
 
         if inplace:
             obj = self
@@ -878,6 +1072,7 @@ class DataTree:
 
     @property
     def relationships_are_digitized(self):
+        """bool : Whether all relationships are digital (by position)."""
         for e in self._graph.edges:
             r = self._get_relationship(e)
             if r.indexing != "position":

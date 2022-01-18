@@ -14,7 +14,7 @@ def _iat(source, *, _names=None, _load=False, _index_name=None, **idxs):
     else:
         ds = source
     if _load:
-        ds = ds.load()
+        ds = ds._load()
     return ds.isel(**loaders)
 
 
@@ -29,7 +29,7 @@ def _at(source, *, _names=None, _load=False, _index_name=None, **idxs):
     else:
         ds = source
     if _load:
-        ds = ds.load()
+        ds = ds._load()
     return ds.sel(**loaders)
 
 

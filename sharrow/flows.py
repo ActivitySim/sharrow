@@ -253,7 +253,8 @@ def linemaker(
 
 """
 
-MNL_2D_TEMPLATE = """
+
+MNL_GENERIC_TEMPLATE = """
 @nb.jit(cache=True, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath})
 def _sample_choices_maker(
         prob_array,
@@ -361,7 +362,62 @@ def _sample_choices_maker_counted(
             out_pick_count[unique_s] += 1
             s += 1
 
+"""
 
+MNL_1D_TEMPLATE = (
+    MNL_GENERIC_TEMPLATE
+    + """
+
+@nb.jit(cache=True, parallel=True, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath})
+def mnl_transform(
+    argshape,
+    {joined_namespace_names}
+    dtype=np.{dtype},
+    dotarray=None,
+    random_draws=None,
+    pick_counted=False,
+):
+    if dotarray is None:
+        raise ValueError("dotarray cannot be None")
+    assert dotarray.ndim == 2
+    result = np.full((argshape[0], random_draws.shape[1]), -1, dtype=np.int32)
+    result_p = np.zeros((argshape[0], random_draws.shape[1]), dtype=dtype)
+    if pick_counted:
+        pick_count = np.zeros((argshape[0], random_draws.shape[1]), dtype=np.int32)
+    else:
+        pick_count = np.zeros((argshape[0], 0), dtype=np.int32)
+    ###result = np.empty((argshape[0], dotarray.shape[1]), dtype=dtype)
+    if argshape[0] > 1000:
+        for j0 in nb.prange(argshape[0]):
+            intermediate = np.zeros({len_self_raw_functions}, dtype=dtype)
+            {meta_code_stack_dot}
+            partial = np.exp(np.dot(intermediate, dotarray))
+            local_sum = np.sum(partial)
+            partial /= local_sum
+            if pick_counted:
+                _sample_choices_maker_counted(partial, random_draws[j0], result[j0], result_p[j0], pick_count[j0])
+            else:
+                _sample_choices_maker(partial, random_draws[j0], result[j0], result_p[j0])
+    else:
+        intermediate = np.zeros({len_self_raw_functions}, dtype=dtype)
+        for j0 in range(argshape[0]):
+            {meta_code_stack_dot}
+            partial = np.exp(np.dot(intermediate, dotarray))
+            local_sum = np.sum(partial)
+            partial /= local_sum
+            if pick_counted:
+                _sample_choices_maker_counted(partial, random_draws[j0], result[j0], result_p[j0], pick_count[j0])
+            else:
+                _sample_choices_maker(partial, random_draws[j0], result[j0], result_p[j0])
+    return result, result_p, pick_count
+
+"""
+)
+
+
+MNL_2D_TEMPLATE = (
+    MNL_GENERIC_TEMPLATE
+    + """
 
 @nb.jit(cache=True, parallel=True, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath})
 def mnl_transform(
@@ -415,6 +471,7 @@ def mnl_transform(
             _sample_choices_maker(partial, random_draws[j0], result[j0], result_p[j0])
     return result, result_p, pick_count
 """
+)
 
 
 class Flow:
@@ -1051,7 +1108,7 @@ class Flow:
                         meta_template = IRUNNER_1D_TEMPLATE.format(**locals())
                         meta_template_dot = IDOTTER_1D_TEMPLATE.format(**locals())
                         line_template = ILINER_1D_TEMPLATE.format(**locals())
-                        mnl_template = ""
+                        mnl_template = MNL_1D_TEMPLATE.format(**locals())
                     elif n_root_dims == 2:
                         meta_template = IRUNNER_2D_TEMPLATE.format(**locals())
                         meta_template_dot = IDOTTER_2D_TEMPLATE.format(**locals())
@@ -1320,7 +1377,7 @@ class Flow:
                 else:
                     raise err
 
-    def load(
+    def _load(
         self,
         source=None,
         as_dataframe=False,
@@ -1363,10 +1420,6 @@ class Flow:
             also be provided. The dot-product is treated as the utility function
             for a multinomial logit model, and these draws are used to simulate
             choices from the implied probabilities.
-
-
-        Returns
-        -------
 
         """
         if (as_dataframe or as_table) and dot is not None:
@@ -1478,6 +1531,25 @@ class Flow:
                 return result, result_p
         return result
 
+    def load(self, source=None, dtype=None):
+        """
+        Compute the flow outputs as a numpy array.
+
+        Parameters
+        ----------
+        source : DataTree, optional
+            This is the source of the data for this flow. If not provided, the
+            tree used to initialize this flow is used.
+        dtype : str or dtype
+            Override the default dtype for the result. May trigger re-compilation
+            of the underlying code.
+
+        Returns
+        -------
+        numpy.array
+        """
+        return self._load(source=source, dtype=dtype)
+
     def load_dataframe(self, source=None, dtype=None):
         """
         Compute the flow outputs as a pandas.DataFrame.
@@ -1495,7 +1567,7 @@ class Flow:
         -------
         pandas.DataFrame
         """
-        return self.load(source=source, dtype=dtype, as_dataframe=True)
+        return self._load(source=source, dtype=dtype, as_dataframe=True)
 
     def load_dataarray(self, source=None, dtype=None):
         """
@@ -1514,7 +1586,7 @@ class Flow:
         -------
         xarray.DataArray
         """
-        return self.load(source=source, dtype=dtype, as_dataarray=True)
+        return self._load(source=source, dtype=dtype, as_dataarray=True)
 
     def dot(self, coefficients, source=None, dtype=None):
         """
@@ -1538,7 +1610,7 @@ class Flow:
         -------
         numpy.ndarray
         """
-        return self.load(
+        return self._load(
             source,
             dot=coefficients,
             dtype=dtype,
@@ -1566,7 +1638,7 @@ class Flow:
         -------
         xarray.DataArray
         """
-        return self.load(
+        return self._load(
             source,
             dot=coefficients,
             dtype=dtype,
@@ -1612,7 +1684,7 @@ class Flow:
             A count of how many times this choice was chosen, only included
             if `pick_counted` is True.
         """
-        return self.load(
+        return self._load(
             source=source,
             dot=coefficients,
             mnl_draws=draws,

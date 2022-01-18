@@ -4,6 +4,7 @@
 title: sharrow documentation
 author: Cambridge Systematics, Inc.
 logo: logo.png
+copyright: "2022"  # Copyright year to be placed in the footer
 
 # Force re-execution of notebooks on each build.
 # See https://jupyterbook.org/content/execute.html
@@ -26,3 +27,11 @@ repository:
 html:
   use_issues_button: true
   use_repository_button: true
+
+sphinx:
+  extra_extensions:
+  - 'sphinx.ext.autodoc'
+  - 'sphinx.ext.napoleon'
+  - 'sphinx.ext.viewcode'
+  config:
+    add_module_names: False
