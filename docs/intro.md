@@ -1,7 +1,9 @@
 # Getting Started
 
-Sharrow is a library that enables compiling expression specification
-files into optimized, runnable code.
+Sharrow is a Python library that enables several different kinds of data to flow
+together in the same lane.  It leverages the power of numba and xarray to
+compile expression specification files (like those used in ActivitySim) into
+optimized, runnable code.
 
 
 ## Installation

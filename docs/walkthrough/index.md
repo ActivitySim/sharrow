@@ -1,4 +1,4 @@
-# Code Walkthroughs
+# User Guide
 
 ```{tableofcontents}
 ```
