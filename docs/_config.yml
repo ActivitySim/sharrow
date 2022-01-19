@@ -1,10 +1,11 @@
 # Book settings
 # Learn more at https://jupyterbook.org/customize/config.html
 
-title: sharrow documentation
-author: Cambridge Systematics, Inc.
+title: v2022.1.dev4+gfb66fe7.d20220118
+author: <a href="https://www.camsys.com">Cambridge Systematics</a> for the <a href="https://activitysim.github.io/">ActivitySim
+  Consortium</a>
 logo: logo.png
-copyright: "2022"  # Copyright year to be placed in the footer
+copyright: 2022 AMPO Research Foundation    # Copyright year to be placed in the footer
 
 # Force re-execution of notebooks on each build.
 # See https://jupyterbook.org/content/execute.html
@@ -27,11 +28,16 @@ repository:
 html:
   use_issues_button: true
   use_repository_button: true
+  extra_navbar: ''  # Will be displayed underneath the left navbar.
+  home_page_in_navbar: true  # Whether to include your home page in the left Navigation Bar
+  extra_footer: Powered by <a href="https://jupyterbook.org">Jupyter Book</a>  # Will be displayed underneath the footer.
 
 sphinx:
   extra_extensions:
-  - 'sphinx.ext.autodoc'
-  - 'sphinx.ext.napoleon'
-  - 'sphinx.ext.viewcode'
+  - sphinx.ext.autodoc
+  - sphinx.ext.napoleon
+  - sphinx.ext.viewcode
   config:
-    add_module_names: False
+    add_module_names: false
+#    html_theme_options:
+#      search_bar_text: Search these docs...

@@ -19,6 +19,9 @@ text_search_dict = {
 
 # Search through each notebook and look for th text, add a tag if necessary
 for ipath in notebooks:
+    if "/_build/" in ipath:
+        continue
+    print(f"hiding test cells in {ipath}")
     ntbk = nbf.read(ipath, nbf.NO_CONVERT)
 
     for cell in ntbk.cells:
