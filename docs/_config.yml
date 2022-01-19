@@ -30,7 +30,7 @@ html:
   use_repository_button: true
   extra_navbar: ''  # Will be displayed underneath the left navbar.
   home_page_in_navbar: true  # Whether to include your home page in the left Navigation Bar
-  extra_footer: Powered by <a href="https://jupyterbook.org">Jupyter Book</a>  # Will be displayed underneath the footer.
+  search_bar_text: Search these docs...
 
 sphinx:
   extra_extensions:
@@ -39,5 +39,12 @@ sphinx:
   - sphinx.ext.viewcode
   config:
     add_module_names: false
-#    html_theme_options:
-#      search_bar_text: Search these docs...
+    html_theme_options:
+      home_page_in_toc: true
+      search_bar_text: Search these docs...
+      repository_url: https://github.com/ActivitySim/sharrow
+      use_repository_button: true
+      use_issues_button: true
+      repository_branch: master
+      path_to_docs: docs
+      extra_navbar:
