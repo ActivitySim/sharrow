@@ -944,7 +944,10 @@ class DataTree:
             debugging purposes.
         hashing_level : int, default 1
             Level of detail to write into flow hashes.  Increase detail to avoid
-            hash conflicts for similar flows.
+            hash conflicts for similar flows.  Level 2 adds information about
+            names used in expressions and digital encodings to the flow hash,
+            which prevents conflicts but requires more pre-computation to generate
+            the hash.
 
         Returns
         -------

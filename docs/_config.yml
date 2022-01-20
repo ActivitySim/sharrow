@@ -1,7 +1,7 @@
 # Book settings
 # Learn more at https://jupyterbook.org/customize/config.html
 
-title: v2022.1.dev4+gfb66fe7.d20220118
+title: v2022.0.1
 author: <a href="https://www.camsys.com">Cambridge Systematics</a> for the <a href="https://activitysim.github.io/">ActivitySim
   Consortium</a>
 logo: logo.png

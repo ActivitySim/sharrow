@@ -21,7 +21,7 @@ text_search_dict = {
 for ipath in notebooks:
     if "/_build/" in ipath:
         continue
-    print(f"hiding test cells in {ipath}")
+    touch = False
     ntbk = nbf.read(ipath, nbf.NO_CONVERT)
 
     for cell in ntbk.cells:
@@ -30,7 +30,11 @@ for ipath in notebooks:
             if key in cell["source"]:
                 if val not in cell_tags:
                     cell_tags.append(val)
+                    touch = True
         if len(cell_tags) > 0:
             cell["metadata"]["tags"] = cell_tags
-
-    nbf.write(ntbk, ipath)
+    if touch:
+        print(f"hiding test cells in {ipath}")
+        nbf.write(ntbk, ipath)
+    else:
+        print(f"no changes in {ipath}")

@@ -140,6 +140,65 @@ class _iLocIndexer:
 
 
 class Dataset(xr.Dataset):
+    """
+    A multi-dimensional, in memory, array database.
+
+    A dataset consists of variables, coordinates and attributes which
+    together form a self describing dataset.
+
+    Dataset implements the mapping interface with keys given by variable
+    names and values given by DataArray objects for each variable name.
+
+    One dimensional variables with name equal to their dimension are
+    index coordinates used for label based indexing.
+
+    Parameters
+    ----------
+    data_vars : dict-like, optional
+        A mapping from variable names to :py:class:`~xarray.DataArray`
+        objects, :py:class:`~xarray.Variable` objects or to tuples of
+        the form ``(dims, data[, attrs])`` which can be used as
+        arguments to create a new ``Variable``. Each dimension must
+        have the same length in all variables in which it appears.
+
+        The following notations are accepted:
+
+        - mapping {var name: DataArray}
+        - mapping {var name: Variable}
+        - mapping {var name: (dimension name, array-like)}
+        - mapping {var name: (tuple of dimension names, array-like)}
+        - mapping {dimension name: array-like}
+          (it will be automatically moved to coords, see below)
+
+        Each dimension must have the same length in all variables in
+        which it appears.
+    coords : dict-like, optional
+        Another mapping in similar form as the `data_vars` argument,
+        except the each item is saved on the dataset as a "coordinate".
+        These variables have an associated meaning: they describe
+        constant/fixed/independent quantities, unlike the
+        varying/measured/dependent quantities that belong in
+        `variables`. Coordinates values may be given by 1-dimensional
+        arrays or scalars, in which case `dims` do not need to be
+        supplied: 1D arrays will be assumed to give index values along
+        the dimension with the same name.
+
+        The following notations are accepted:
+
+        - mapping {coord name: DataArray}
+        - mapping {coord name: Variable}
+        - mapping {coord name: (dimension name, array-like)}
+        - mapping {coord name: (tuple of dimension names, array-like)}
+        - mapping {dimension name: array-like}
+          (the dimension name is implicitly set to be the same as the
+          coord name)
+
+        The last notation implies that the coord name is the same as
+        the dimension name.
+
+    attrs : dict-like, optional
+        Global attributes to save on this dataset.
+    """
 
     __slots__ = (
         "_shared_memory_key_",
@@ -155,6 +214,21 @@ class Dataset(xr.Dataset):
 
     @classmethod
     def construct(cls, source):
+        """
+        A generic constructor for creating Datasets from various similar objects.
+
+        Parameters
+        ----------
+        source : pandas.DataFrame, pyarrow.Table, xarray.Dataset, or Sequence[str]
+            The source from which to create a Dataset.  DataFrames and Tables
+            are converted to Datasets that have one dimension (the rows) and
+            seperate variables for each of the columns.  A list of strings
+            creates a dataset with those named empty variables.
+
+        Returns
+        -------
+        Dataset
+        """
         if isinstance(source, pd.DataFrame):
             source = cls.from_dataframe(source)
             # source = cls.from_dataframe_fast(source) # older xarray was slow
@@ -245,6 +319,36 @@ class Dataset(xr.Dataset):
         indexes="one-based",
         renames=None,
     ):
+        """
+        Create a Dataset from an OMX file.
+
+        Parameters
+        ----------
+        omx : openmatrix.File or larch.OMX
+            An OMX-format file, opened for reading.
+        index_names : tuple, default ("otaz", "dtaz", "time_period")
+            Should be a tuple of length 3, giving the names of the three
+            dimensions.  The first two names are the native dimensions from
+            the open matrix file, the last is the name of the implicit
+            dimension that is created by parsing array names.
+        indexes : str, optional
+            The name of a 'lookup' in the OMX file, which will be used to
+            populate the coordinates for the two native dimensions.  Or,
+            specify "one-based" or "zero-based" to assume sequential and
+            consecutive numbering starting with 1 or 0 respectively.
+        renames : Mapping or Collection, optional
+            Limit the import only to these data elements.  If given as a
+            mapping, the keys will be the names of variables in the resulting
+            dataset, and the values give the names of data matrix tables in the
+            OMX file.  If given as a list or other non-mapping collection,
+            elements are not renamed but only elements in the collection are
+            included.
+
+        Returns
+        -------
+        Dataset
+        """
+
         # handle both larch.OMX and openmatrix.open_file versions
         if "larch" in type(omx).__module__:
             omx_data = omx.data
@@ -294,6 +398,39 @@ class Dataset(xr.Dataset):
         time_periods=None,
         time_period_sep="__",
     ):
+        """
+        Create a Dataset from an OMX file with an implicit third dimension.
+
+        Parameters
+        ----------
+        omx : openmatrix.File or larch.OMX
+            An OMX-format file, opened for reading.
+        index_names : tuple, default ("otaz", "dtaz", "time_period")
+            Should be a tuple of length 3, giving the names of the three
+            dimensions.  The first two names are the native dimensions from
+            the open matrix file, the last is the name of the implicit
+            dimension that is created by parsing array names.
+        indexes : str, optional
+            The name of a 'lookup' in the OMX file, which will be used to
+            populate the coordinates for the two native dimensions.  Or,
+            specify "one-based" or "zero-based" to assume sequential and
+            consecutive numbering starting with 1 or 0 respectively.
+        time_periods : list-like, required keyword argument
+            A list of index values from which the third dimension is constructed
+            for all variables with a third dimension.
+        time_period_sep : str, default "__" (double underscore)
+            The presence of this separator within the name of any table in the
+            OMX file indicates that table is to be considered a page in a
+            three dimensional variable.  The portion of the name preceding the
+            first instance of this separator is the name of the resulting
+            variable, and the portion of the name after the first instance of
+            this separator is the label of the position for this page, which
+            should appear in `time_periods`.
+
+        Returns
+        -------
+        Dataset
+        """
         # handle both larch.OMX and openmatrix.open_file versions
         if "larch" in type(omx).__module__:
             omx_data = omx.data
@@ -400,6 +537,92 @@ class Dataset(xr.Dataset):
 
     @classmethod
     def from_zarr(cls, store, *args, **kwargs):
+        """
+        Load and decode a dataset from a Zarr store.
+
+        The `store` object should be a valid store for a Zarr group. `store`
+        variables must contain dimension metadata encoded in the
+        `_ARRAY_DIMENSIONS` attribute.
+
+        Parameters
+        ----------
+        store : MutableMapping or str
+            A MutableMapping where a Zarr Group has been stored or a path to a
+            directory in file system where a Zarr DirectoryStore has been stored.
+        synchronizer : object, optional
+            Array synchronizer provided to zarr
+        group : str, optional
+            Group path. (a.k.a. `path` in zarr terminology.)
+        chunks : int or dict or tuple or {None, 'auto'}, optional
+            Chunk sizes along each dimension, e.g., ``5`` or
+            ``{'x': 5, 'y': 5}``. If `chunks='auto'`, dask chunks are created
+            based on the variable's zarr chunks. If `chunks=None`, zarr array
+            data will lazily convert to numpy arrays upon access. This accepts
+            all the chunk specifications as Dask does.
+        overwrite_encoded_chunks : bool, optional
+            Whether to drop the zarr chunks encoded for each variable when a
+            dataset is loaded with specified chunk sizes (default: False)
+        decode_cf : bool, optional
+            Whether to decode these variables, assuming they were saved according
+            to CF conventions.
+        mask_and_scale : bool, optional
+            If True, replace array values equal to `_FillValue` with NA and scale
+            values according to the formula `original_values * scale_factor +
+            add_offset`, where `_FillValue`, `scale_factor` and `add_offset` are
+            taken from variable attributes (if they exist).  If the `_FillValue` or
+            `missing_value` attribute contains multiple values a warning will be
+            issued and all array values matching one of the multiple values will
+            be replaced by NA.
+        decode_times : bool, optional
+            If True, decode times encoded in the standard NetCDF datetime format
+            into datetime objects. Otherwise, leave them encoded as numbers.
+        concat_characters : bool, optional
+            If True, concatenate along the last dimension of character arrays to
+            form string arrays. Dimensions will only be concatenated over (and
+            removed) if they have no corresponding variable and if they are only
+            used as the last dimension of character arrays.
+        decode_coords : bool, optional
+            If True, decode the 'coordinates' attribute to identify coordinates in
+            the resulting dataset.
+        drop_variables : str or iterable, optional
+            A variable or list of variables to exclude from being parsed from the
+            dataset. This may be useful to drop variables with problems or
+            inconsistent values.
+        consolidated : bool, optional
+            Whether to open the store using zarr's consolidated metadata
+            capability. Only works for stores that have already been consolidated.
+            By default (`consolidate=None`), attempts to read consolidated metadata,
+            falling back to read non-consolidated metadata if that fails.
+        chunk_store : MutableMapping, optional
+            A separate Zarr store only for chunk data.
+        storage_options : dict, optional
+            Any additional parameters for the storage backend (ignored for local
+            paths).
+        decode_timedelta : bool, optional
+            If True, decode variables and coordinates with time units in
+            {'days', 'hours', 'minutes', 'seconds', 'milliseconds', 'microseconds'}
+            into timedelta objects. If False, leave them encoded as numbers.
+            If None (default), assume the same value of decode_time.
+        use_cftime : bool, optional
+            Only relevant if encoded dates come from a standard calendar
+            (e.g. "gregorian", "proleptic_gregorian", "standard", or not
+            specified).  If None (default), attempt to decode times to
+            ``np.datetime64[ns]`` objects; if this is not possible, decode times to
+            ``cftime.datetime`` objects. If True, always decode times to
+            ``cftime.datetime`` objects, regardless of whether or not they can be
+            represented using ``np.datetime64[ns]`` objects.  If False, always
+            decode times to ``np.datetime64[ns]`` objects; if this is not possible
+            raise an error.
+
+        Returns
+        -------
+        dataset : Dataset
+            The newly created dataset.
+
+        References
+        ----------
+        http://zarr.readthedocs.io/
+        """
         return cls(xr.open_zarr(store, *args, **kwargs))
 
     def to_zarr(self, *args, **kwargs):
@@ -491,6 +714,32 @@ class Dataset(xr.Dataset):
         return super().to_zarr(*args, **kwargs)
 
     def iat(self, *, _names=None, _load=False, _index_name=None, **idxs):
+        """
+        Multi-dimensional fancy indexing by position.
+
+        Provide the dataset dimensions to index up as keywords, each with
+        a value giving an array (one dimensional) of positions to extract.
+
+        All other arguments are keyword-only arguments beginning with an
+        underscore.
+
+        Parameters
+        ----------
+        _names : Collection[str], optional
+            Only include these variables of this Dataset.
+        _load : bool, default False
+            Call `load` on the result, which will trigger a compute
+            operation if the data underlying this Dataset is in dask,
+            otherwise this does nothing.
+        _index_name, str, default "index"
+            The name to use for the resulting dataset's dimension.
+        **idxs : Mapping[str, Any]
+            Positions to extract.
+
+        Returns
+        -------
+        Dataset
+        """
         loaders = {}
         if _index_name is None:
             _index_name = "index"
@@ -505,6 +754,32 @@ class Dataset(xr.Dataset):
         return ds.isel(**loaders)
 
     def at(self, *, _names=None, _load=False, _index_name=None, **idxs):
+        """
+        Multi-dimensional fancy indexing by label.
+
+        Provide the dataset dimensions to index up as keywords, each with
+        a value giving an array (one dimensional) of labels to extract.
+
+        All other arguments are keyword-only arguments beginning with an
+        underscore.
+
+        Parameters
+        ----------
+        _names : Collection[str], optional
+            Only include these variables of this Dataset.
+        _load : bool, default False
+            Call `load` on the result, which will trigger a compute
+            operation if the data underlying this Dataset is in dask,
+            otherwise this does nothing.
+        _index_name, str, default "index"
+            The name to use for the resulting dataset's dimension.
+        **idxs : Mapping[str, Any]
+            Labels to extract.
+
+        Returns
+        -------
+        Dataset
+        """
         loaders = {}
         if _index_name is None:
             _index_name = "index"
@@ -1188,6 +1463,18 @@ class Dataset(xr.Dataset):
         return result
 
     def interchange_dims(self, dim1, dim2):
+        """
+        Rename a pair of dimensions by swapping their names.
+
+        Parameters
+        ----------
+        dim1, dim2 : str
+            The names of the two dimensions to swap.
+
+        Returns
+        -------
+        Dataset
+        """
         p21 = "PLACEHOLD21"
         p12 = "PLACEHOLD12"
         s1 = {dim1: p12, dim2: p21}
@@ -1237,6 +1524,21 @@ class Dataset(xr.Dataset):
 
     @classmethod
     def from_named_objects(cls, *args):
+        """
+        Create a Dataset by populating it with named objects.
+
+        A mapping of names to values is first created, and then that mapping is
+        used in the standard constructor to initialize a Dataset.
+
+        Parameters
+        ----------
+        *args : Any
+            A collection of objects, each exposing a `name` attribute.
+
+        Returns
+        -------
+        Dataset
+        """
         objs = {}
         for n, a in enumerate(args):
             try:
@@ -1251,6 +1553,7 @@ class Dataset(xr.Dataset):
     def ensure_integer(self, names, bitwidth=32, inplace=False):
         """
         Convert dataset variables to integers, if they are not already integers.
+
         Parameters
         ----------
         names : Iterable[str]

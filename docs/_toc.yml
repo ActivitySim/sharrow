@@ -8,4 +8,5 @@ chapters:
     sections:
       - file: walkthrough/one-dim
       - file: walkthrough/two-dim
+      - file: walkthrough/encoding
   - file: api
