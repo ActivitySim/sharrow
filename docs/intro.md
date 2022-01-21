@@ -5,13 +5,6 @@ together in the same lane.  It leverages the power of numba and xarray to
 compile expression specification files (like those used in ActivitySim) into
 optimized, runnable code.
 
-## ActivitySim
-
-Sharrow is a project of the [ActivitySim](https://activitysim.github.io/) consortium.
-
-The mission of the ActivitySim Consortium is to create and maintain advanced,
-open-source, activity-based travel behavior modeling software based on best
-software development practices for distribution at no charge to the public.
 
 ## Installation
 
@@ -65,7 +58,3 @@ Then to build the docs, in the root directory of the sharrow repository run
 ```shell
 jb build docs
 ```
-
-## License
-
-Sharrow is available under the open source [3-Clause BSD License](https://opensource.org/licenses/BSD-3-Clause).

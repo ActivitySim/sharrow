@@ -64,12 +64,17 @@ Logit
 ~~~~~~~~~
 .. automethod:: sharrow.Flow.mnl_draws
 
+Convenience
+~~~~~~~~~~~
+.. automethod:: sharrow.Flow.show_code
+
 
 
 --------------------------------------------------------------------------------
 Dataset
 --------------------------------------------------------------------------------
 .. autoclass:: sharrow.Dataset
+    :show-inheritance:
 
 Constructors
 ~~~~~~~~~~~~

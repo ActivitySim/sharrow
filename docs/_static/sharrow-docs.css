@@ -4,3 +4,8 @@
     font-weight: 700;
     margin-top: 0;
 }
+
+img[src*="#floatleft"] {
+    float: left;
+    margin-right: 20px;
+}

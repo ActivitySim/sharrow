@@ -799,7 +799,7 @@ class Dataset(xr.Dataset):
 
         Parameters
         ----------
-        df : pd.DataFrame or Mapping[str, array-like]
+        df : pandas.DataFrame or Mapping[str, array-like]
             The columns (or keys) of `df` should match the named dimensions of
             this Dataset.  The resulting extracted DataFrame will have one row
             per row of `df`, columns matching the data variables in this dataset,
@@ -807,7 +807,7 @@ class Dataset(xr.Dataset):
 
         Returns
         -------
-        pd.DataFrame
+        pandas.DataFrame
         """
         result = self.at(**df).reset_coords(drop=True).to_dataframe()
         if isinstance(df, pd.DataFrame):
@@ -820,7 +820,7 @@ class Dataset(xr.Dataset):
 
         Parameters
         ----------
-        df : pd.DataFrame or Mapping[str, array-like]
+        df : pandas.DataFrame or Mapping[str, array-like]
             The columns (or keys) of `df` should match the named dimensions of
             this Dataset.  The resulting extracted DataFrame will have one row
             per row of `df`, columns matching the data variables in this dataset,
@@ -828,7 +828,7 @@ class Dataset(xr.Dataset):
 
         Returns
         -------
-        pd.DataFrame
+        pandas.DataFrame
         """
         result = self.iat(**df).reset_coords(drop=True).to_dataframe()
         if isinstance(df, pd.DataFrame):

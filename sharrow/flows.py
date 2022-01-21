@@ -1715,6 +1715,26 @@ class Flow:
         return "\n".join(cmds)
 
     def show_code(self, linenos="inline"):
+        """
+        Display the underlying Python code constructed for this flow.
+
+        This convenience function is provided primarily to display the underlying
+        source code in a Jupyter notebook, for debugging and educational purposes.
+
+        Parameters
+        ----------
+        linenos : {'inline', 'table'}
+            This argument is passed to the pygments HtmlFormatter.
+            If set to ``'table'``, output line numbers as a table with two cells,
+            one containing the line numbers, the other the whole code.  This is
+            copy-and-paste-friendly, but may cause alignment problems with some
+            browsers or fonts.  If set to ``'inline'``, the line numbers will be
+            integrated in the ``<pre>`` tag that contains the code.
+
+        Returns
+        -------
+        IPython.display.HTML
+        """
         from IPython.display import HTML
         from pygments import highlight
         from pygments.formatters.html import HtmlFormatter

@@ -37,10 +37,11 @@ sphinx:
   - sphinx.ext.autodoc
   - sphinx.ext.napoleon
   - sphinx.ext.viewcode
+  - sphinx.ext.intersphinx
   config:
     add_module_names: false
     html_theme_options:
-      home_page_in_toc: true
+      home_page_in_toc: false
       search_bar_text: Search these docs...
       repository_url: https://github.com/ActivitySim/sharrow
       use_repository_button: true
@@ -52,3 +53,13 @@ sphinx:
       - rel: icon
         sizes: 32x32
         href: favicon.png
+    intersphinx_mapping:
+      pandas:
+      - http://pandas.pydata.org/pandas-docs/stable/
+      -
+      xarray:
+      - https://xarray.pydata.org/en/stable/
+      -
+      networkx:
+      - https://networkx.github.io/documentation/stable/
+      -
