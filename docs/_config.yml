@@ -54,6 +54,9 @@ sphinx:
         sizes: 32x32
         href: favicon.png
     intersphinx_mapping:
+      python:
+      - https://docs.python.org/3/
+      -
       pandas:
       - http://pandas.pydata.org/pandas-docs/stable/
       -
@@ -62,4 +65,10 @@ sphinx:
       -
       networkx:
       - https://networkx.github.io/documentation/stable/
+      -
+      pyarrow:
+      - https://arrow.apache.org/docs/
+      -
+      numba:
+      - https://numba.pydata.org/numba-doc/latest
       -
