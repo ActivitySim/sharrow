@@ -102,8 +102,8 @@ to have `loc` and `iloc` functionality enabled.  This only works for indexing on
 the rows, but if there's only the one dimension the complexity of `sel` and `isel`
 are not needed.
 
-.. automethod:: sharrow.Dataset.loc
-.. automethod:: sharrow.Dataset.iloc
+.. autoattribute:: sharrow.Dataset.loc
+.. autoattribute:: sharrow.Dataset.iloc
 
 Shared Memory
 ~~~~~~~~~~~~~

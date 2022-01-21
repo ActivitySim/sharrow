@@ -2,7 +2,7 @@
 # Learn more at https://jupyterbook.org/customize/config.html
 
 title: v2022.0.1
-author: <a href="https://www.camsys.com">Cambridge Systematics</a> for the <a href="https://activitysim.github.io/">ActivitySim
+author: Sharrow contributors, for the <a href="https://activitysim.github.io/">ActivitySim
   Consortium</a>
 logo: logo.png
 copyright: 2022 AMPO Research Foundation    # Copyright year to be placed in the footer
@@ -48,3 +48,7 @@ sphinx:
       repository_branch: master
       path_to_docs: docs
       extra_navbar:
+      favicons:
+      - rel: icon
+        sizes: 32x32
+        href: favicon.png
