@@ -293,71 +293,16 @@ class DataTree:
         if force_digitization:
             self.digitize_relationships(inplace=True)
 
-        if self.dim_order:
-            self.root_dataset = self.apply_dim_ordering(self.root_dataset)
-
-    def apply_dim_ordering(self, x):
-        """
-        Rename dimensions to ensure correct ordering.
-
-        Parameters
-        ----------
-        x : str or Any
-            A string giving a dimension name, or an object with a `dims`
-            attribute and a `rename` method (e.g. Dataset, DataArray)
-
-        Returns
-        -------
-        Same type as `x`
-        """
-        if self.dim_order:
-            for n, dim_name in enumerate(self.dim_order):
-                try:
-                    x_dims = x.dims
-                except AttributeError:
-                    if isinstance(x, str) and x == dim_name:
-                        return f"AAA{n}{dim_name}"
-                else:
-                    if dim_name in x_dims:
-                        x = x.rename({dim_name: f"AAA{n}{dim_name}"})
-        return x
-
-    def clean_dim_ordering(self, x):
-        """
-        Undo the `apply_dim_ordering` transformation.
-
-        Parameters
-        ----------
-        x : str or Any
-            A string giving a dimension name, or an object with a `dims`
-            attribute and a `rename` method (e.g. Dataset, DataArray)
-
-        Returns
-        -------
-        Same type as `x`
-        """
-        if self.dim_order:
-            for n, dim_name in enumerate(self.dim_order):
-                try:
-                    x_dims = x.dims
-                except AttributeError:
-                    if isinstance(x, str) and x == f"AAA{n}{dim_name}":
-                        return dim_name
-                else:
-                    if f"AAA{n}{dim_name}" in x_dims:
-                        x = x.rename({f"AAA{n}{dim_name}": dim_name})
-        return x
-
     @property
     def shape(self):
         """Tuple[int]: base shape of arrays that will be loaded when using this DataTree."""
         if self.dim_order:
             dim_order = self.dim_order
         else:
-            dim_order = sorted(self.root_dataset.dims)
-        return tuple(
-            self.root_dataset.dims[self.apply_dim_ordering(i)] for i in dim_order
-        )
+            from .flows import presorted
+
+            dim_order = presorted(self.root_dataset.dims, self.dim_order)
+        return tuple(self.root_dataset.dims[i] for i in dim_order)
 
     def __shallow_copy_extras(self):
         return dict(
@@ -473,10 +418,6 @@ class DataTree:
         else:
             r = Relationship(*args, **kwargs)
 
-        if self.dim_order:
-            if r.parent_data == self.root_node_name:
-                r.parent_name = self.apply_dim_ordering(r.parent_name)
-
         # check for existing relationships, don't duplicate
         for e in self._graph.edges:
             r2 = self._get_relationship(e)
@@ -559,7 +500,7 @@ class DataTree:
 
         if not isinstance(x, Dataset):
             x = self.DatasetType.construct(x)
-        self._graph.nodes[self.root_node_name]["dataset"] = self.apply_dim_ordering(x)
+        self._graph.nodes[self.root_node_name]["dataset"] = x
 
     def _get_relationship(self, edge):
         return Relationship(
@@ -745,7 +686,7 @@ class DataTree:
 
     def drop_dims(self, dims, inplace=False, ignore_missing_dims=True):
         """
-        Drop dimensions from all Dataset nodes.
+        Drop dimensions from root Dataset node.
 
         Parameters
         ----------
@@ -758,11 +699,13 @@ class DataTree:
 
         Returns
         -------
-        Dataset
+        DataTree
             Returns self if dropping inplace, otherwise returns a copy
             with dimensions dropped.
         """
 
+        if isinstance(dims, str):
+            dims = [dims]
         if inplace:
             obj = self
         else:
@@ -770,11 +713,10 @@ class DataTree:
         if not ignore_missing_dims:
             obj.root_dataset = obj.root_dataset.drop_dims(dims)
         else:
-            if isinstance(dims, str):
-                dims = [dims]
             for d in dims:
                 if d in obj.root_dataset.dims:
                     obj.root_dataset = obj.root_dataset.drop_dims(d)
+        self.dim_order = tuple(x for x in self.dim_order if x not in dims)
         return obj
 
     def get_indexes(
@@ -971,6 +913,7 @@ class DataTree:
             hashing_level=hashing_level,
             error_model=error_model,
             write_hash_audit=write_hash_audit,
+            dim_order=self.dim_order,
         )
 
     def _spill(self, all_name_tokens=()):
@@ -1086,7 +1029,9 @@ class DataTree:
 
         if spacename == self.root_node_name:
             root_dataset = self.root_dataset
-            root_dims = sorted(root_dataset.dims)
+            from .flows import presorted
+
+            root_dims = list(presorted(root_dataset.dims, self.dim_order))
             if isinstance(spacearray, str):
                 from_dims = root_dataset[spacearray].dims
             else:

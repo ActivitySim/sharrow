@@ -1,3 +1,4 @@
+import ast
 import base64
 import hashlib
 import importlib
@@ -87,12 +88,29 @@ def clean(s):
     return cleaned
 
 
-def presorted(sortable, presort):
+def presorted(sortable, presort=None):
+    """
+    Sort a collection, with certain items appearing first.
+
+    Parameters
+    ----------
+    sortable : Collection
+        Elements to sort.
+    presort : Iterable, optional
+        Pre-sorted elements, which are yielded first, in this order,
+        if they appear in `sortable`.
+
+    Yields
+    ------
+    Any
+        The elements of sortable.
+    """
     queue = set(sortable)
-    for j in presort:
-        if j in queue:
-            yield j
-            queue.remove(j)
+    if presort is not None:
+        for j in presort:
+            if j in queue:
+                yield j
+                queue.remove(j)
     for i in sorted(queue):
         yield i
 
@@ -550,6 +568,7 @@ class Flow:
         extra_hash_data=(),
         write_hash_audit=True,
         hashing_level=1,
+        dim_order=None,
     ):
         assert isinstance(tree, DataTree)
         tree.digitize_relationships(inplace=True)
@@ -565,6 +584,7 @@ class Flow:
             cache_dir=cache_dir,
             extra_hash_data=extra_hash_data,
             hashing_level=hashing_level,
+            dim_order=dim_order,
         )
         # return from library if available
         if flow_library is not None and self.flow_hash in flow_library:
@@ -601,6 +621,7 @@ class Flow:
         nopython=True,
         fastmath=True,
         hashing_level=1,
+        dim_order=None,
     ):
         """
         Initialize up to the flow_hash
@@ -618,6 +639,7 @@ class Flow:
         self.tree = tree
         self._raw_functions = {}
         self._secondary_flows = {}
+        self.dim_order = dim_order
 
         all_raw_names = set()
         all_name_tokens = set()
@@ -628,9 +650,10 @@ class Flow:
                 all_raw_names |= attribute_pairs.get(self.tree.root_node_name, set())
                 all_raw_names |= subscript_pairs.get(self.tree.root_node_name, set())
 
-        index_slots = {i: n for n, i in enumerate(sorted(self.tree.dims))}
+        dimensions_ordered = presorted(self.tree.dims, self.dim_order)
+        index_slots = {i: n for n, i in enumerate(dimensions_ordered)}
         self.arg_name_positions = index_slots
-        self.arg_names = sorted(self.tree.dims)
+        self.arg_names = dimensions_ordered
         self.output_name_positions = {}
 
         self._used_extra_vars = {}
@@ -681,8 +704,11 @@ class Flow:
         for k in self.tree._hash_features():
             if self._hashing_level > 0 or not k.startswith("relationship:"):
                 _flow_hash_push(k)
+        if self.dim_order:
+            _flow_hash_push("---dim-order---")
+            for k in self.dim_order:
+                _flow_hash_push(k)
         if self._hashing_level > 1:
-            _flow_hash_push("---namespace_names---")
             for k in sorted(self._namespace_names):
                 if k.startswith("__base__"):
                     continue
@@ -713,7 +739,7 @@ class Flow:
         self.flow_hash_audit = "]\n# [".join(flow_hash_audit)
 
     def _index_slots(self):
-        return {i: n for n, i in enumerate(sorted(self.tree.dims))}
+        return {i: n for n, i in enumerate(presorted(self.tree.dims, self.dim_order))}
 
     def init_sub_funcs(
         self,
@@ -725,7 +751,9 @@ class Flow:
     ):
         func_code = ""
         all_name_tokens = set()
-        index_slots = {i: n for n, i in enumerate(sorted(self.tree.dims))}
+        index_slots = {
+            i: n for n, i in enumerate(presorted(self.tree.dims, self.dim_order))
+        }
         self.arg_name_positions = index_slots
         candidate_names = self.tree.namespace_names()
 
@@ -749,7 +777,6 @@ class Flow:
                 except AttributeError:
                     digital_encodings = {}
                 meta_data[spacename] = (dim_slots, digital_encodings)
-
         else:
             for spacename, spacearrays in self.tree.subspaces.items():
                 dim_slots = {}
@@ -1070,13 +1097,19 @@ class Flow:
 
                 if self.tree.relationships_are_digitized:
 
-                    root_dims = sorted(self.tree.root_dataset.dims)
+                    root_dims = list(
+                        presorted(self.tree.root_dataset.dims, self.dim_order)
+                    )
                     n_root_dims = len(root_dims)
 
                     if n_root_dims == 1:
                         js = "j0"
                     elif n_root_dims == 2:
                         js = "j0, j1"
+                    else:
+                        raise NotImplementedError(
+                            f"n_root_dims only supported up to 2, not {n_root_dims}"
+                        )
 
                     meta_code = []
                     meta_code_dot = []
@@ -1121,98 +1154,98 @@ class Flow:
 
                     raise RuntimeError("deprecated")
 
-                    line_template = ""
-                    mnl_template = ""
-                    meta_code = []
-                    meta_code_dot = []
-                    meta_args = ", ".join(
-                        [f"_arg{n:02}" for n in self.arg_name_positions.values()]
-                    )
-                    meta_args_j = ", ".join(
-                        [f"_arg{n:02}[j]" for n in self.arg_name_positions.values()]
-                    )
-                    # meta_args_explode = textwrap.indent(
-                    #     "\n".join([f"_arg{n:02} = argarray[:,{n}]" for n in self.arg_name_positions.values()]),
-                    #     ' ' * 20,
+                    # line_template = ""
+                    # mnl_template = ""
+                    # meta_code = []
+                    # meta_code_dot = []
+                    # meta_args = ", ".join(
+                    #     [f"_arg{n:02}" for n in self.arg_name_positions.values()]
+                    # )
+                    # meta_args_j = ", ".join(
+                    #     [f"_arg{n:02}[j]" for n in self.arg_name_positions.values()]
+                    # )
+                    # # meta_args_explode = textwrap.indent(
+                    # #     "\n".join([f"_arg{n:02} = argarray[:,{n}]" for n in self.arg_name_positions.values()]),
+                    # #     ' ' * 20,
+                    # # ).lstrip()
+                    # for n, k in enumerate(self._raw_functions):
+                    #     f_name_tokens = self._raw_functions[k][2]
+                    #     f_arg_tokens = self._raw_functions[k][3]
+                    #     f_name_tokens = ", ".join(sorted(f_name_tokens))
+                    #     f_args_j = ", ".join([f"{argn}[j]" for argn in f_arg_tokens])
+                    #     if f_args_j:
+                    #         f_args_j += ", "
+                    #     meta_code.append(
+                    #         f"result[j, {n}] = {clean(k)}({f_args_j}result[j], {f_name_tokens})"
+                    #     )
+                    #     meta_code_dot.append(
+                    #         f"intermediate[{n}] = {clean(k)}({f_args_j}intermediate, {f_name_tokens})"
+                    #     )
+                    # meta_code_stack = textwrap.indent(
+                    #     "\n".join(meta_code), " " * 32
                     # ).lstrip()
-                    for n, k in enumerate(self._raw_functions):
-                        f_name_tokens = self._raw_functions[k][2]
-                        f_arg_tokens = self._raw_functions[k][3]
-                        f_name_tokens = ", ".join(sorted(f_name_tokens))
-                        f_args_j = ", ".join([f"{argn}[j]" for argn in f_arg_tokens])
-                        if f_args_j:
-                            f_args_j += ", "
-                        meta_code.append(
-                            f"result[j, {n}] = {clean(k)}({f_args_j}result[j], {f_name_tokens})"
-                        )
-                        meta_code_dot.append(
-                            f"intermediate[{n}] = {clean(k)}({f_args_j}intermediate, {f_name_tokens})"
-                        )
-                    meta_code_stack = textwrap.indent(
-                        "\n".join(meta_code), " " * 32
-                    ).lstrip()
-                    meta_code_stack_dot = textwrap.indent(
-                        "\n".join(meta_code_dot), " " * 36
-                    ).lstrip()
-                    linefeed = "\n                           "
-                    meta_template = f"""
-                    @nb.jit(cache=True, parallel=True, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath})
-                    def runner({meta_args},
-                               {"".join(f"{j}, {linefeed}" for j in self._namespace_names)}dtype=np.{dtype}, min_shape_0=0,
-                    ):
-                        out_size = max(_arg00.shape[0], min_shape_0)
-                        if out_size != _arg00.shape[0]:
-                            result = np.zeros((out_size, {len(self._raw_functions)}), dtype=dtype)
-                        else:
-                            result = np.empty((out_size, {len(self._raw_functions)}), dtype=dtype)
-                        if out_size > 1000:
-                            for j in nb.prange(out_size):
-                                {meta_code_stack}
-                        else:
-                            for j in range(out_size):
-                                {meta_code_stack}
-                        return result
-                    """
-                    if parallel:
-                        meta_template_dot = f"""
-                        @nb.jit(cache=True, parallel=True, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath})
-                        def dotter({meta_args},
-                                   {"".join(f"{j}, {linefeed}" for j in self._namespace_names)}dtype=np.{dtype}, min_shape_0=0, dotarray=None,
-                        ):
-                            out_size = max(_arg00.shape[0], min_shape_0)
-                            if dotarray is None:
-                                raise ValueError("dotarray cannot be None")
-                            assert dotarray.ndim == 2
-                            result = np.zeros((out_size, dotarray.shape[1]), dtype=dtype)
-                            if out_size > 1000:
-                                for j in nb.prange(out_size):
-                                    intermediate = np.zeros({len(self._raw_functions)}, dtype=dtype)
-                                    {meta_code_stack_dot}
-                                    np.dot(intermediate, dotarray, out=result[j,:])
-                            else:
-                                intermediate = np.zeros({len(self._raw_functions)}, dtype=dtype)
-                                for j in range(out_size):
-                                    {meta_code_stack_dot}
-                                    np.dot(intermediate, dotarray, out=result[j,:])
-                            return result
-                        """
-                    else:
-                        meta_template_dot = f"""
-                            @nb.jit(cache=True, parallel=False, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath})
-                            def dotter({meta_args},
-                                       {"".join(f"{j}, {linefeed}" for j in self._namespace_names)}dtype=np.{dtype}, min_shape_0=0, dotarray=None,
-                            ):
-                                out_size = max(_arg00.shape[0], min_shape_0)
-                                if dotarray is None:
-                                    raise ValueError("dotarray cannot be None")
-                                assert dotarray.ndim == 2
-                                result = np.zeros((out_size, dotarray.shape[1]), dtype=dtype)
-                                intermediate = np.zeros({len(self._raw_functions)}, dtype=dtype)
-                                for j in range(out_size):
-                                    {meta_code_stack_dot}
-                                    np.dot(intermediate, dotarray, out=result[j,:])
-                                return result
-                        """
+                    # meta_code_stack_dot = textwrap.indent(
+                    #     "\n".join(meta_code_dot), " " * 36
+                    # ).lstrip()
+                    # linefeed = "\n                           "
+                    # meta_template = f"""
+                    # @nb.jit(cache=True, parallel=True, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath})
+                    # def runner({meta_args},
+                    #            {"".join(f"{j}, {linefeed}" for j in self._namespace_names)}dtype=np.{dtype}, min_shape_0=0,
+                    # ):
+                    #     out_size = max(_arg00.shape[0], min_shape_0)
+                    #     if out_size != _arg00.shape[0]:
+                    #         result = np.zeros((out_size, {len(self._raw_functions)}), dtype=dtype)
+                    #     else:
+                    #         result = np.empty((out_size, {len(self._raw_functions)}), dtype=dtype)
+                    #     if out_size > 1000:
+                    #         for j in nb.prange(out_size):
+                    #             {meta_code_stack}
+                    #     else:
+                    #         for j in range(out_size):
+                    #             {meta_code_stack}
+                    #     return result
+                    # """
+                    # if parallel:
+                    #     meta_template_dot = f"""
+                    #     @nb.jit(cache=True, parallel=True, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath})
+                    #     def dotter({meta_args},
+                    #                {"".join(f"{j}, {linefeed}" for j in self._namespace_names)}dtype=np.{dtype}, min_shape_0=0, dotarray=None,
+                    #     ):
+                    #         out_size = max(_arg00.shape[0], min_shape_0)
+                    #         if dotarray is None:
+                    #             raise ValueError("dotarray cannot be None")
+                    #         assert dotarray.ndim == 2
+                    #         result = np.zeros((out_size, dotarray.shape[1]), dtype=dtype)
+                    #         if out_size > 1000:
+                    #             for j in nb.prange(out_size):
+                    #                 intermediate = np.zeros({len(self._raw_functions)}, dtype=dtype)
+                    #                 {meta_code_stack_dot}
+                    #                 np.dot(intermediate, dotarray, out=result[j,:])
+                    #         else:
+                    #             intermediate = np.zeros({len(self._raw_functions)}, dtype=dtype)
+                    #             for j in range(out_size):
+                    #                 {meta_code_stack_dot}
+                    #                 np.dot(intermediate, dotarray, out=result[j,:])
+                    #         return result
+                    #     """
+                    # else:
+                    #     meta_template_dot = f"""
+                    #         @nb.jit(cache=True, parallel=False, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath})
+                    #         def dotter({meta_args},
+                    #                    {"".join(f"{j}, {linefeed}" for j in self._namespace_names)}dtype=np.{dtype}, min_shape_0=0, dotarray=None,
+                    #         ):
+                    #             out_size = max(_arg00.shape[0], min_shape_0)
+                    #             if dotarray is None:
+                    #                 raise ValueError("dotarray cannot be None")
+                    #             assert dotarray.ndim == 2
+                    #             result = np.zeros((out_size, dotarray.shape[1]), dtype=dtype)
+                    #             intermediate = np.zeros({len(self._raw_functions)}, dtype=dtype)
+                    #             for j in range(out_size):
+                    #                 {meta_code_stack_dot}
+                    #                 np.dot(intermediate, dotarray, out=result[j,:])
+                    #             return result
+                    #     """
 
                 f_code.write(blacken(textwrap.dedent(line_template)))
                 f_code.write("\n\n")
@@ -1351,8 +1384,9 @@ class Flow:
                     kwargs["random_draws"] = mnl
                     kwargs["pick_counted"] = pick_counted
                 tree_root_dims = rg.root_dataset.dims
-                argshape = [tree_root_dims[i] for i in sorted(tree_root_dims)]
-                # logger.debug(f"load_raw calling runner with {assembled_args.shape=}, {assembled_inputs.shape=}")
+                argshape = [
+                    tree_root_dims[i] for i in presorted(tree_root_dims, self.dim_order)
+                ]
                 return runner_(np.asarray(argshape), *arguments, **kwargs)
             except nb.TypingError as err:
                 _raw_functions = getattr(self, "_raw_functions", {})
@@ -1468,14 +1502,15 @@ class Flow:
             if dot is None:
                 result = xr.DataArray(
                     result,
-                    dims=sorted(source.root_dataset.dims) + ["expressions"],
+                    dims=list(presorted(source.root_dataset.dims, self.dim_order))
+                    + ["expressions"],
                     coords=source.root_dataset.coords,
                 )
                 result.coords["expressions"] = self.function_names
             elif dot_collapse and mnl_draws is None:
                 result = xr.DataArray(
                     np.squeeze(result, -1),
-                    dims=sorted(source.root_dataset.dims),
+                    dims=list(presorted(source.root_dataset.dims, self.dim_order)),
                     coords=source.root_dataset.coords,
                 )
             elif mnl_collapse:
@@ -1485,18 +1520,23 @@ class Flow:
                     plus_dims = []
                 result = xr.DataArray(
                     np.squeeze(result, -1),
-                    dims=sorted(source.root_dataset.dims)[:-1] + plus_dims,
+                    dims=list(presorted(source.root_dataset.dims, self.dim_order))[:-1]
+                    + plus_dims,
                     coords=source.root_dataset.coords,
                 )
                 result_p = xr.DataArray(
                     np.squeeze(result_p, -1),
-                    dims=sorted(source.root_dataset.dims)[:-1] + plus_dims,
+                    dims=list(presorted(source.root_dataset.dims, self.dim_order))[:-1]
+                    + plus_dims,
                     coords=source.root_dataset.coords,
                 )
                 if pick_count is not None:
                     pick_count = xr.DataArray(
                         np.squeeze(pick_count, -1),
-                        dims=sorted(source.root_dataset.dims)[:-1] + plus_dims,
+                        dims=list(presorted(source.root_dataset.dims, self.dim_order))[
+                            :-1
+                        ]
+                        + plus_dims,
                         coords=source.root_dataset.coords,
                     )
                 for plus_dim in plus_dims:
@@ -1509,7 +1549,8 @@ class Flow:
                 plus_dims = dot.dims[1:]
                 result = xr.DataArray(
                     result,
-                    dims=sorted(source.root_dataset.dims) + list(plus_dims),
+                    dims=list(presorted(source.root_dataset.dims, self.dim_order))
+                    + list(plus_dims),
                     coords=source.root_dataset.coords,
                 )
                 for plus_dim in plus_dims:
@@ -1520,10 +1561,10 @@ class Flow:
                 plus_dims = dot_.dims[1:]
                 result = xr.DataArray(
                     result,
-                    dims=sorted(source.root_dataset.dims) + list(plus_dims),
+                    dims=list(presorted(source.root_dataset.dims, self.dim_order))
+                    + list(plus_dims),
                     coords=source.root_dataset.coords,
                 )
-            result = source.clean_dim_ordering(result)
         elif dot_collapse and mnl_draws is None:
             result = np.squeeze(result, -1)
         elif mnl_collapse:
