@@ -83,8 +83,8 @@ def create_shared_memory_array(key, size):
                 create=True,
                 size=size,
             )
-        except FileExistsError as err:
-            raise FileExistsError(f"sharrow_shared_memory_array:{key} ")
+        except FileExistsError:
+            raise FileExistsError(f"sharrow_shared_memory_array:{key}")
         __GLOBAL_MEMORY_ARRAYS[key] = result
         return result
 
@@ -174,7 +174,7 @@ def read_shared_list(key):
         logger.info(f"read_shared_list:{key}")
         try:
             sl = ShareableList(name=_hexhash(f"sharrow__list__{key}"))
-        except FileNotFoundError as err:
+        except FileNotFoundError:
             raise FileNotFoundError(f"sharrow_shared_memory_list:{key}")
         else:
             return sl

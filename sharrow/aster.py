@@ -320,7 +320,7 @@ class RewriteForNumba(ast.NodeTransformer):
             elif node2 is None:
                 try:
                     unparsed = ast.unparse(node1)
-                except:
+                except:  # noqa: E722
                     unparsed = f"{type(node1)} not unparseable"
                 logger.log(
                     5,
@@ -329,11 +329,11 @@ class RewriteForNumba(ast.NodeTransformer):
             else:
                 try:
                     unparsed1 = ast.unparse(node1)
-                except:
+                except:  # noqa: E722
                     unparsed1 = f"{type(node1).__name__} not unparseable"
                 try:
                     unparsed2 = ast.unparse(node2)
-                except:
+                except:  # noqa: E722
                     unparsed2 = f"{type(node2).__name__} not unparseable"
                 logger.log(
                     5,
@@ -341,7 +341,7 @@ class RewriteForNumba(ast.NodeTransformer):
                 )
 
     def generic_visit(self, node):
-        self.log_event(f"generic_visit", node)
+        self.log_event("generic_visit", node)
         return super().generic_visit(node)
 
     def _replacement(
@@ -465,7 +465,7 @@ class RewriteForNumba(ast.NodeTransformer):
                 )
                 self.log_event(f"visit_Subscript(Raw {node.slice.value})", node, result)
                 return result
-        self.log_event(f"visit_Subscript(no change)", node)
+        self.log_event("visit_Subscript(no change)", node)
         return node
 
     def visit_Attribute(self, node):
@@ -487,13 +487,13 @@ class RewriteForNumba(ast.NodeTransformer):
                 attr=node.attr,
                 ctx=node.ctx,
             )
-            self.log_event(f"visit_Attribute(no change)", node, result)
+            self.log_event("visit_Attribute(no change)", node, result)
             return result
 
     def visit_Name(self, node):
         attr = node.id
         if attr not in self.spacevars:
-            self.log_event(f"visit_Name(no change)", node)
+            self.log_event("visit_Name(no change)", node)
             return node
         if self.spacename == "":
             result = ast.Subscript(
@@ -533,14 +533,14 @@ class RewriteForNumba(ast.NodeTransformer):
                 op=node.op,
                 right=bool_wrap(right),
             )
-            self.log_event(f"visit_BinOp(Replacement)", node, result)
+            self.log_event("visit_BinOp(Replacement)", node, result)
         else:
             result = ast.BinOp(
                 left=left,
                 op=node.op,
                 right=right,
             )
-            self.log_event(f"visit_BinOp(no change)", node, result)
+            self.log_event("visit_BinOp(no change)", node, result)
         return result
 
     def visit_Call(self, node):
@@ -659,7 +659,7 @@ class RewriteForNumba(ast.NodeTransformer):
                 args=args,
                 keywords=kwds,
             )
-        self.log_event(f"visit_Call", node, result)
+        self.log_event("visit_Call", node, result)
         return result
 
 

@@ -121,7 +121,7 @@ def digitize_by_dictionary(arr, bitwidth=8):
     bin_edges = (bins[1:] - bins[:-1]) / 2 + bins[:-1]
     try:
         arr_data = arr.data
-    except:
+    except AttributeError:
         pass
     else:
         if isinstance(arr_data, da.Array):

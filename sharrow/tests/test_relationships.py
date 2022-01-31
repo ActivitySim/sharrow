@@ -1,14 +1,8 @@
-import os
-import pathlib
-
 import numpy as np
 import pandas as pd
 from numpy.random import SeedSequence, default_rng
-from pytest import approx, fixture, raises
+from pytest import raises
 
-# import pyarrow as pa
-# import pyarrow.feather as pf
-# import larch
 import sharrow
 from sharrow import Dataset, DataTree, example_data
 

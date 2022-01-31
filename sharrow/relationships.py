@@ -1,17 +1,12 @@
 import ast
-import warnings
-from collections.abc import Sequence
+import logging
 
 import networkx as nx
 import numpy as np
 import pandas as pd
-import pyarrow as pa
 import xarray as xr
 
-from . import __version__
-from .dataset import Dataset, Table
-from .maths import clip, hard_sigmoid, piece, transpose_leading
-from .shared_memory import *
+from .dataset import Dataset
 
 logger = logging.getLogger("sharrow")
 
@@ -344,7 +339,7 @@ class DataTree:
                     continue
                 h.append(f"dataset:{k}")
         else:
-            h.append(f"datasets:none")
+            h.append("datasets:none")
         if len(self._graph.edges):
             for e in self._graph.edges:
                 r = f"relationship:{self._get_relationship(e)!r}".replace(
@@ -514,7 +509,7 @@ class DataTree:
             return Dataset({k: self[k] for k in item})
         try:
             return self._getitem(item)
-        except KeyError as err:
+        except KeyError:
             return self._getitem(item, include_blank_dims=True)
 
     def finditem(self, item, maybe_in=None):
@@ -545,8 +540,14 @@ class DataTree:
             if current_node in examined:
                 continue
             dataset = self._graph.nodes[current_node].get("dataset", {})
-            by_name = item in dataset and not only_dims
-            by_dims = not by_name and include_blank_dims and (item in dataset.dims)
+            try:
+                by_name = item in dataset and not only_dims
+            except TypeError:
+                by_name = False
+            try:
+                by_dims = not by_name and include_blank_dims and (item in dataset.dims)
+            except TypeError:
+                by_dims = False
             if (by_name or by_dims) and (item_in is None or item_in == current_node):
                 if just_node_name:
                     return current_node
@@ -626,6 +627,28 @@ class DataTree:
                         queue.append(next_up)
 
         raise KeyError(item)
+
+    def get_expr(self, expression):
+        """
+        Access or evaluate an expression.
+
+        Parameters
+        ----------
+        expression : str
+
+        Returns
+        -------
+        DataArray
+        """
+        try:
+            result = self[expression]
+        except (KeyError, IndexError):
+            result = (
+                self.setup_flow({expression: expression})
+                .load_dataarray()
+                .isel(expressions=0)
+            )
+        return result
 
     @property
     def subspaces(self):
@@ -716,7 +739,7 @@ class DataTree:
             for d in dims:
                 if d in obj.root_dataset.dims:
                     obj.root_dataset = obj.root_dataset.drop_dims(d)
-        self.dim_order = tuple(x for x in self.dim_order if x not in dims)
+        obj.dim_order = tuple(x for x in self.dim_order if x not in dims)
         return obj
 
     def get_indexes(
@@ -1059,7 +1082,7 @@ class DataTree:
                 upside_ast = self._arg_tokenizer(parent_data, parent_name)
                 try:
                     upside = ", ".join(ast.unparse(t) for t in upside_ast)
-                except:
+                except:  # noqa: E722
                     for t in upside_ast:
                         print(f"t:{t}")
                     raise

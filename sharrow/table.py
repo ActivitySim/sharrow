@@ -167,7 +167,7 @@ class Table:
         if isinstance(expression, str):
             try:
                 num = float(expression.split("#")[0].strip())
-            except:
+            except:  # noqa: E722
                 pass
             else:
                 if not inplace:
@@ -267,8 +267,8 @@ class Table:
         else:
             stopper = 1e99
         n = 0
-        rowfile = lambda n: os.path.join(path, f"block.{n:03d}.rows")
-        colfile = lambda n: os.path.join(path, f"block.{n:03d}.cols")
+        rowfile = lambda n: os.path.join(path, f"block.{n:03d}.rows")  # noqa: E731
+        colfile = lambda n: os.path.join(path, f"block.{n:03d}.cols")  # noqa: E731
         builder = None
         look = True
         print(f"{stopper=}")
@@ -324,7 +324,7 @@ class Table:
                     os.path.join(path, blob_file),
                 )
                 f.write(f"  rows: {len(self)}\n")
-                f.write(f"  cols:\n")
+                f.write("  cols:\n")
                 for ci in self.column_names:
                     f.write(f"    - {ci}\n")
             else:
@@ -349,7 +349,7 @@ class Table:
                         col_block,
                         os.path.join(path, blob_file),
                     )
-                    f.write(f"  cols:\n")
+                    f.write("  cols:\n")
                     for ci in c2:
                         f.write(f"    - {ci}\n")
 

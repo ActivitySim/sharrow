@@ -39,6 +39,28 @@ To run the test suite after installing sharrow, install (via pypi or conda) pyte
 and run `pytest` in the root directory of the sharrow repository.
 
 
+## Code Formatting
+
+Sharrow uses several tools to ensure a consistent code format throughout the project:
+
+- [Black](https://black.readthedocs.io/en/stable/) for standardized code formatting,
+- [Flake8](http://flake8.pycqa.org/en/latest/) for general code quality,
+- [isort](https://github.com/timothycrosley/isort) for standardized order in imports, and
+- [nbstripout](https://github.com/kynan/nbstripout) to ensure notebooks are committed
+  to the GitHub repository without bulky outputs included.
+
+We highly recommend that you setup [pre-commit hooks](https://pre-commit.com/)
+to automatically run all the above tools every time you make a git commit. This
+can be done by running:
+
+```shell
+pre-commit install
+```
+
+from the root of the sharrow repository. You can skip the pre-commit checks
+with `git commit --no-verify`.
+
+
 ## Building the Documentation
 
 The docs for sharrow are built using [Jupyter Book](https://jupyterbook.org).

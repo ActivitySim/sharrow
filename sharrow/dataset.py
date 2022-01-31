@@ -1,33 +1,27 @@
 import base64
 import hashlib
-import importlib
-import inspect
-import io
 import logging
-import os
+import pickle
 import re
-import sys
-import textwrap
-import time
-import warnings
-from collections.abc import Sequence
-from typing import Any, Dict, Hashable, Mapping, Sequence
+from typing import Any, Hashable, Mapping, Sequence
 
 import dask
 import dask.array as da
-import numba as nb
 import numpy as np
 import pandas as pd
 import pyarrow as pa
 import xarray as xr
 
-import sharrow
-
-from . import __version__
-from .aster import expression_for_numba, extract_all_name_tokens, extract_names_2
-from .filewrite import rewrite
-from .maths import clip, hard_sigmoid, piece, transpose_leading
-from .shared_memory import *
+from .aster import extract_all_name_tokens
+from .shared_memory import (
+    create_shared_list,
+    create_shared_memory_array,
+    delete_shared_memory_files,
+    get_shared_list_nbytes,
+    open_shared_memory_array,
+    read_shared_list,
+    release_shared_memory,
+)
 from .table import Table
 
 logger = logging.getLogger("sharrow")
@@ -78,7 +72,7 @@ def clean(s):
     """
     if not isinstance(s, str):
         s = f"{type(s)}-{s}"
-    cleaned = re.sub("\W|^(?=\d)", "_", s)
+    cleaned = re.sub(r"\W|^(?=\d)", "_", s)
     if cleaned != s or len(cleaned) > 120:
         # digest size 15 creates a 24 character base32 string
         h = base64.b32encode(
@@ -387,112 +381,6 @@ class Dataset(xr.Dataset):
                 for index_name, index in indexes.items()
             }
         return cls.from_dict(d)
-
-    @classmethod
-    def from_omx_3d(
-        cls,
-        omx,
-        index_names=("otaz", "dtaz", "time_period"),
-        indexes=None,
-        *,
-        time_periods=None,
-        time_period_sep="__",
-    ):
-        """
-        Create a Dataset from an OMX file with an implicit third dimension.
-
-        Parameters
-        ----------
-        omx : openmatrix.File or larch.OMX
-            An OMX-format file, opened for reading.
-        index_names : tuple, default ("otaz", "dtaz", "time_period")
-            Should be a tuple of length 3, giving the names of the three
-            dimensions.  The first two names are the native dimensions from
-            the open matrix file, the last is the name of the implicit
-            dimension that is created by parsing array names.
-        indexes : str, optional
-            The name of a 'lookup' in the OMX file, which will be used to
-            populate the coordinates for the two native dimensions.  Or,
-            specify "one-based" or "zero-based" to assume sequential and
-            consecutive numbering starting with 1 or 0 respectively.
-        time_periods : list-like, required keyword argument
-            A list of index values from which the third dimension is constructed
-            for all variables with a third dimension.
-        time_period_sep : str, default "__" (double underscore)
-            The presence of this separator within the name of any table in the
-            OMX file indicates that table is to be considered a page in a
-            three dimensional variable.  The portion of the name preceding the
-            first instance of this separator is the name of the resulting
-            variable, and the portion of the name after the first instance of
-            this separator is the label of the position for this page, which
-            should appear in `time_periods`.
-
-        Returns
-        -------
-        Dataset
-        """
-        # handle both larch.OMX and openmatrix.open_file versions
-        if "larch" in type(omx).__module__:
-            omx_data = omx.data
-            omx_shape = omx.shape
-            omx_lookup = omx.lookup
-        else:
-            omx_data = omx.root["data"]
-            omx_shape = omx.shape()
-            omx_lookup = omx.root["lookup"]
-
-        data_names = list(omx_data._v_children.keys())
-        n1, n2 = omx_shape
-        if indexes is None:
-            # default reads mapping if only one lookup is included, otherwise one-based
-            if len(omx_lookup._v_children) == 1:
-                ranger = None
-            else:
-                ranger = one_based
-        elif indexes == "one-based":
-            ranger = one_based
-        elif indexes == "zero-based":
-            ranger = zero_based
-        elif indexes in set(omx_lookup._v_children):
-            ranger = None
-        else:
-            raise NotImplementedError(
-                "only one-based, zero-based, and named indexes are implemented"
-            )
-        if ranger is not None:
-            r1 = ranger(n1)
-            r2 = ranger(n2)
-        else:
-            r1 = r2 = pd.Index(omx_lookup[indexes])
-
-        if time_periods is None:
-            raise ValueError("must give time periods explicitly")
-
-        ds = cls()
-        for k in data_names:
-            if time_period_sep in k:
-                base_k, time_k = k.split(time_period_sep, 1)
-                if base_k not in ds:
-                    ds[base_k] = xr.DataArray(
-                        np.float32(0),
-                        dims=index_names,
-                        coords={
-                            index_names[0]: r1,
-                            index_names[1]: r2,
-                            index_names[2]: time_periods,
-                        },
-                    )
-                ds[base_k].loc[:, :, time_k] = omx_data[k][:]
-            else:
-                ds[k] = xr.DataArray(
-                    omx_data[k][:],
-                    dims=index_names[:2],
-                    coords={
-                        index_names[0]: r1,
-                        index_names[1]: r2,
-                    },
-                )
-        return ds
 
     @classmethod
     def from_amx(
@@ -934,7 +822,7 @@ class Dataset(xr.Dataset):
 
         Returns
         -------
-        sharrow.dataset.Dataset
+        Dataset
         """
         result = self.copy()
         result.match_names = names
@@ -976,8 +864,6 @@ class Dataset(xr.Dataset):
                     "Dataset does not contain the dimensions: %s" % missing_dims
                 )
         return self.drop_dims([i for i in all_dims if i not in keep_dims])
-
-    ### Pro
 
     @property
     def loc(self):
@@ -1119,8 +1005,6 @@ class Dataset(xr.Dataset):
         self._shared_memory_key_ = key
         self._shared_memory_owned_ = False
         self._shared_memory_objs_ = []
-        import pickle
-        from multiprocessing.shared_memory import ShareableList, SharedMemory
 
         wrappers = []
         sizes = []
@@ -1243,7 +1127,7 @@ class Dataset(xr.Dataset):
             shape = t.pop("shape")
             dtype = t.pop("dtype")
             name = t.pop("name")
-            coord = t.pop("coord", False)
+            coord = t.pop("coord", False)  # noqa: F841
             position = t.pop("position")
             nbytes = t.pop("nbytes")
             mem_arr = np.ndarray(
@@ -1286,10 +1170,6 @@ class Dataset(xr.Dataset):
         -------
         int
         """
-        import pickle
-        from multiprocessing.shared_memory import ShareableList, SharedMemory
-
-        _shared_memory_key_ = key
         memsize = 0
         try:
             n = get_shared_list_nbytes(key)
@@ -1316,6 +1196,44 @@ class Dataset(xr.Dataset):
         time_period_sep="__",
         max_float_precision=32,
     ):
+        """
+        Create a Dataset from an OMX file with an implicit third dimension.
+
+        Parameters
+        ----------
+        omx : openmatrix.File or larch.OMX
+            An OMX-format file, opened for reading.
+        index_names : tuple, default ("otaz", "dtaz", "time_period")
+            Should be a tuple of length 3, giving the names of the three
+            dimensions.  The first two names are the native dimensions from
+            the open matrix file, the last is the name of the implicit
+            dimension that is created by parsing array names.
+        indexes : str, optional
+            The name of a 'lookup' in the OMX file, which will be used to
+            populate the coordinates for the two native dimensions.  Or,
+            specify "one-based" or "zero-based" to assume sequential and
+            consecutive numbering starting with 1 or 0 respectively.
+        time_periods : list-like, required keyword argument
+            A list of index values from which the third dimension is constructed
+            for all variables with a third dimension.
+        time_period_sep : str, default "__" (double underscore)
+            The presence of this separator within the name of any table in the
+            OMX file indicates that table is to be considered a page in a
+            three dimensional variable.  The portion of the name preceding the
+            first instance of this separator is the name of the resulting
+            variable, and the portion of the name after the first instance of
+            this separator is the label of the position for this page, which
+            should appear in `time_periods`.
+        max_float_precision : int, default 32
+            When loading, reduce all floats in the OMX file to this level of
+            precision, generally to save memory if they were stored as double
+            precision but that level of detail is unneeded in the present
+            application.
+
+        Returns
+        -------
+        Dataset
+        """
         if not isinstance(omx, (list, tuple)):
             omx = [omx]
 
@@ -1446,10 +1364,7 @@ class Dataset(xr.Dataset):
         """
         result = {}
         for k in self.variables:
-            try:
-                k_attrs = self._variables[k].attrs
-            except:
-                k_attrs = self[k].attrs
+            k_attrs = self._variables[k].attrs
             if "digital_encoding" in k_attrs:
                 result[k] = k_attrs["digital_encoding"]
         return result

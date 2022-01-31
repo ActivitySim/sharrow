@@ -1,4 +1,3 @@
-import ast
 import base64
 import hashlib
 import importlib
@@ -11,23 +10,16 @@ import sys
 import textwrap
 import time
 import warnings
-from collections.abc import Sequence
 
-import dask
-import dask.array as da
 import numba as nb
 import numpy as np
 import pandas as pd
-import pyarrow as pa
 import xarray as xr
 
 from . import __version__
 from .aster import expression_for_numba, extract_all_name_tokens, extract_names_2
-from .dataset import Dataset
 from .filewrite import blacken, rewrite
-from .maths import clip, hard_sigmoid, piece, transpose_leading
 from .relationships import DataTree
-from .shared_memory import *
 from .table import Table
 
 logger = logging.getLogger("sharrow")
@@ -78,7 +70,7 @@ def clean(s):
     """
     if not isinstance(s, str):
         s = f"{type(s)}-{s}"
-    cleaned = re.sub("\W|^(?=\d)", "_", s)
+    cleaned = re.sub(r"\W|^(?=\d)", "_", s)
     if cleaned != s or len(cleaned) > 120:
         # digest size 15 creates a 24 character base32 string
         h = base64.b32encode(
@@ -719,7 +711,7 @@ class Flow:
                         digital_encoding = self.tree.subspaces[parts[1]][
                             "__".join(parts[2:])
                         ].attrs["digital_encoding"]
-                    except (AttributeError, KeyError) as err:
+                    except (AttributeError, KeyError):
                         pass
                     else:
                         if digital_encoding:
@@ -764,13 +756,12 @@ class Flow:
                 dim_slots = {}
                 for k1 in spacearrays.keys():
                     try:
-                        toks = self.tree._arg_tokenizer(
-                            spacename, spacearray=spacearrays._variables[k1]
-                        )
-                    except:
-                        toks = self.tree._arg_tokenizer(
-                            spacename, spacearray=spacearrays[k1]
-                        )
+                        spacearrays_vars = spacearrays._variables
+                    except AttributeError:
+                        spacearrays_vars = spacearrays
+                    toks = self.tree._arg_tokenizer(
+                        spacename, spacearray=spacearrays_vars[k1]
+                    )
                     dim_slots[k1] = toks
                 try:
                     digital_encodings = spacearrays.digital_encodings
@@ -783,7 +774,7 @@ class Flow:
                 for k1 in spacearrays.keys():
                     try:
                         _dims = spacearrays._variables[k1].dims
-                    except:
+                    except AttributeError:
                         _dims = spacearrays[k1].dims
                     dim_slots[k1] = [index_slots[z] for z in _dims]
                 try:
@@ -937,7 +928,7 @@ class Flow:
                         digital_encoding = self.tree.subspaces[parts[1]][
                             "__".join(parts[2:])
                         ].attrs["digital_encoding"]
-                    except (AttributeError, KeyError) as err:
+                    except (AttributeError, KeyError):
                         pass
                     else:
                         if digital_encoding:
@@ -955,7 +946,7 @@ class Flow:
         os.makedirs(self.cache_dir, exist_ok=True)
 
         # if an existing __init__ file matches the hash, just use it
-        init_file = os.path.join(self.cache_dir, self.name, f"__init__.py")
+        init_file = os.path.join(self.cache_dir, self.name, "__init__.py")
         if os.path.isfile(init_file):
             with open(init_file, "rt") as f:
                 content = f.read()
@@ -1014,7 +1005,7 @@ class Flow:
                         )
                         dependencies.add("import pickle")
                 with io.StringIO() as x_code:
-                    x_code.write(f"\n")
+                    x_code.write("\n")
                     x_code.write(buffer.getvalue())
                     func_code += "\n\n# extra_vars\n"
                     func_code += x_code.getvalue()
@@ -1032,7 +1023,7 @@ class Flow:
                         f"__encoding_dict{x_name} = pickle.loads({repr(pickle.dumps(x_dict))})\n"
                     )
                 with io.StringIO() as x_code:
-                    x_code.write(f"\n")
+                    x_code.write("\n")
                     x_code.write(buffer.getvalue())
                     func_code += "\n\n# encoding dictionaries\n"
                     func_code += x_code.getvalue()
@@ -1040,7 +1031,7 @@ class Flow:
             # write the master module for this flow
             os.makedirs(os.path.join(self.cache_dir, self.name), exist_ok=True)
             with rewrite(
-                os.path.join(self.cache_dir, self.name, f"__init__.py"), "wt"
+                os.path.join(self.cache_dir, self.name, "__init__.py"), "wt"
             ) as f_code:
 
                 f_code.write(
@@ -1152,100 +1143,7 @@ class Flow:
 
                 else:
 
-                    raise RuntimeError("deprecated")
-
-                    # line_template = ""
-                    # mnl_template = ""
-                    # meta_code = []
-                    # meta_code_dot = []
-                    # meta_args = ", ".join(
-                    #     [f"_arg{n:02}" for n in self.arg_name_positions.values()]
-                    # )
-                    # meta_args_j = ", ".join(
-                    #     [f"_arg{n:02}[j]" for n in self.arg_name_positions.values()]
-                    # )
-                    # # meta_args_explode = textwrap.indent(
-                    # #     "\n".join([f"_arg{n:02} = argarray[:,{n}]" for n in self.arg_name_positions.values()]),
-                    # #     ' ' * 20,
-                    # # ).lstrip()
-                    # for n, k in enumerate(self._raw_functions):
-                    #     f_name_tokens = self._raw_functions[k][2]
-                    #     f_arg_tokens = self._raw_functions[k][3]
-                    #     f_name_tokens = ", ".join(sorted(f_name_tokens))
-                    #     f_args_j = ", ".join([f"{argn}[j]" for argn in f_arg_tokens])
-                    #     if f_args_j:
-                    #         f_args_j += ", "
-                    #     meta_code.append(
-                    #         f"result[j, {n}] = {clean(k)}({f_args_j}result[j], {f_name_tokens})"
-                    #     )
-                    #     meta_code_dot.append(
-                    #         f"intermediate[{n}] = {clean(k)}({f_args_j}intermediate, {f_name_tokens})"
-                    #     )
-                    # meta_code_stack = textwrap.indent(
-                    #     "\n".join(meta_code), " " * 32
-                    # ).lstrip()
-                    # meta_code_stack_dot = textwrap.indent(
-                    #     "\n".join(meta_code_dot), " " * 36
-                    # ).lstrip()
-                    # linefeed = "\n                           "
-                    # meta_template = f"""
-                    # @nb.jit(cache=True, parallel=True, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath})
-                    # def runner({meta_args},
-                    #            {"".join(f"{j}, {linefeed}" for j in self._namespace_names)}dtype=np.{dtype}, min_shape_0=0,
-                    # ):
-                    #     out_size = max(_arg00.shape[0], min_shape_0)
-                    #     if out_size != _arg00.shape[0]:
-                    #         result = np.zeros((out_size, {len(self._raw_functions)}), dtype=dtype)
-                    #     else:
-                    #         result = np.empty((out_size, {len(self._raw_functions)}), dtype=dtype)
-                    #     if out_size > 1000:
-                    #         for j in nb.prange(out_size):
-                    #             {meta_code_stack}
-                    #     else:
-                    #         for j in range(out_size):
-                    #             {meta_code_stack}
-                    #     return result
-                    # """
-                    # if parallel:
-                    #     meta_template_dot = f"""
-                    #     @nb.jit(cache=True, parallel=True, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath})
-                    #     def dotter({meta_args},
-                    #                {"".join(f"{j}, {linefeed}" for j in self._namespace_names)}dtype=np.{dtype}, min_shape_0=0, dotarray=None,
-                    #     ):
-                    #         out_size = max(_arg00.shape[0], min_shape_0)
-                    #         if dotarray is None:
-                    #             raise ValueError("dotarray cannot be None")
-                    #         assert dotarray.ndim == 2
-                    #         result = np.zeros((out_size, dotarray.shape[1]), dtype=dtype)
-                    #         if out_size > 1000:
-                    #             for j in nb.prange(out_size):
-                    #                 intermediate = np.zeros({len(self._raw_functions)}, dtype=dtype)
-                    #                 {meta_code_stack_dot}
-                    #                 np.dot(intermediate, dotarray, out=result[j,:])
-                    #         else:
-                    #             intermediate = np.zeros({len(self._raw_functions)}, dtype=dtype)
-                    #             for j in range(out_size):
-                    #                 {meta_code_stack_dot}
-                    #                 np.dot(intermediate, dotarray, out=result[j,:])
-                    #         return result
-                    #     """
-                    # else:
-                    #     meta_template_dot = f"""
-                    #         @nb.jit(cache=True, parallel=False, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath})
-                    #         def dotter({meta_args},
-                    #                    {"".join(f"{j}, {linefeed}" for j in self._namespace_names)}dtype=np.{dtype}, min_shape_0=0, dotarray=None,
-                    #         ):
-                    #             out_size = max(_arg00.shape[0], min_shape_0)
-                    #             if dotarray is None:
-                    #                 raise ValueError("dotarray cannot be None")
-                    #             assert dotarray.ndim == 2
-                    #             result = np.zeros((out_size, dotarray.shape[1]), dtype=dtype)
-                    #             intermediate = np.zeros({len(self._raw_functions)}, dtype=dtype)
-                    #             for j in range(out_size):
-                    #                 {meta_code_stack_dot}
-                    #                 np.dot(intermediate, dotarray, out=result[j,:])
-                    #             return result
-                    #     """
+                    raise RuntimeError("digitization is now required")
 
                 f_code.write(blacken(textwrap.dedent(line_template)))
                 f_code.write("\n\n")
@@ -1486,7 +1384,6 @@ class Flow:
                     mnl=mnl_draws,
                     pick_counted=pick_counted,
                 )
-            indexes_dict = None
         else:
             raise RuntimeError("please digitize")
         if as_dataframe:
@@ -1781,7 +1678,7 @@ class Flow:
         from pygments.formatters.html import HtmlFormatter
         from pygments.lexers.python import PythonLexer
 
-        codefile = os.path.join(self.cache_dir, self.name, f"__init__.py")
+        codefile = os.path.join(self.cache_dir, self.name, "__init__.py")
         with open(codefile, "rt") as f_code:
             code = f_code.read()
         pretty = highlight(code, PythonLexer(), HtmlFormatter(linenos=linenos))
