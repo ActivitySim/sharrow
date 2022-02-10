@@ -1422,26 +1422,24 @@ class Flow:
                 {k: result[:, n] for n, k in enumerate(self._raw_functions.keys())}
             )
         elif as_dataarray:
+            use_dims = list(
+                presorted(source.root_dataset.dims, self.dim_order, self.dim_exclude)
+            )
             if dot is None:
                 result = xr.DataArray(
                     result,
-                    dims=list(
-                        presorted(
-                            source.root_dataset.dims, self.dim_order, self.dim_exclude
-                        )
-                    )
-                    + ["expressions"],
-                    coords=source.root_dataset.coords,
+                    dims=use_dims + ["expressions"],
+                    coords={
+                        k: v
+                        for k, v in source.root_dataset.coords.items()
+                        if k in use_dims
+                    },
                 )
                 result.coords["expressions"] = self.function_names
             elif dot_collapse and mnl_draws is None:
                 result = xr.DataArray(
                     np.squeeze(result, -1),
-                    dims=list(
-                        presorted(
-                            source.root_dataset.dims, self.dim_order, self.dim_exclude
-                        )
-                    ),
+                    dims=use_dims,
                     coords=source.root_dataset.coords,
                 )
             elif mnl_collapse:
@@ -1451,35 +1449,18 @@ class Flow:
                     plus_dims = []
                 result = xr.DataArray(
                     np.squeeze(result, -1),
-                    dims=list(
-                        presorted(
-                            source.root_dataset.dims, self.dim_order, self.dim_exclude
-                        )
-                    )[:-1]
-                    + plus_dims,
+                    dims=use_dims[:-1] + plus_dims,
                     coords=source.root_dataset.coords,
                 )
                 result_p = xr.DataArray(
                     np.squeeze(result_p, -1),
-                    dims=list(
-                        presorted(
-                            source.root_dataset.dims, self.dim_order, self.dim_exclude
-                        )
-                    )[:-1]
-                    + plus_dims,
+                    dims=use_dims[:-1] + plus_dims,
                     coords=source.root_dataset.coords,
                 )
                 if pick_count is not None:
                     pick_count = xr.DataArray(
                         np.squeeze(pick_count, -1),
-                        dims=list(
-                            presorted(
-                                source.root_dataset.dims,
-                                self.dim_order,
-                                self.dim_exclude,
-                            )
-                        )[:-1]
-                        + plus_dims,
+                        dims=use_dims[:-1] + plus_dims,
                         coords=source.root_dataset.coords,
                     )
                 for plus_dim in plus_dims:
@@ -1492,12 +1473,7 @@ class Flow:
                 plus_dims = dot.dims[1:]
                 result = xr.DataArray(
                     result,
-                    dims=list(
-                        presorted(
-                            source.root_dataset.dims, self.dim_order, self.dim_exclude
-                        )
-                    )
-                    + list(plus_dims),
+                    dims=use_dims + list(plus_dims),
                     coords=source.root_dataset.coords,
                 )
                 for plus_dim in plus_dims:
@@ -1508,12 +1484,7 @@ class Flow:
                 plus_dims = dot_.dims[1:]
                 result = xr.DataArray(
                     result,
-                    dims=list(
-                        presorted(
-                            source.root_dataset.dims, self.dim_order, self.dim_exclude
-                        )
-                    )
-                    + list(plus_dims),
+                    dims=use_dims + list(plus_dims),
                     coords=source.root_dataset.coords,
                 )
         elif dot_collapse and mnl_draws is None:
