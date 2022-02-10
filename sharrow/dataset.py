@@ -839,18 +839,13 @@ class Dataset(xr.Dataset):
         errors : {"raise", "ignore"}, optional
             If 'raise' (default), raises a ValueError error if any of the
             dimensions passed are not in the dataset. If 'ignore', any given
-            labels that are in the dataset are dropped and no error is raised.
+            dimensions that are in the dataset are dropped and no error is raised.
 
         Returns
         -------
         obj : Dataset
             The dataset without the given dimensions (or any variables
             containing those dimensions)
-        errors : {"raise", "ignore"}, optional
-            If 'raise' (default), raises a ValueError error if
-            any of the dimensions passed are not
-            in the dataset. If 'ignore', any given dimensions that are in the
-            dataset are dropped and no error is raised.
         """
         if isinstance(keep_dims, str):
             keep_dims = {keep_dims}

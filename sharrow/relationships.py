@@ -270,6 +270,7 @@ class DataTree:
         self._root_node_name = None
         self.force_digitization = force_digitization
         self.dim_order = dim_order
+        self.dim_exclude = set()
 
         # defined init
         if root_node_name is not None and root_node_name in kwargs:
@@ -297,7 +298,9 @@ class DataTree:
             from .flows import presorted
 
             dim_order = presorted(self.root_dataset.dims, self.dim_order)
-        return tuple(self.root_dataset.dims[i] for i in dim_order)
+        return tuple(
+            self.root_dataset.dims[i] for i in dim_order if i not in self.dim_exclude
+        )
 
     def __shallow_copy_extras(self):
         return dict(
@@ -348,6 +351,7 @@ class DataTree:
                 h.append(r)
         else:
             h.append("relationships:none")
+        h.append(f"dim_order:{self.dim_order}")
         return h
 
     @property
@@ -628,7 +632,7 @@ class DataTree:
 
         raise KeyError(item)
 
-    def get_expr(self, expression):
+    def get_expr(self, expression, engine="sharrow"):
         """
         Access or evaluate an expression.
 
@@ -643,11 +647,18 @@ class DataTree:
         try:
             result = self[expression]
         except (KeyError, IndexError):
-            result = (
-                self.setup_flow({expression: expression})
-                .load_dataarray()
-                .isel(expressions=0)
-            )
+            if engine == "sharrow":
+                result = (
+                    self.setup_flow({expression: expression})
+                    .load_dataarray()
+                    .isel(expressions=0)
+                )
+            elif engine == "numexpr":
+                from xarray import DataArray
+
+                result = DataArray(
+                    pd.eval(expression, resolvers=[self], engine="numexpr"),
+                )
         return result
 
     @property
@@ -856,6 +867,7 @@ class DataTree:
         extra_hash_data=(),
         write_hash_audit=True,
         hashing_level=1,
+        dim_exclude=None,
     ):
         """
         Set up a new Flow for analysis using the structure of this DataTree.
@@ -913,6 +925,8 @@ class DataTree:
             names used in expressions and digital encodings to the flow hash,
             which prevents conflicts but requires more pre-computation to generate
             the hash.
+        dim_exclude : Collection[str], optional
+            Exclude these root dataset dimensions from this flow.
 
         Returns
         -------
@@ -937,6 +951,7 @@ class DataTree:
             error_model=error_model,
             write_hash_audit=write_hash_audit,
             dim_order=self.dim_order,
+            dim_exclude=dim_exclude,
         )
 
     def _spill(self, all_name_tokens=()):
@@ -1048,13 +1063,13 @@ class DataTree:
                 return False
         return True
 
-    def _arg_tokenizer(self, spacename, spacearray):
+    def _arg_tokenizer(self, spacename, spacearray, exclude_dims=None):
 
         if spacename == self.root_node_name:
             root_dataset = self.root_dataset
             from .flows import presorted
 
-            root_dims = list(presorted(root_dataset.dims, self.dim_order))
+            root_dims = list(presorted(root_dataset.dims, self.dim_order, exclude_dims))
             if isinstance(spacearray, str):
                 from_dims = root_dataset[spacearray].dims
             else:
@@ -1079,7 +1094,9 @@ class DataTree:
                 parent_name = self._graph.edges[e]["parent_name"]
                 parent_data = e[0]
 
-                upside_ast = self._arg_tokenizer(parent_data, parent_name)
+                upside_ast = self._arg_tokenizer(
+                    parent_data, parent_name, exclude_dims=exclude_dims
+                )
                 try:
                     upside = ", ".join(ast.unparse(t) for t in upside_ast)
                 except:  # noqa: E722

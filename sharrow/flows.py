@@ -80,7 +80,7 @@ def clean(s):
     return cleaned
 
 
-def presorted(sortable, presort=None):
+def presorted(sortable, presort=None, exclude=None):
     """
     Sort a collection, with certain items appearing first.
 
@@ -101,10 +101,12 @@ def presorted(sortable, presort=None):
     if presort is not None:
         for j in presort:
             if j in queue:
-                yield j
+                if exclude is None or j not in exclude:
+                    yield j
                 queue.remove(j)
     for i in sorted(queue):
-        yield i
+        if exclude is None or i not in exclude:
+            yield i
 
 
 def _flip_flop_def(v):
@@ -561,6 +563,7 @@ class Flow:
         write_hash_audit=True,
         hashing_level=1,
         dim_order=None,
+        dim_exclude=None,
     ):
         assert isinstance(tree, DataTree)
         tree.digitize_relationships(inplace=True)
@@ -577,6 +580,7 @@ class Flow:
             extra_hash_data=extra_hash_data,
             hashing_level=hashing_level,
             dim_order=dim_order,
+            dim_exclude=dim_exclude,
         )
         # return from library if available
         if flow_library is not None and self.flow_hash in flow_library:
@@ -614,6 +618,7 @@ class Flow:
         fastmath=True,
         hashing_level=1,
         dim_order=None,
+        dim_exclude=None,
     ):
         """
         Initialize up to the flow_hash
@@ -632,6 +637,7 @@ class Flow:
         self._raw_functions = {}
         self._secondary_flows = {}
         self.dim_order = dim_order
+        self.dim_exclude = dim_exclude
 
         all_raw_names = set()
         all_name_tokens = set()
@@ -642,7 +648,7 @@ class Flow:
                 all_raw_names |= attribute_pairs.get(self.tree.root_node_name, set())
                 all_raw_names |= subscript_pairs.get(self.tree.root_node_name, set())
 
-        dimensions_ordered = presorted(self.tree.dims, self.dim_order)
+        dimensions_ordered = presorted(self.tree.dims, self.dim_order, self.dim_exclude)
         index_slots = {i: n for n, i in enumerate(dimensions_ordered)}
         self.arg_name_positions = index_slots
         self.arg_names = dimensions_ordered
@@ -731,7 +737,12 @@ class Flow:
         self.flow_hash_audit = "]\n# [".join(flow_hash_audit)
 
     def _index_slots(self):
-        return {i: n for n, i in enumerate(presorted(self.tree.dims, self.dim_order))}
+        return {
+            i: n
+            for n, i in enumerate(
+                presorted(self.tree.dims, self.dim_order, self.dim_exclude)
+            )
+        }
 
     def init_sub_funcs(
         self,
@@ -744,7 +755,10 @@ class Flow:
         func_code = ""
         all_name_tokens = set()
         index_slots = {
-            i: n for n, i in enumerate(presorted(self.tree.dims, self.dim_order))
+            i: n
+            for n, i in enumerate(
+                presorted(self.tree.dims, self.dim_order, self.dim_exclude)
+            )
         }
         self.arg_name_positions = index_slots
         candidate_names = self.tree.namespace_names()
@@ -760,7 +774,9 @@ class Flow:
                     except AttributeError:
                         spacearrays_vars = spacearrays
                     toks = self.tree._arg_tokenizer(
-                        spacename, spacearray=spacearrays_vars[k1]
+                        spacename,
+                        spacearray=spacearrays_vars[k1],
+                        exclude_dims=self.dim_exclude,
                     )
                     dim_slots[k1] = toks
                 try:
@@ -776,6 +792,9 @@ class Flow:
                         _dims = spacearrays._variables[k1].dims
                     except AttributeError:
                         _dims = spacearrays[k1].dims
+
+                    print(f"  YO {_dims=}")
+
                     dim_slots[k1] = [index_slots[z] for z in _dims]
                 try:
                     digital_encodings = spacearrays.digital_encodings
@@ -1089,7 +1108,11 @@ class Flow:
                 if self.tree.relationships_are_digitized:
 
                     root_dims = list(
-                        presorted(self.tree.root_dataset.dims, self.dim_order)
+                        presorted(
+                            self.tree.root_dataset.dims,
+                            self.dim_order,
+                            self.dim_exclude,
+                        )
                     )
                     n_root_dims = len(root_dims)
 
@@ -1128,6 +1151,8 @@ class Flow:
                         f"{nn}," for nn in self._namespace_names
                     )
                     linefeed = "\n                           "
+                    if not meta_code_stack_dot:
+                        meta_code_stack_dot = "pass"
                     if n_root_dims == 1:
                         meta_template = IRUNNER_1D_TEMPLATE.format(**locals())
                         meta_template_dot = IDOTTER_1D_TEMPLATE.format(**locals())
@@ -1283,7 +1308,8 @@ class Flow:
                     kwargs["pick_counted"] = pick_counted
                 tree_root_dims = rg.root_dataset.dims
                 argshape = [
-                    tree_root_dims[i] for i in presorted(tree_root_dims, self.dim_order)
+                    tree_root_dims[i]
+                    for i in presorted(tree_root_dims, self.dim_order, self.dim_exclude)
                 ]
                 return runner_(np.asarray(argshape), *arguments, **kwargs)
             except nb.TypingError as err:
@@ -1399,7 +1425,11 @@ class Flow:
             if dot is None:
                 result = xr.DataArray(
                     result,
-                    dims=list(presorted(source.root_dataset.dims, self.dim_order))
+                    dims=list(
+                        presorted(
+                            source.root_dataset.dims, self.dim_order, self.dim_exclude
+                        )
+                    )
                     + ["expressions"],
                     coords=source.root_dataset.coords,
                 )
@@ -1407,7 +1437,11 @@ class Flow:
             elif dot_collapse and mnl_draws is None:
                 result = xr.DataArray(
                     np.squeeze(result, -1),
-                    dims=list(presorted(source.root_dataset.dims, self.dim_order)),
+                    dims=list(
+                        presorted(
+                            source.root_dataset.dims, self.dim_order, self.dim_exclude
+                        )
+                    ),
                     coords=source.root_dataset.coords,
                 )
             elif mnl_collapse:
@@ -1417,22 +1451,34 @@ class Flow:
                     plus_dims = []
                 result = xr.DataArray(
                     np.squeeze(result, -1),
-                    dims=list(presorted(source.root_dataset.dims, self.dim_order))[:-1]
+                    dims=list(
+                        presorted(
+                            source.root_dataset.dims, self.dim_order, self.dim_exclude
+                        )
+                    )[:-1]
                     + plus_dims,
                     coords=source.root_dataset.coords,
                 )
                 result_p = xr.DataArray(
                     np.squeeze(result_p, -1),
-                    dims=list(presorted(source.root_dataset.dims, self.dim_order))[:-1]
+                    dims=list(
+                        presorted(
+                            source.root_dataset.dims, self.dim_order, self.dim_exclude
+                        )
+                    )[:-1]
                     + plus_dims,
                     coords=source.root_dataset.coords,
                 )
                 if pick_count is not None:
                     pick_count = xr.DataArray(
                         np.squeeze(pick_count, -1),
-                        dims=list(presorted(source.root_dataset.dims, self.dim_order))[
-                            :-1
-                        ]
+                        dims=list(
+                            presorted(
+                                source.root_dataset.dims,
+                                self.dim_order,
+                                self.dim_exclude,
+                            )
+                        )[:-1]
                         + plus_dims,
                         coords=source.root_dataset.coords,
                     )
@@ -1446,7 +1492,11 @@ class Flow:
                 plus_dims = dot.dims[1:]
                 result = xr.DataArray(
                     result,
-                    dims=list(presorted(source.root_dataset.dims, self.dim_order))
+                    dims=list(
+                        presorted(
+                            source.root_dataset.dims, self.dim_order, self.dim_exclude
+                        )
+                    )
                     + list(plus_dims),
                     coords=source.root_dataset.coords,
                 )
@@ -1458,7 +1508,11 @@ class Flow:
                 plus_dims = dot_.dims[1:]
                 result = xr.DataArray(
                     result,
-                    dims=list(presorted(source.root_dataset.dims, self.dim_order))
+                    dims=list(
+                        presorted(
+                            source.root_dataset.dims, self.dim_order, self.dim_exclude
+                        )
+                    )
                     + list(plus_dims),
                     coords=source.root_dataset.coords,
                 )
