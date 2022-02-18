@@ -1,0 +1,15 @@
+name: testing-env
+channels:
+  - conda-forge
+  - nodefaults
+dependencies:
+  - pip
+  - numpy>=1.19
+  - pandas>=1.2
+  - pyarrow
+  - xarray
+  - numba>=0.53
+  - numexpr
+  - filelock
+  - flake8
+  - pytest
