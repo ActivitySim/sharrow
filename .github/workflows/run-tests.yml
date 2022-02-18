@@ -8,21 +8,15 @@ on:
 
 jobs:
   build:
-
+    name: ${{ matrix.os }} py${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        include:
-          - os: ubuntu-latest
-            shellcmd: "bash -l {0}"
-            python-version: 3.9
-          - os: windows-latest
-            shellcmd: "cmd /C call {0}"
-            python-version: 3.9
-          - os: macos-latest
-            shellcmd: "bash -l {0}"
-            python-version: 3.9
-
+        os: ["ubuntu-latest", "macos-latest", "windows-latest"]
+        python-version: ["3.9"]
+    defaults:
+      run:
+        shell: bash -l {0}
     steps:
       - uses: actions/checkout@v2
       - name: Set up Python ${{ matrix.python-version }}
@@ -39,19 +33,20 @@ jobs:
           python-version: ${{ matrix.python-version }}
           activate-environment: testing-env
           auto-activate-base: false
-      - name: Conda checkup
-        shell: ${{ matrix.shellcmd }}
+          auto-update-conda: false
+      - name: Install sharrow
         run: |
-          conda info
+          python -m pip install --no-deps -e .
+      - name: Conda checkup
+        run: |
+          conda info -a
           conda list
       - name: Lint with flake8
-        shell: ${{ matrix.shellcmd }}
         run: |
           # stop the build if there are Python syntax errors or undefined names
           flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
           # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
           flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
       - name: Test with pytest
-        shell: ${{ matrix.shellcmd }}
         run: |
-          pytest
+          python -m pytest

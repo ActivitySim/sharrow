@@ -14,5 +14,3 @@ dependencies:
   - flake8
   - pytest
   - nbmake
-  - pip:
-      - -e .
