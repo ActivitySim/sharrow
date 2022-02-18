@@ -92,6 +92,7 @@ jobs:
         conda list
     - name: Build the docs
       run: |
+        python docs/_script/run_all.py
         jupyter-book build ./docs
     - name: Push to GitHub Pages
       uses: peaceiris/actions-gh-pages@v3.5.9
