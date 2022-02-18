@@ -9,10 +9,18 @@ on:
 jobs:
   build:
 
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
+        os: [macos-latest, windows-latest, ubuntu-latest]
         python-version: [3.9]
+        include:
+          - os: ubuntu-latest
+            shell-cmd: bash -l {0}
+          - os: windows-latest
+            shell-cmd: cmd /C call {0}
+          - os: macos-latest
+            shell-cmd: bash -l {0}
 
     steps:
       - uses: actions/checkout@v2
@@ -31,18 +39,18 @@ jobs:
           activate-environment: testing-env
           auto-activate-base: false
       - name: Conda checkup
-        shell: bash -l {0}
+        shell: ${{ matrix.shell-cmd }}
         run: |
           conda info
           conda list
       - name: Lint with flake8
-        shell: bash -l {0}
+        shell: ${{ matrix.shell-cmd }}
         run: |
           # stop the build if there are Python syntax errors or undefined names
           flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
           # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
           flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
       - name: Test with pytest
-        shell: bash -l {0}
+        shell: ${{ matrix.shell-cmd }}
         run: |
           pytest
