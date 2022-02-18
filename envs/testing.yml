@@ -8,6 +8,7 @@ dependencies:
   - pandas>=1.2
   - pyarrow
   - xarray
+  - dask
   - numba>=0.53
   - numexpr
   - filelock
