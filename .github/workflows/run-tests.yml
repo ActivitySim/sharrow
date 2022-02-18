@@ -51,6 +51,14 @@ jobs:
         run: |
           python -m pytest
 
+  status-printer:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+    - name: Echo ref
+      run: |
+        echo ${{ github.ref }}
+
   deploy-docs:
     needs: test
     # only on pushes tagged with v...
