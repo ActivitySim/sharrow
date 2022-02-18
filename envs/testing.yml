@@ -13,3 +13,4 @@ dependencies:
   - filelock
   - flake8
   - pytest
+  - nbmake
