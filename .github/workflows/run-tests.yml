@@ -14,13 +14,13 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            shellcmd: bash -l {0}
+            shellcmd: "bash -l {0}"
             python-version: 3.9
           - os: windows-latest
-            shellcmd: cmd /C call {0}
+            shellcmd: "cmd /C call {0}"
             python-version: 3.9
           - os: macos-latest
-            shellcmd: bash -l {0}
+            shellcmd: "bash -l {0}"
             python-version: 3.9
 
     steps:
