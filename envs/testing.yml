@@ -14,5 +14,10 @@ dependencies:
   - numexpr
   - filelock
   - flake8
+  # required for testing
   - pytest
+  - pytest-cov
+  - pytest-regressions
+  - pytest-xdist
   - nbmake
+  - openmatrix
