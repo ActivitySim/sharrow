@@ -9,6 +9,7 @@ dependencies:
   - pyarrow
   - xarray
   - dask
+  - networkx
   - numba>=0.53
   - numexpr
   - filelock
