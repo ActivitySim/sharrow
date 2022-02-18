@@ -55,19 +55,14 @@ jobs:
         run: |
           python -m pytest
 
-  status-printer:
-    needs: test
-    runs-on: ubuntu-latest
-    steps:
-    - name: Echo ref
-      run: |
-        echo ${{ github.ref }}
-
   deploy-docs:
     needs: test
     # only on pushes tagged with v...
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -l {0}
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python 3.9
