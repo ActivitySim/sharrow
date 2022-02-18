@@ -130,3 +130,6 @@ dmypy.json
 _version.py
 .idea
 .vscode
+
+# Sharrow
+!sharrow/example_data/skims.zarr/**
