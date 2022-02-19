@@ -1,0 +1,1624 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>API Reference &#8212; v1.0.5</title>
+    
+  <link href="_static/css/theme.css" rel="stylesheet">
+  <link href="_static/css/index.ff1ffe594081f20da1ef19478df9384b.css" rel="stylesheet">
+
+    
+  <link rel="stylesheet"
+    href="_static/vendor/fontawesome/5.13.0/css/all.min.css">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="_static/vendor/fontawesome/5.13.0/webfonts/fa-solid-900.woff2">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="_static/vendor/fontawesome/5.13.0/webfonts/fa-brands-400.woff2">
+
+    
+      
+
+    
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/sphinx-book-theme.css?digest=c3fdc42140077d1ad13ad2f1588a4309" />
+    <link rel="stylesheet" type="text/css" href="_static/togglebutton.css" />
+    <link rel="stylesheet" type="text/css" href="_static/copybutton.css" />
+    <link rel="stylesheet" type="text/css" href="_static/mystnb.css" />
+    <link rel="stylesheet" type="text/css" href="_static/sphinx-thebe.css" />
+    <link rel="stylesheet" type="text/css" href="_static/sharrow-docs.css" />
+    <link rel="stylesheet" type="text/css" href="_static/panels-main.c949a650a448cc0ae9fd3441c0e17fb0.css" />
+    <link rel="stylesheet" type="text/css" href="_static/panels-variables.06eb56fa6e07937060861dad626602ad.css" />
+    
+  <link rel="preload" as="script" href="_static/js/index.be7d3bbb2ef33a8344ce.js">
+
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/togglebutton.js"></script>
+    <script src="_static/clipboard.min.js"></script>
+    <script src="_static/copybutton.js"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown, .tag_hide_input div.cell_input, .tag_hide-input div.cell_input, .tag_hide_output div.cell_output, .tag_hide-output div.cell_output, .tag_hide_cell.cell, .tag_hide-cell.cell';</script>
+    <script src="_static/sphinx-book-theme.d59cb220de22ca1c485ebbdc042f0030.js"></script>
+    <script async="async" src="https://unpkg.com/thebe@0.5.1/lib/index.js"></script>
+    <script>
+        const thebe_selector = ".thebe"
+        const thebe_selector_input = "pre"
+        const thebe_selector_output = ".output"
+    </script>
+    <script async="async" src="_static/sphinx-thebe.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Data Encoding" href="walkthrough/encoding.html" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="docsearch:language" content="None">
+    
+      
+      <link rel="icon" sizes="32x32" href="_static/favicon.png">
+      
+    
+
+    <!-- Google Analytics -->
+    
+  </head>
+  <body data-spy="scroll" data-target="#bd-toc-nav" data-offset="80">
+    
+    <div class="container-fluid" id="banner"></div>
+
+    
+
+    <div class="container-xl">
+      <div class="row">
+          
+<div class="col-12 col-md-3 bd-sidebar site-navigation show" id="site-navigation">
+    
+        <div class="navbar-brand-box">
+    <a class="navbar-brand text-wrap" href="index.html">
+      
+        <!-- `logo` is deprecated in Sphinx 4.0, so remove this when we stop supporting 3 -->
+        
+      
+      
+      <img src="_static/logo.png" class="logo" alt="logo">
+      
+      
+      <h1 class="site-logo" id="site-title">v1.0.5</h1>
+      
+    </a>
+</div><form class="bd-search d-flex align-items-center" action="search.html" method="get">
+  <i class="icon fas fa-search"></i>
+  <input type="search" class="form-control" name="q" id="search-input" placeholder="Search these docs..." aria-label="Search these docs..." autocomplete="off" >
+</form><nav class="bd-links" id="bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item active">
+        <ul class="current nav bd-sidenav">
+ <li class="toctree-l1">
+  <a class="reference internal" href="intro.html">
+   Getting Started
+  </a>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="walkthrough/index.html">
+   User Guide
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" type="checkbox"/>
+  <label for="toctree-checkbox-1">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="walkthrough/one-dim.html">
+     Sharrow Basics
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="walkthrough/two-dim.html">
+     Multi-Dimensional Analysis
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="walkthrough/encoding.html">
+     Data Encoding
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toctree-l1 current active">
+  <a class="current reference internal" href="#">
+   API Reference
+  </a>
+ </li>
+</ul>
+
+    </div>
+</nav> <!-- To handle the deprecated key -->
+
+</div>
+
+
+          
+
+
+          
+<main class="col py-md-3 pl-md-4 bd-content overflow-auto" role="main">
+    
+    <div class="topbar container-xl fixed-top">
+    <div class="topbar-contents row">
+        <div class="col-12 col-md-3 bd-topbar-whitespace site-navigation show"></div>
+        <div class="col pl-md-4 topbar-main">
+            
+            <button id="navbar-toggler" class="navbar-toggler ml-0" type="button" data-toggle="collapse"
+                data-toggle="tooltip" data-placement="bottom" data-target=".site-navigation" aria-controls="navbar-menu"
+                aria-expanded="true" aria-label="Toggle navigation" aria-controls="site-navigation"
+                title="Toggle navigation" data-toggle="tooltip" data-placement="left">
+                <i class="fas fa-bars"></i>
+                <i class="fas fa-arrow-left"></i>
+                <i class="fas fa-arrow-up"></i>
+            </button>
+            
+            
+<div class="dropdown-buttons-trigger">
+    <button id="dropdown-buttons-trigger" class="btn btn-secondary topbarbtn" aria-label="Download this page"><i
+            class="fas fa-download"></i></button>
+
+    <div class="dropdown-buttons">
+        <!-- ipynb file if we had a myst markdown file -->
+        
+        <!-- Download raw file -->
+        <a class="dropdown-buttons" href="_sources/api.rst"><button type="button"
+                class="btn btn-secondary topbarbtn" title="Download source file" data-toggle="tooltip"
+                data-placement="left">.rst</button></a>
+        <!-- Download PDF via print -->
+        <button type="button" id="download-print" class="btn btn-secondary topbarbtn" title="Print to PDF"
+                onclick="printPdf(this)" data-toggle="tooltip" data-placement="left">.pdf</button>
+    </div>
+</div>
+
+            <!-- Source interaction buttons -->
+
+<div class="dropdown-buttons-trigger">
+    <button id="dropdown-buttons-trigger" class="btn btn-secondary topbarbtn"
+        aria-label="Connect with source repository"><i class="fab fa-github"></i></button>
+    <div class="dropdown-buttons sourcebuttons">
+        <a class="repository-button"
+            href="https://github.com/ActivitySim/sharrow"><button type="button" class="btn btn-secondary topbarbtn"
+                data-toggle="tooltip" data-placement="left" title="Source repository"><i
+                    class="fab fa-github"></i>repository</button></a>
+        <a class="issues-button"
+            href="https://github.com/ActivitySim/sharrow/issues/new?title=Issue%20on%20page%20%2Fapi.html&body=Your%20issue%20content%20here."><button
+                type="button" class="btn btn-secondary topbarbtn" data-toggle="tooltip" data-placement="left"
+                title="Open an issue"><i class="fas fa-lightbulb"></i>open issue</button></a>
+        
+    </div>
+</div>
+
+            <!-- Full screen (wrap in <a> to have style consistency -->
+
+<a class="full-screen-button"><button type="button" class="btn btn-secondary topbarbtn" data-toggle="tooltip"
+        data-placement="bottom" onclick="toggleFullScreen()" aria-label="Fullscreen mode"
+        title="Fullscreen mode"><i
+            class="fas fa-expand"></i></button></a>
+
+            <!-- Launch buttons -->
+
+        </div>
+
+        <!-- Table of contents -->
+        <div class="d-none d-md-block col-md-2 bd-toc show noprint">
+            
+            <div class="tocsection onthispage pt-5 pb-3">
+                <i class="fas fa-list"></i> Contents
+            </div>
+            <nav id="bd-toc-nav" aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#datatree">
+   DataTree
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#attributes">
+     Attributes
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#setup-flow">
+     Setup Flow
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#datasets">
+     Datasets
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#digitization">
+     Digitization
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#relationship">
+   Relationship
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#id1">
+     Attributes
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#flow">
+   Flow
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#load">
+     Load
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#dot">
+     Dot
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#logit">
+     Logit
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#convenience">
+     Convenience
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#dataset">
+   Dataset
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#constructors">
+     Constructors
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#editing">
+     Editing
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#indexing">
+     Indexing
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#id2">
+     Convenience
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#shared-memory">
+     Shared Memory
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#digital-encoding">
+     Digital Encoding
+    </a>
+   </li>
+  </ul>
+ </li>
+</ul>
+
+            </nav>
+        </div>
+    </div>
+</div>
+    <div id="main-content" class="row">
+        <div class="col-12 col-md-9 pl-md-3 pr-md-0">
+            <!-- Table of contents that is only displayed when printing the page -->
+            <div id="jb-print-docs-body" class="onlyprint">
+                <h1>API Reference</h1>
+                <!-- Table of contents -->
+                <div id="print-main-content">
+                    <div id="jb-print-toc">
+                        
+                        <div>
+                            <h2> Contents </h2>
+                        </div>
+                        <nav aria-label="Page">
+                            <ul class="visible nav section-nav flex-column">
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#datatree">
+   DataTree
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#attributes">
+     Attributes
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#setup-flow">
+     Setup Flow
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#datasets">
+     Datasets
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#digitization">
+     Digitization
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#relationship">
+   Relationship
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#id1">
+     Attributes
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#flow">
+   Flow
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#load">
+     Load
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#dot">
+     Dot
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#logit">
+     Logit
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#convenience">
+     Convenience
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#dataset">
+   Dataset
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#constructors">
+     Constructors
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#editing">
+     Editing
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#indexing">
+     Indexing
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#id2">
+     Convenience
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#shared-memory">
+     Shared Memory
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#digital-encoding">
+     Digital Encoding
+    </a>
+   </li>
+  </ul>
+ </li>
+</ul>
+
+                        </nav>
+                    </div>
+                </div>
+            </div>
+            
+              <div>
+                
+  <div class="section" id="api-reference">
+<h1>API Reference<a class="headerlink" href="#api-reference" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="datatree">
+<h2>DataTree<a class="headerlink" href="#datatree" title="Permalink to this headline">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="sharrow.DataTree">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">DataTree</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">graph</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">root_node_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extra_funcs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">()</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extra_vars</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cache_dir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">relationships</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">()</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">force_digitization</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dim_order</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sharrow/relationships.html#DataTree"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#sharrow.DataTree" title="Permalink to this definition">¶</a></dt>
+<dd><p>A tree representing linked datasets, from which data can flow.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>graph</strong> (<a class="reference external" href="https://networkx.org/documentation/stable/reference/classes/multidigraph.html#networkx.MultiDiGraph" title="(in NetworkX v2.6.2)"><em>networkx.MultiDiGraph</em></a>) – </p></li>
+<li><p><strong>root_node_name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a>) – The name of the node at the root of the tree.</p></li>
+<li><p><strong>extra_funcs</strong> (<em>Tuple</em><em>[</em><em>Callable</em><em>]</em>) – Additional functions that can be called by Flow objects created
+using this DataTree.  These functions should have defined <cite>__name__</cite>
+attributes, so they can be called in expressions.</p></li>
+<li><p><strong>extra_vars</strong> (<em>Mapping</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a><em>,</em><em>Any</em><em>]</em><em>, </em><em>optional</em>) – Additional named constants that can be referenced by expressions in
+Flow objects created using this DataTree.</p></li>
+<li><p><strong>cache_dir</strong> (<em>Path-like</em><em>, </em><em>optional</em>) – The default directory where Flow objects are created.</p></li>
+<li><p><strong>relationships</strong> (<em>Iterable</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a><em> or </em><a class="reference internal" href="#sharrow.Relationship" title="sharrow.Relationship"><em>Relationship</em></a><em>]</em>) – The relationship definitions used to define this tree.  All dataset
+nodes named in these relationships should also be included as
+keyword arguments for this constructor.</p></li>
+<li><p><strong>force_digitization</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a><em>, </em><em>default False</em>) – Whether to automatically digitize all relationships (converting them
+from label-based to position-based).  Digitization is required to
+evaluate Flows, but doing so automatically on construction may be
+inefficient.</p></li>
+<li><p><strong>dim_order</strong> (<em>Tuple</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a><em>]</em><em>, </em><em>optional</em>) – The order of dimensions to use in Flow outputs.  Generally only needed
+if there are multiple dimensions in the root dataset.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<div class="section" id="attributes">
+<h3>Attributes<a class="headerlink" href="#attributes" title="Permalink to this headline">¶</a></h3>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="sharrow.DataTree.root_node_name">
+<span class="sig-prename descclassname"><span class="pre">DataTree.</span></span><span class="sig-name descname"><span class="pre">root_node_name</span></span><a class="headerlink" href="#sharrow.DataTree.root_node_name" title="Permalink to this definition">¶</a></dt>
+<dd><p>The root node for this data tree, which is only ever a parent.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="sharrow.DataTree.subspaces">
+<span class="sig-prename descclassname"><span class="pre">DataTree.</span></span><span class="sig-name descname"><span class="pre">subspaces</span></span><a class="headerlink" href="#sharrow.DataTree.subspaces" title="Permalink to this definition">¶</a></dt>
+<dd><p>Direct access to node Dataset objects by name.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>Mapping[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)">str</a>,<a class="reference internal" href="#sharrow.Dataset" title="sharrow.Dataset">Dataset</a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="sharrow.DataTree.relationships_are_digitized">
+<span class="sig-prename descclassname"><span class="pre">DataTree.</span></span><span class="sig-name descname"><span class="pre">relationships_are_digitized</span></span><a class="headerlink" href="#sharrow.DataTree.relationships_are_digitized" title="Permalink to this definition">¶</a></dt>
+<dd><p>Whether all relationships are digital (by position).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)">bool</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="setup-flow">
+<h3>Setup Flow<a class="headerlink" href="#setup-flow" title="Permalink to this headline">¶</a></h3>
+<dl class="py method">
+<dt class="sig sig-object py" id="sharrow.DataTree.setup_flow">
+<span class="sig-prename descclassname"><span class="pre">DataTree.</span></span><span class="sig-name descname"><span class="pre">setup_flow</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">definition_spec</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cache_dir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dtype</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'float32'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">boundscheck</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">error_model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'numpy'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nopython</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fastmath</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parallel</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">readme</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">flow_library</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extra_hash_data</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">()</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">write_hash_audit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hashing_level</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dim_exclude</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sharrow/relationships.html#DataTree.setup_flow"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#sharrow.DataTree.setup_flow" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set up a new Flow for analysis using the structure of this DataTree.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>definition_spec</strong> (<em>Dict</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a><em>,</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a><em>]</em>) – Gives the names and expressions that define the variables to
+create in this new <cite>Flow</cite>.</p></li>
+<li><p><strong>cache_dir</strong> (<em>Path-like</em><em>, </em><em>optional</em>) – A location to write out generated python and numba code. If not
+provided, a unique temporary directory is created.</p></li>
+<li><p><strong>name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a><em>, </em><em>optional</em>) – The name of this Flow used for writing out cached files. If not
+provided, a unique name is generated. If <cite>cache_dir</cite> is given,
+be sure to avoid name conflicts with other flow’s in the same
+directory.</p></li>
+<li><p><strong>dtype</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a><em>, </em><em>default &quot;float32&quot;</em>) – The name of the numpy dtype that will be used for the output.</p></li>
+<li><p><strong>boundscheck</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a><em>, </em><em>default False</em>) – If True, boundscheck enables bounds checking for array indices, and
+out of bounds accesses will raise IndexError. The default is to not
+do bounds checking, which is faster but can produce garbage results
+or segfaults if there are problems, so try turning this on for
+debugging if you are getting unexplained errors or crashes.</p></li>
+<li><p><strong>error_model</strong> (<em>{'numpy'</em><em>, </em><em>'python'}</em><em>, </em><em>default 'numpy'</em>) – The error_model option controls the divide-by-zero behavior. Setting
+it to ‘python’ causes divide-by-zero to raise exception like
+CPython. Setting it to ‘numpy’ causes divide-by-zero to set the
+result to +/-inf or nan.</p></li>
+<li><p><strong>nopython</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a><em>, </em><em>default True</em>) – Compile using numba’s <cite>nopython</cite> mode.  Provided for debugging only,
+as there’s little point in turning this off for production code, as
+all the speed benefits of sharrow will be lost.</p></li>
+<li><p><strong>fastmath</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a><em>, </em><em>default True</em>) – If true, fastmath enables the use of “fast” floating point transforms,
+which can improve performance but can result in tiny distortions in
+results.  See numba docs for details.</p></li>
+<li><p><strong>parallel</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a><em>, </em><em>default True</em>) – Enable or disable parallel computation for certain functions.</p></li>
+<li><p><strong>readme</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a><em>, </em><em>optional</em>) – A string to inject as a comment at the top of the flow Python file.</p></li>
+<li><p><strong>flow_library</strong> (<em>Mapping</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a><em>,</em><a class="reference internal" href="#sharrow.Flow" title="sharrow.Flow"><em>Flow</em></a><em>]</em><em>, </em><em>optional</em>) – An in-memory cache of precompiled Flow objects.  Using this can result
+in performance improvements when repeatedly using the same definitions.</p></li>
+<li><p><strong>extra_hash_data</strong> (<em>Tuple</em><em>[</em><em>Hashable</em><em>]</em><em>, </em><em>optional</em>) – Additional data used for generating the flow hash.  Useful to prevent
+conflicts when using a flow_library with multiple similar flows.</p></li>
+<li><p><strong>write_hash_audit</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a><em>, </em><em>default True</em>) – Writes a hash audit log into a comment in the flow Python file, for
+debugging purposes.</p></li>
+<li><p><strong>hashing_level</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><em>int</em></a><em>, </em><em>default 1</em>) – Level of detail to write into flow hashes.  Increase detail to avoid
+hash conflicts for similar flows.  Level 2 adds information about
+names used in expressions and digital encodings to the flow hash,
+which prevents conflicts but requires more pre-computation to generate
+the hash.</p></li>
+<li><p><strong>dim_exclude</strong> (<em>Collection</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a><em>]</em><em>, </em><em>optional</em>) – Exclude these root dataset dimensions from this flow.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#sharrow.Flow" title="sharrow.Flow">Flow</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="datasets">
+<h3>Datasets<a class="headerlink" href="#datasets" title="Permalink to this headline">¶</a></h3>
+<dl class="py method">
+<dt class="sig sig-object py" id="sharrow.DataTree.add_dataset">
+<span class="sig-prename descclassname"><span class="pre">DataTree.</span></span><span class="sig-name descname"><span class="pre">add_dataset</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">relationships</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">()</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">as_root</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sharrow/relationships.html#DataTree.add_dataset"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#sharrow.DataTree.add_dataset" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a new Dataset node to this DataTree.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a>) – </p></li>
+<li><p><strong>dataset</strong> (<a class="reference internal" href="#sharrow.Dataset" title="sharrow.Dataset"><em>Dataset</em></a><em> or </em><a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v1.4.1)"><em>pandas.DataFrame</em></a>) – Will be coerced into a <cite>Dataset</cite> object if it is not already
+in that format, using a no-copy process if possible.</p></li>
+<li><p><strong>relationships</strong> (<em>Tuple</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a><em> or </em><a class="reference internal" href="#sharrow.Relationship" title="sharrow.Relationship"><em>Relationship</em></a><em>]</em>) – Also add these relationships.</p></li>
+<li><p><strong>as_root</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a><em>, </em><em>default False</em>) – Set this new node as the root of the tree, displacing any existing
+root.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="sharrow.DataTree.add_relationship">
+<span class="sig-prename descclassname"><span class="pre">DataTree.</span></span><span class="sig-name descname"><span class="pre">add_relationship</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sharrow/relationships.html#DataTree.add_relationship"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#sharrow.DataTree.add_relationship" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a relationship to this DataTree.</p>
+<p>The new relationship will point from a variable in one dataset
+to a dimension of another dataset in this tree.  Both the parent
+and the child datasets should already have been added.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>*args</strong> – All arguments are passed through to the <cite>Relationship</cite>
+contructor, unless only a single <cite>str</cite> argument is provided,
+in which case the <cite>Relationship.from_string</cite> class constructor
+is used.</p></li>
+<li><p><strong>**kwargs</strong> – All arguments are passed through to the <cite>Relationship</cite>
+contructor, unless only a single <cite>str</cite> argument is provided,
+in which case the <cite>Relationship.from_string</cite> class constructor
+is used.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="sharrow.DataTree.replace_datasets">
+<span class="sig-prename descclassname"><span class="pre">DataTree.</span></span><span class="sig-name descname"><span class="pre">replace_datasets</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">other</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">validate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">redigitize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sharrow/relationships.html#DataTree.replace_datasets"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#sharrow.DataTree.replace_datasets" title="Permalink to this definition">¶</a></dt>
+<dd><p>Replace one or more datasets in the nodes of this tree.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>other</strong> (<em>Mapping</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a><em>,</em><a class="reference internal" href="#sharrow.Dataset" title="sharrow.Dataset"><em>Dataset</em></a><em>]</em>) – A dictionary of replacement datasets.</p></li>
+<li><p><strong>validate</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a><em>, </em><em>default True</em>) – Raise an error when replacing downstream datasets that
+are referenced by position, unless the replacement is identically
+sized.  If validation is deactivated, and an incompatible dataset
+is placed in this tree, flows that rely on that relationship will
+give erroneous results or crash with a segfault.</p></li>
+<li><p><strong>redigitize</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a><em>, </em><em>default True</em>) – Automatically re-digitize relationships that are label-based and
+were previously digitized.</p></li>
+<li><p><strong>**kwargs</strong> (<em>Mapping</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a><em>,</em><a class="reference internal" href="#sharrow.Dataset" title="sharrow.Dataset"><em>Dataset</em></a><em>]</em>) – Alternative format to <cite>other</cite>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>A new DataTree with data replacements completed.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#sharrow.DataTree" title="sharrow.DataTree">DataTree</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="digitization">
+<h3>Digitization<a class="headerlink" href="#digitization" title="Permalink to this headline">¶</a></h3>
+<dl class="py method">
+<dt class="sig sig-object py" id="sharrow.DataTree.digitize_relationships">
+<span class="sig-prename descclassname"><span class="pre">DataTree.</span></span><span class="sig-name descname"><span class="pre">digitize_relationships</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">redigitize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sharrow/relationships.html#DataTree.digitize_relationships"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#sharrow.DataTree.digitize_relationships" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert all label-based relationships into position-based.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>inplace</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a><em>, </em><em>default False</em>) – </p></li>
+<li><p><strong>redigitize</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a><em>, </em><em>default True</em>) – Re-compute position-based relationships from labels, even
+if the relationship had previously been digitized.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Only returns a copy if not digitizing in-place.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#sharrow.DataTree" title="sharrow.DataTree">DataTree</a> or <a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.10)">None</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+</div>
+<div class="section" id="relationship">
+<h2>Relationship<a class="headerlink" href="#relationship" title="Permalink to this headline">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="sharrow.Relationship">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">Relationship</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">parent_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parent_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">child_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">child_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">indexing</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'label'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">analog</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sharrow/relationships.html#Relationship"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#sharrow.Relationship" title="Permalink to this definition">¶</a></dt>
+<dd><p>Defines a linkage between datasets in a <cite>DataTree</cite>.</p>
+</dd></dl>
+
+<div class="section" id="id1">
+<h3>Attributes<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h3>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="sharrow.Relationship.parent_data">
+<span class="sig-prename descclassname"><span class="pre">Relationship.</span></span><span class="sig-name descname"><span class="pre">parent_data</span></span><a class="headerlink" href="#sharrow.Relationship.parent_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>Name of the parent dataset.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="sharrow.Relationship.parent_name">
+<span class="sig-prename descclassname"><span class="pre">Relationship.</span></span><span class="sig-name descname"><span class="pre">parent_name</span></span><a class="headerlink" href="#sharrow.Relationship.parent_name" title="Permalink to this definition">¶</a></dt>
+<dd><p>Variable in the parent dataset that references the child dimension.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="sharrow.Relationship.child_data">
+<span class="sig-prename descclassname"><span class="pre">Relationship.</span></span><span class="sig-name descname"><span class="pre">child_data</span></span><a class="headerlink" href="#sharrow.Relationship.child_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>Name of the child dataset.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="sharrow.Relationship.child_name">
+<span class="sig-prename descclassname"><span class="pre">Relationship.</span></span><span class="sig-name descname"><span class="pre">child_name</span></span><a class="headerlink" href="#sharrow.Relationship.child_name" title="Permalink to this definition">¶</a></dt>
+<dd><p>Dimension in the child dataset that is used by this relationship.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="sharrow.Relationship.indexing">
+<span class="sig-prename descclassname"><span class="pre">Relationship.</span></span><span class="sig-name descname"><span class="pre">indexing</span></span><a class="headerlink" href="#sharrow.Relationship.indexing" title="Permalink to this definition">¶</a></dt>
+<dd><p>How the target dimension is used, either by ‘label’ or ‘position’.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="sharrow.Relationship.analog">
+<span class="sig-prename descclassname"><span class="pre">Relationship.</span></span><span class="sig-name descname"><span class="pre">analog</span></span><a class="headerlink" href="#sharrow.Relationship.analog" title="Permalink to this definition">¶</a></dt>
+<dd><p>Original variable that defined label-based relationship before digitization.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+</div>
+<div class="section" id="flow">
+<h2>Flow<a class="headerlink" href="#flow" title="Permalink to this headline">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="sharrow.Flow">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">Flow</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tree</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">defs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">error_model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'numpy'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cache_dir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dtype</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'float32'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">boundscheck</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nopython</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fastmath</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parallel</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">readme</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">flow_library</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extra_hash_data</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">()</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">write_hash_audit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hashing_level</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dim_order</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dim_exclude</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sharrow/flows.html#Flow"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#sharrow.Flow" title="Permalink to this definition">¶</a></dt>
+<dd><p>A prepared data flow.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>tree</strong> (<a class="reference internal" href="#sharrow.DataTree" title="sharrow.DataTree"><em>DataTree</em></a>) – The tree from whence the output will be constructed.</p></li>
+<li><p><strong>defs</strong> (<em>Mapping</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a><em>,</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a><em>]</em>) – Gives the names and definitions for the variables to create in the
+generated output.</p></li>
+<li><p><strong>error_model</strong> (<em>{'numpy'</em><em>, </em><em>'python'}</em><em>, </em><em>default 'numpy'</em>) – The error_model option controls the divide-by-zero behavior. Setting
+it to ‘python’ causes divide-by-zero to raise exception like
+CPython. Setting it to ‘numpy’ causes divide-by-zero to set the
+result to +/-inf or nan.</p></li>
+<li><p><strong>cache_dir</strong> (<em>Path-like</em><em>, </em><em>optional</em>) – A location to write out generated python and numba code. If not
+provided, a unique temporary directory is created.</p></li>
+<li><p><strong>name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a><em>, </em><em>optional</em>) – The name of this Flow used for writing out cached files. If not
+provided, a unique name is generated. If <cite>cache_dir</cite> is given,
+be sure to avoid name conflicts with other flow’s in the same
+directory.</p></li>
+<li><p><strong>dtype</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a><em>, </em><em>default &quot;float32&quot;</em>) – The name of the numpy dtype that will be used for the output.</p></li>
+<li><p><strong>boundscheck</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a><em>, </em><em>default False</em>) – If True, boundscheck enables bounds checking for array indices, and
+out of bounds accesses will raise IndexError. The default is to not
+do bounds checking, which is faster but can produce garbage results
+or segfaults if there are problems, so try turning this on for
+debugging if you are getting unexplained errors or crashes.</p></li>
+<li><p><strong>nopython</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a><em>, </em><em>default True</em>) – Compile using numba’s <cite>nopython</cite> mode.  Provided for debugging only,
+as there’s little point in turning this off for production code, as
+all the speed benefits of sharrow will be lost.</p></li>
+<li><p><strong>fastmath</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a><em>, </em><em>default True</em>) – If true, fastmath enables the use of “fast” floating point transforms,
+which can improve performance but can result in tiny distortions in
+results.  See numba docs for details.</p></li>
+<li><p><strong>parallel</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a><em>, </em><em>default True</em>) – Enable or disable parallel computation for certain functions.</p></li>
+<li><p><strong>readme</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a><em>, </em><em>optional</em>) – A string to inject as a comment at the top of the flow Python file.</p></li>
+<li><p><strong>flow_library</strong> (<em>Mapping</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a><em>,</em><a class="reference internal" href="#sharrow.Flow" title="sharrow.Flow"><em>Flow</em></a><em>]</em><em>, </em><em>optional</em>) – An in-memory cache of precompiled Flow objects.  Using this can result
+in performance improvements when repeatedly using the same definitions.</p></li>
+<li><p><strong>extra_hash_data</strong> (<em>Tuple</em><em>[</em><em>Hashable</em><em>]</em><em>, </em><em>optional</em>) – Additional data used for generating the flow hash.  Useful to prevent
+conflicts when using a flow_library with multiple similar flows.</p></li>
+<li><p><strong>write_hash_audit</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a><em>, </em><em>default True</em>) – Writes a hash audit log into a comment in the flow Python file, for
+debugging purposes.</p></li>
+<li><p><strong>hashing_level</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><em>int</em></a><em>, </em><em>default 1</em>) – Level of detail to write into flow hashes.  Increase detail to avoid
+hash conflicts for similar flows.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<div class="section" id="load">
+<h3>Load<a class="headerlink" href="#load" title="Permalink to this headline">¶</a></h3>
+<dl class="py method">
+<dt class="sig sig-object py" id="sharrow.Flow.load">
+<span class="sig-prename descclassname"><span class="pre">Flow.</span></span><span class="sig-name descname"><span class="pre">load</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dtype</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sharrow/flows.html#Flow.load"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#sharrow.Flow.load" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the flow outputs as a numpy array.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>source</strong> (<a class="reference internal" href="#sharrow.DataTree" title="sharrow.DataTree"><em>DataTree</em></a><em>, </em><em>optional</em>) – This is the source of the data for this flow. If not provided, the
+tree used to initialize this flow is used.</p></li>
+<li><p><strong>dtype</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a><em> or </em><em>dtype</em>) – Override the default dtype for the result. May trigger re-compilation
+of the underlying code.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>numpy.array</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="sharrow.Flow.load_dataframe">
+<span class="sig-prename descclassname"><span class="pre">Flow.</span></span><span class="sig-name descname"><span class="pre">load_dataframe</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dtype</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sharrow/flows.html#Flow.load_dataframe"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#sharrow.Flow.load_dataframe" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the flow outputs as a pandas.DataFrame.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>source</strong> (<a class="reference internal" href="#sharrow.DataTree" title="sharrow.DataTree"><em>DataTree</em></a><em>, </em><em>optional</em>) – This is the source of the data for this flow. If not provided, the
+tree used to initialize this flow is used.</p></li>
+<li><p><strong>dtype</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a><em> or </em><em>dtype</em>) – Override the default dtype for the result. May trigger re-compilation
+of the underlying code.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v1.4.1)">pandas.DataFrame</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="sharrow.Flow.load_dataarray">
+<span class="sig-prename descclassname"><span class="pre">Flow.</span></span><span class="sig-name descname"><span class="pre">load_dataarray</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dtype</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sharrow/flows.html#Flow.load_dataarray"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#sharrow.Flow.load_dataarray" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the flow outputs as a xarray.DataArray.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>source</strong> (<a class="reference internal" href="#sharrow.DataTree" title="sharrow.DataTree"><em>DataTree</em></a><em>, </em><em>optional</em>) – This is the source of the data for this flow. If not provided, the
+tree used to initialize this flow is used.</p></li>
+<li><p><strong>dtype</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a><em> or </em><em>dtype</em>) – Override the default dtype for the result. May trigger re-compilation
+of the underlying code.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://xarray.pydata.org/en/stable/generated/xarray.DataArray.html#xarray.DataArray" title="(in xarray v0.21.2.dev0)">xarray.DataArray</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="dot">
+<h3>Dot<a class="headerlink" href="#dot" title="Permalink to this headline">¶</a></h3>
+<dl class="py method">
+<dt class="sig sig-object py" id="sharrow.Flow.dot">
+<span class="sig-prename descclassname"><span class="pre">Flow.</span></span><span class="sig-name descname"><span class="pre">dot</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">coefficients</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">source</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dtype</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sharrow/flows.html#Flow.dot"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#sharrow.Flow.dot" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the dot-product of expression results and coefficients.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>coefficients</strong> (<em>array-like</em>) – This function will return the dot-product of the computed expressions
+and this array of coefficients, but without ever materializing the
+array of computed expression values in memory, achieving significant
+performance gains.</p></li>
+<li><p><strong>source</strong> (<a class="reference internal" href="#sharrow.DataTree" title="sharrow.DataTree"><em>DataTree</em></a><em>, </em><em>optional</em>) – This is the source of the data for this flow. If not provided, the
+tree used to initialize this flow is used.</p></li>
+<li><p><strong>dtype</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a><em> or </em><em>dtype</em>) – Override the default dtype for the result. May trigger re-compilation
+of the underlying code.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>numpy.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="sharrow.Flow.dot_dataarray">
+<span class="sig-prename descclassname"><span class="pre">Flow.</span></span><span class="sig-name descname"><span class="pre">dot_dataarray</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">coefficients</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">source</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dtype</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sharrow/flows.html#Flow.dot_dataarray"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#sharrow.Flow.dot_dataarray" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the dot-product of expression results and coefficients.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>coefficients</strong> (<em>DataArray</em>) – This function will return the dot-product of the computed expressions
+and this array of coefficients, but without ever materializing the
+array of computed expression values in memory, achieving significant
+performance gains.</p></li>
+<li><p><strong>source</strong> (<a class="reference internal" href="#sharrow.DataTree" title="sharrow.DataTree"><em>DataTree</em></a><em>, </em><em>optional</em>) – This is the source of the data for this flow. If not provided, the
+tree used to initialize this flow is used.</p></li>
+<li><p><strong>dtype</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a><em> or </em><em>dtype</em>) – Override the default dtype for the result. May trigger re-compilation
+of the underlying code.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://xarray.pydata.org/en/stable/generated/xarray.DataArray.html#xarray.DataArray" title="(in xarray v0.21.2.dev0)">xarray.DataArray</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="logit">
+<h3>Logit<a class="headerlink" href="#logit" title="Permalink to this headline">¶</a></h3>
+<dl class="py method">
+<dt class="sig sig-object py" id="sharrow.Flow.mnl_draws">
+<span class="sig-prename descclassname"><span class="pre">Flow.</span></span><span class="sig-name descname"><span class="pre">mnl_draws</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">coefficients</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">draws</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">source</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pick_counted</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dtype</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sharrow/flows.html#Flow.mnl_draws"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#sharrow.Flow.mnl_draws" title="Permalink to this definition">¶</a></dt>
+<dd><p>Make random simulated choices for a multinomial logit model.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>coefficients</strong> (<em>array-like</em>) – These coefficients are used is in <cite>dot</cite> to compute the dot-product
+of the computed expressions, and this result is treated as the utility
+function for a multinomial logit model.</p></li>
+<li><p><strong>draws</strong> (<em>array-like</em>) – A one or two dimensional array of random values in the unit interval.
+If one dimensional, then it must have length equal to the first
+dimension of the base <cite>shape</cite> of <cite>source</cite>, and a single draw will be
+applied for each row in that dimension.  If two dimensional, the first
+dimension must match as above, and the second dimension determines the
+number of draws applied for each row in the first dimension.</p></li>
+<li><p><strong>source</strong> (<a class="reference internal" href="#sharrow.DataTree" title="sharrow.DataTree"><em>DataTree</em></a><em>, </em><em>optional</em>) – This is the source of the data for this flow. If not provided, the
+tree used to initialize this flow is used.</p></li>
+<li><p><strong>pick_counted</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a><em>, </em><em>default False</em>) – Whether to tally multiple repeated choices with a pick count.</p></li>
+<li><p><strong>dtype</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a><em> or </em><em>dtype</em>) – Override the default dtype for the probability. May trigger re-compilation
+of the underlying code.  The choices and pick counts (if included)
+are always integers.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>choices</strong> (<em>array[int32]</em>) – The positions of the simulated choices.</p></li>
+<li><p><strong>probs</strong> (<em>array[dtype]</em>) – The probability that was associated with each simulated choice.</p></li>
+<li><p><strong>pick_count</strong> (<em>array[int32], optional</em>) – A count of how many times this choice was chosen, only included
+if <cite>pick_counted</cite> is True.</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="convenience">
+<h3>Convenience<a class="headerlink" href="#convenience" title="Permalink to this headline">¶</a></h3>
+<dl class="py method">
+<dt class="sig sig-object py" id="sharrow.Flow.show_code">
+<span class="sig-prename descclassname"><span class="pre">Flow.</span></span><span class="sig-name descname"><span class="pre">show_code</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">linenos</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'inline'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sharrow/flows.html#Flow.show_code"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#sharrow.Flow.show_code" title="Permalink to this definition">¶</a></dt>
+<dd><p>Display the underlying Python code constructed for this flow.</p>
+<p>This convenience function is provided primarily to display the underlying
+source code in a Jupyter notebook, for debugging and educational purposes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>linenos</strong> (<em>{'inline'</em><em>, </em><em>'table'}</em>) – This argument is passed to the pygments HtmlFormatter.
+If set to <code class="docutils literal notranslate"><span class="pre">'table'</span></code>, output line numbers as a table with two cells,
+one containing the line numbers, the other the whole code.  This is
+copy-and-paste-friendly, but may cause alignment problems with some
+browsers or fonts.  If set to <code class="docutils literal notranslate"><span class="pre">'inline'</span></code>, the line numbers will be
+integrated in the <code class="docutils literal notranslate"><span class="pre">&lt;pre&gt;</span></code> tag that contains the code.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>IPython.display.HTML</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+</div>
+<div class="section" id="dataset">
+<h2>Dataset<a class="headerlink" href="#dataset" title="Permalink to this headline">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="sharrow.Dataset">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">Dataset</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sharrow/dataset.html#Dataset"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#sharrow.Dataset" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">xarray.core.dataset.Dataset</span></code></p>
+<p>A multi-dimensional, in memory, array database.</p>
+<p>A dataset consists of variables, coordinates and attributes which
+together form a self describing dataset.</p>
+<p>Dataset implements the mapping interface with keys given by variable
+names and values given by DataArray objects for each variable name.</p>
+<p>One dimensional variables with name equal to their dimension are
+index coordinates used for label based indexing.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data_vars</strong> (<em>dict-like</em><em>, </em><em>optional</em>) – <p>A mapping from variable names to <a class="reference external" href="https://xarray.pydata.org/en/stable/generated/xarray.DataArray.html#xarray.DataArray" title="(in xarray v0.21.2.dev0)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataArray</span></code></a>
+objects, <a class="reference external" href="https://xarray.pydata.org/en/stable/generated/xarray.Variable.html#xarray.Variable" title="(in xarray v0.21.2.dev0)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Variable</span></code></a> objects or to tuples of
+the form <code class="docutils literal notranslate"><span class="pre">(dims,</span> <span class="pre">data[,</span> <span class="pre">attrs])</span></code> which can be used as
+arguments to create a new <code class="docutils literal notranslate"><span class="pre">Variable</span></code>. Each dimension must
+have the same length in all variables in which it appears.</p>
+<p>The following notations are accepted:</p>
+<ul>
+<li><p>mapping {var name: DataArray}</p></li>
+<li><p>mapping {var name: Variable}</p></li>
+<li><p>mapping {var name: (dimension name, array-like)}</p></li>
+<li><p>mapping {var name: (tuple of dimension names, array-like)}</p></li>
+<li><p>mapping {dimension name: array-like}
+(it will be automatically moved to coords, see below)</p></li>
+</ul>
+<p>Each dimension must have the same length in all variables in
+which it appears.</p>
+</p></li>
+<li><p><strong>coords</strong> (<em>dict-like</em><em>, </em><em>optional</em>) – <p>Another mapping in similar form as the <cite>data_vars</cite> argument,
+except the each item is saved on the dataset as a “coordinate”.
+These variables have an associated meaning: they describe
+constant/fixed/independent quantities, unlike the
+varying/measured/dependent quantities that belong in
+<cite>variables</cite>. Coordinates values may be given by 1-dimensional
+arrays or scalars, in which case <cite>dims</cite> do not need to be
+supplied: 1D arrays will be assumed to give index values along
+the dimension with the same name.</p>
+<p>The following notations are accepted:</p>
+<ul>
+<li><p>mapping {coord name: DataArray}</p></li>
+<li><p>mapping {coord name: Variable}</p></li>
+<li><p>mapping {coord name: (dimension name, array-like)}</p></li>
+<li><p>mapping {coord name: (tuple of dimension names, array-like)}</p></li>
+<li><p>mapping {dimension name: array-like}
+(the dimension name is implicitly set to be the same as the
+coord name)</p></li>
+</ul>
+<p>The last notation implies that the coord name is the same as
+the dimension name.</p>
+</p></li>
+<li><p><strong>attrs</strong> (<em>dict-like</em><em>, </em><em>optional</em>) – Global attributes to save on this dataset.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<div class="section" id="constructors">
+<h3>Constructors<a class="headerlink" href="#constructors" title="Permalink to this headline">¶</a></h3>
+<dl class="py method">
+<dt class="sig sig-object py" id="sharrow.Dataset.construct">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">Dataset.</span></span><span class="sig-name descname"><span class="pre">construct</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sharrow/dataset.html#Dataset.construct"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#sharrow.Dataset.construct" title="Permalink to this definition">¶</a></dt>
+<dd><p>A generic constructor for creating Datasets from various similar objects.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>source</strong> (<a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v1.4.1)"><em>pandas.DataFrame</em></a><em>, </em><a class="reference external" href="https://arrow.apache.org/docs/python/generated/pyarrow.Table.html#pyarrow.Table" title="(in Apache Arrow v7.0.0)"><em>pyarrow.Table</em></a><em>, </em><a class="reference external" href="https://xarray.pydata.org/en/stable/generated/xarray.Dataset.html#xarray.Dataset" title="(in xarray v0.21.2.dev0)"><em>xarray.Dataset</em></a><em>, or </em><em>Sequence</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a><em>]</em>) – The source from which to create a Dataset.  DataFrames and Tables
+are converted to Datasets that have one dimension (the rows) and
+seperate variables for each of the columns.  A list of strings
+creates a dataset with those named empty variables.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#sharrow.Dataset" title="sharrow.Dataset">Dataset</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="sharrow.Dataset.from_table">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">Dataset.</span></span><span class="sig-name descname"><span class="pre">from_table</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tbl</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">index_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'index'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">index</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sharrow/dataset.html#Dataset.from_table"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#sharrow.Dataset.from_table" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert a pyarrow.Table into an xarray.Dataset</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>tbl</strong> (<em>Table</em>) – Table from which to use data and indices.</p></li>
+<li><p><strong>index_name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a><em>, </em><em>default 'index'</em>) – This name will be given to the default dimension index, if
+none is given.  Ignored if <cite>index</cite> is given explicitly.</p></li>
+<li><p><strong>index</strong> (<em>Index-like</em><em>, </em><em>optional</em>) – Use this index instead of a default RangeIndex.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>New Dataset.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="sharrow.Dataset.from_omx">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">Dataset.</span></span><span class="sig-name descname"><span class="pre">from_omx</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">omx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">index_names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">('otaz',</span> <span class="pre">'dtaz')</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">indexes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'one-based'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">renames</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sharrow/dataset.html#Dataset.from_omx"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#sharrow.Dataset.from_omx" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a Dataset from an OMX file.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>omx</strong> (<em>openmatrix.File</em><em> or </em><em>larch.OMX</em>) – An OMX-format file, opened for reading.</p></li>
+<li><p><strong>index_names</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.10)"><em>tuple</em></a><em>, </em><em>default</em><em> (</em><em>&quot;otaz&quot;</em><em>, </em><em>&quot;dtaz&quot;</em><em>, </em><em>&quot;time_period&quot;</em><em>)</em>) – Should be a tuple of length 3, giving the names of the three
+dimensions.  The first two names are the native dimensions from
+the open matrix file, the last is the name of the implicit
+dimension that is created by parsing array names.</p></li>
+<li><p><strong>indexes</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a><em>, </em><em>optional</em>) – The name of a ‘lookup’ in the OMX file, which will be used to
+populate the coordinates for the two native dimensions.  Or,
+specify “one-based” or “zero-based” to assume sequential and
+consecutive numbering starting with 1 or 0 respectively.</p></li>
+<li><p><strong>renames</strong> (<em>Mapping</em><em> or </em><em>Collection</em><em>, </em><em>optional</em>) – Limit the import only to these data elements.  If given as a
+mapping, the keys will be the names of variables in the resulting
+dataset, and the values give the names of data matrix tables in the
+OMX file.  If given as a list or other non-mapping collection,
+elements are not renamed but only elements in the collection are
+included.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#sharrow.Dataset" title="sharrow.Dataset">Dataset</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="sharrow.Dataset.from_omx_3d">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">Dataset.</span></span><span class="sig-name descname"><span class="pre">from_omx_3d</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">omx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">index_names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">('otaz',</span> <span class="pre">'dtaz',</span> <span class="pre">'time_period')</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">indexes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">time_periods</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">time_period_sep</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'__'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_float_precision</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">32</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sharrow/dataset.html#Dataset.from_omx_3d"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#sharrow.Dataset.from_omx_3d" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a Dataset from an OMX file with an implicit third dimension.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>omx</strong> (<em>openmatrix.File</em><em> or </em><em>larch.OMX</em>) – An OMX-format file, opened for reading.</p></li>
+<li><p><strong>index_names</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.10)"><em>tuple</em></a><em>, </em><em>default</em><em> (</em><em>&quot;otaz&quot;</em><em>, </em><em>&quot;dtaz&quot;</em><em>, </em><em>&quot;time_period&quot;</em><em>)</em>) – Should be a tuple of length 3, giving the names of the three
+dimensions.  The first two names are the native dimensions from
+the open matrix file, the last is the name of the implicit
+dimension that is created by parsing array names.</p></li>
+<li><p><strong>indexes</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a><em>, </em><em>optional</em>) – The name of a ‘lookup’ in the OMX file, which will be used to
+populate the coordinates for the two native dimensions.  Or,
+specify “one-based” or “zero-based” to assume sequential and
+consecutive numbering starting with 1 or 0 respectively.</p></li>
+<li><p><strong>time_periods</strong> (<em>list-like</em><em>, </em><em>required keyword argument</em>) – A list of index values from which the third dimension is constructed
+for all variables with a third dimension.</p></li>
+<li><p><strong>time_period_sep</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a><em>, </em><em>default &quot;__&quot;</em><em> (</em><em>double underscore</em><em>)</em>) – The presence of this separator within the name of any table in the
+OMX file indicates that table is to be considered a page in a
+three dimensional variable.  The portion of the name preceding the
+first instance of this separator is the name of the resulting
+variable, and the portion of the name after the first instance of
+this separator is the label of the position for this page, which
+should appear in <cite>time_periods</cite>.</p></li>
+<li><p><strong>max_float_precision</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><em>int</em></a><em>, </em><em>default 32</em>) – When loading, reduce all floats in the OMX file to this level of
+precision, generally to save memory if they were stored as double
+precision but that level of detail is unneeded in the present
+application.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#sharrow.Dataset" title="sharrow.Dataset">Dataset</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="sharrow.Dataset.from_zarr">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">Dataset.</span></span><span class="sig-name descname"><span class="pre">from_zarr</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">store</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sharrow/dataset.html#Dataset.from_zarr"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#sharrow.Dataset.from_zarr" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load and decode a dataset from a Zarr store.</p>
+<p>The <cite>store</cite> object should be a valid store for a Zarr group. <cite>store</cite>
+variables must contain dimension metadata encoded in the
+<cite>_ARRAY_DIMENSIONS</cite> attribute.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>store</strong> (<em>MutableMapping</em><em> or </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a>) – A MutableMapping where a Zarr Group has been stored or a path to a
+directory in file system where a Zarr DirectoryStore has been stored.</p></li>
+<li><p><strong>synchronizer</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.10)"><em>object</em></a><em>, </em><em>optional</em>) – Array synchronizer provided to zarr</p></li>
+<li><p><strong>group</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a><em>, </em><em>optional</em>) – Group path. (a.k.a. <cite>path</cite> in zarr terminology.)</p></li>
+<li><p><strong>chunks</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><em>int</em></a><em> or </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.10)"><em>dict</em></a><em> or </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.10)"><em>tuple</em></a><em> or </em><em>{None</em><em>, </em><em>'auto'}</em><em>, </em><em>optional</em>) – Chunk sizes along each dimension, e.g., <code class="docutils literal notranslate"><span class="pre">5</span></code> or
+<code class="docutils literal notranslate"><span class="pre">{'x':</span> <span class="pre">5,</span> <span class="pre">'y':</span> <span class="pre">5}</span></code>. If <cite>chunks=’auto’</cite>, dask chunks are created
+based on the variable’s zarr chunks. If <cite>chunks=None</cite>, zarr array
+data will lazily convert to numpy arrays upon access. This accepts
+all the chunk specifications as Dask does.</p></li>
+<li><p><strong>overwrite_encoded_chunks</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a><em>, </em><em>optional</em>) – Whether to drop the zarr chunks encoded for each variable when a
+dataset is loaded with specified chunk sizes (default: False)</p></li>
+<li><p><strong>decode_cf</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a><em>, </em><em>optional</em>) – Whether to decode these variables, assuming they were saved according
+to CF conventions.</p></li>
+<li><p><strong>mask_and_scale</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a><em>, </em><em>optional</em>) – If True, replace array values equal to <cite>_FillValue</cite> with NA and scale
+values according to the formula <cite>original_values * scale_factor +
+add_offset</cite>, where <cite>_FillValue</cite>, <cite>scale_factor</cite> and <cite>add_offset</cite> are
+taken from variable attributes (if they exist).  If the <cite>_FillValue</cite> or
+<cite>missing_value</cite> attribute contains multiple values a warning will be
+issued and all array values matching one of the multiple values will
+be replaced by NA.</p></li>
+<li><p><strong>decode_times</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a><em>, </em><em>optional</em>) – If True, decode times encoded in the standard NetCDF datetime format
+into datetime objects. Otherwise, leave them encoded as numbers.</p></li>
+<li><p><strong>concat_characters</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a><em>, </em><em>optional</em>) – If True, concatenate along the last dimension of character arrays to
+form string arrays. Dimensions will only be concatenated over (and
+removed) if they have no corresponding variable and if they are only
+used as the last dimension of character arrays.</p></li>
+<li><p><strong>decode_coords</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a><em>, </em><em>optional</em>) – If True, decode the ‘coordinates’ attribute to identify coordinates in
+the resulting dataset.</p></li>
+<li><p><strong>drop_variables</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a><em> or </em><em>iterable</em><em>, </em><em>optional</em>) – A variable or list of variables to exclude from being parsed from the
+dataset. This may be useful to drop variables with problems or
+inconsistent values.</p></li>
+<li><p><strong>consolidated</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a><em>, </em><em>optional</em>) – Whether to open the store using zarr’s consolidated metadata
+capability. Only works for stores that have already been consolidated.
+By default (<cite>consolidate=None</cite>), attempts to read consolidated metadata,
+falling back to read non-consolidated metadata if that fails.</p></li>
+<li><p><strong>chunk_store</strong> (<em>MutableMapping</em><em>, </em><em>optional</em>) – A separate Zarr store only for chunk data.</p></li>
+<li><p><strong>storage_options</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.10)"><em>dict</em></a><em>, </em><em>optional</em>) – Any additional parameters for the storage backend (ignored for local
+paths).</p></li>
+<li><p><strong>decode_timedelta</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a><em>, </em><em>optional</em>) – If True, decode variables and coordinates with time units in
+{‘days’, ‘hours’, ‘minutes’, ‘seconds’, ‘milliseconds’, ‘microseconds’}
+into timedelta objects. If False, leave them encoded as numbers.
+If None (default), assume the same value of decode_time.</p></li>
+<li><p><strong>use_cftime</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a><em>, </em><em>optional</em>) – Only relevant if encoded dates come from a standard calendar
+(e.g. “gregorian”, “proleptic_gregorian”, “standard”, or not
+specified).  If None (default), attempt to decode times to
+<code class="docutils literal notranslate"><span class="pre">np.datetime64[ns]</span></code> objects; if this is not possible, decode times to
+<code class="docutils literal notranslate"><span class="pre">cftime.datetime</span></code> objects. If True, always decode times to
+<code class="docutils literal notranslate"><span class="pre">cftime.datetime</span></code> objects, regardless of whether or not they can be
+represented using <code class="docutils literal notranslate"><span class="pre">np.datetime64[ns]</span></code> objects.  If False, always
+decode times to <code class="docutils literal notranslate"><span class="pre">np.datetime64[ns]</span></code> objects; if this is not possible
+raise an error.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>dataset</strong> – The newly created dataset.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#sharrow.Dataset" title="sharrow.Dataset">Dataset</a></p>
+</dd>
+</dl>
+<p class="rubric">References</p>
+<p><a class="reference external" href="http://zarr.readthedocs.io/">http://zarr.readthedocs.io/</a></p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="sharrow.Dataset.from_named_objects">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">Dataset.</span></span><span class="sig-name descname"><span class="pre">from_named_objects</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sharrow/dataset.html#Dataset.from_named_objects"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#sharrow.Dataset.from_named_objects" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a Dataset by populating it with named objects.</p>
+<p>A mapping of names to values is first created, and then that mapping is
+used in the standard constructor to initialize a Dataset.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>*args</strong> (<em>Any</em>) – A collection of objects, each exposing a <cite>name</cite> attribute.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#sharrow.Dataset" title="sharrow.Dataset">Dataset</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="editing">
+<h3>Editing<a class="headerlink" href="#editing" title="Permalink to this headline">¶</a></h3>
+<dl class="py method">
+<dt class="sig sig-object py" id="sharrow.Dataset.update">
+<span class="sig-prename descclassname"><span class="pre">Dataset.</span></span><span class="sig-name descname"><span class="pre">update</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">other</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sharrow/dataset.html#Dataset.update"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#sharrow.Dataset.update" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update this dataset’s variables with those from another dataset.</p>
+<p>Just like <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict.update" title="(in Python v3.10)"><code class="xref py py-meth docutils literal notranslate"><span class="pre">dict.update()</span></code></a> this is a in-place operation.
+For a non-inplace version, see <code class="xref py py-meth docutils literal notranslate"><span class="pre">Dataset.merge()</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>other</strong> (<a class="reference internal" href="#sharrow.Dataset" title="sharrow.Dataset"><em>Dataset</em></a><em> or </em><em>mapping</em>) – <p>Variables with which to update this dataset. One of:</p>
+<ul class="simple">
+<li><p>Dataset</p></li>
+<li><p>mapping {var name: DataArray}</p></li>
+<li><p>mapping {var name: Variable}</p></li>
+<li><p>mapping {var name: (dimension name, array-like)}</p></li>
+<li><p>mapping {var name: (tuple of dimension names, array-like)}</p></li>
+</ul>
+</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><p><strong>updated</strong> – Updated dataset. Note that since the update is in-place this is the input
+dataset.</p>
+<p>It is deprecated since version 0.17 and scheduled to be removed in 0.21.</p>
+</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#sharrow.Dataset" title="sharrow.Dataset">Dataset</a></p>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.10)"><strong>ValueError</strong></a> – If any dimensions would have inconsistent sizes in the updated
+    dataset.</p>
+</dd>
+</dl>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p><code class="xref py py-obj docutils literal notranslate"><span class="pre">Dataset.assign</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">Dataset.merge</span></code></p>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="sharrow.Dataset.ensure_integer">
+<span class="sig-prename descclassname"><span class="pre">Dataset.</span></span><span class="sig-name descname"><span class="pre">ensure_integer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">names</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bitwidth</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">32</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sharrow/dataset.html#Dataset.ensure_integer"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#sharrow.Dataset.ensure_integer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert dataset variables to integers, if they are not already integers.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>names</strong> (<em>Iterable</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a><em>]</em>) – Variable names in this dataset to convert.</p></li>
+<li><p><strong>bitwidth</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><em>int</em></a><em>, </em><em>default 32</em>) – Bit width of integers that are created when a conversion is made.
+Note that variables that are already integer are not modified,
+even if their bit width differs from this.</p></li>
+<li><p><strong>inplace</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a><em>, </em><em>default False</em>) – Whether to make the conversion in-place on this Dataset, or
+return a copy.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#sharrow.Dataset" title="sharrow.Dataset">Dataset</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="indexing">
+<h3>Indexing<a class="headerlink" href="#indexing" title="Permalink to this headline">¶</a></h3>
+<dl class="py method">
+<dt class="sig sig-object py" id="sharrow.Dataset.at">
+<span class="sig-prename descclassname"><span class="pre">Dataset.</span></span><span class="sig-name descname"><span class="pre">at</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">_names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">_load</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">_index_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">idxs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sharrow/dataset.html#Dataset.at"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#sharrow.Dataset.at" title="Permalink to this definition">¶</a></dt>
+<dd><p>Multi-dimensional fancy indexing by label.</p>
+<p>Provide the dataset dimensions to index up as keywords, each with
+a value giving an array (one dimensional) of labels to extract.</p>
+<p>All other arguments are keyword-only arguments beginning with an
+underscore.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>_names</strong> (<em>Collection</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a><em>]</em><em>, </em><em>optional</em>) – Only include these variables of this Dataset.</p></li>
+<li><p><strong>_load</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a><em>, </em><em>default False</em>) – Call <cite>load</cite> on the result, which will trigger a compute
+operation if the data underlying this Dataset is in dask,
+otherwise this does nothing.</p></li>
+<li><p><strong>_index_name</strong> – The name to use for the resulting dataset’s dimension.</p></li>
+<li><p><strong>str</strong> – The name to use for the resulting dataset’s dimension.</p></li>
+<li><p><strong>&quot;index&quot;</strong> (<em>default</em>) – The name to use for the resulting dataset’s dimension.</p></li>
+<li><p><strong>**idxs</strong> (<em>Mapping</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a><em>, </em><em>Any</em><em>]</em>) – Labels to extract.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#sharrow.Dataset" title="sharrow.Dataset">Dataset</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="sharrow.Dataset.iat">
+<span class="sig-prename descclassname"><span class="pre">Dataset.</span></span><span class="sig-name descname"><span class="pre">iat</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">_names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">_load</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">_index_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">idxs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sharrow/dataset.html#Dataset.iat"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#sharrow.Dataset.iat" title="Permalink to this definition">¶</a></dt>
+<dd><p>Multi-dimensional fancy indexing by position.</p>
+<p>Provide the dataset dimensions to index up as keywords, each with
+a value giving an array (one dimensional) of positions to extract.</p>
+<p>All other arguments are keyword-only arguments beginning with an
+underscore.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>_names</strong> (<em>Collection</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a><em>]</em><em>, </em><em>optional</em>) – Only include these variables of this Dataset.</p></li>
+<li><p><strong>_load</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a><em>, </em><em>default False</em>) – Call <cite>load</cite> on the result, which will trigger a compute
+operation if the data underlying this Dataset is in dask,
+otherwise this does nothing.</p></li>
+<li><p><strong>_index_name</strong> – The name to use for the resulting dataset’s dimension.</p></li>
+<li><p><strong>str</strong> – The name to use for the resulting dataset’s dimension.</p></li>
+<li><p><strong>&quot;index&quot;</strong> (<em>default</em>) – The name to use for the resulting dataset’s dimension.</p></li>
+<li><p><strong>**idxs</strong> (<em>Mapping</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a><em>, </em><em>Any</em><em>]</em>) – Positions to extract.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#sharrow.Dataset" title="sharrow.Dataset">Dataset</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="sharrow.Dataset.at_df">
+<span class="sig-prename descclassname"><span class="pre">Dataset.</span></span><span class="sig-name descname"><span class="pre">at_df</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sharrow/dataset.html#Dataset.at_df"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#sharrow.Dataset.at_df" title="Permalink to this definition">¶</a></dt>
+<dd><p>Extract values by label on the coordinates indicated by columns of a DataFrame.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>df</strong> (<a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v1.4.1)"><em>pandas.DataFrame</em></a><em> or </em><em>Mapping</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a><em>, </em><em>array-like</em><em>]</em>) – The columns (or keys) of <cite>df</cite> should match the named dimensions of
+this Dataset.  The resulting extracted DataFrame will have one row
+per row of <cite>df</cite>, columns matching the data variables in this dataset,
+and each value is looked up by the labels.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v1.4.1)">pandas.DataFrame</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="sharrow.Dataset.iat_df">
+<span class="sig-prename descclassname"><span class="pre">Dataset.</span></span><span class="sig-name descname"><span class="pre">iat_df</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sharrow/dataset.html#Dataset.iat_df"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#sharrow.Dataset.iat_df" title="Permalink to this definition">¶</a></dt>
+<dd><p>Extract values by position on the coordinates indicated by columns of a DataFrame.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>df</strong> (<a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v1.4.1)"><em>pandas.DataFrame</em></a><em> or </em><em>Mapping</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a><em>, </em><em>array-like</em><em>]</em>) – The columns (or keys) of <cite>df</cite> should match the named dimensions of
+this Dataset.  The resulting extracted DataFrame will have one row
+per row of <cite>df</cite>, columns matching the data variables in this dataset,
+and each value is looked up by the positions.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v1.4.1)">pandas.DataFrame</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="id2">
+<h3>Convenience<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h3>
+<p>In many ways, a dataset with a single dimensions is like a pandas DataFrame,
+with the one dimension giving the rows, and the variables as columns.  This
+analogy eventually breaks down (DataFrame columns are ordered, Dataset
+variables are not) but the similarities are enought that it’s sometimes convenient
+to have <cite>loc</cite> and <cite>iloc</cite> functionality enabled.  This only works for indexing on
+the rows, but if there’s only the one dimension the complexity of <cite>sel</cite> and <cite>isel</cite>
+are not needed.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="sharrow.Dataset.loc">
+<span class="sig-prename descclassname"><span class="pre">Dataset.</span></span><span class="sig-name descname"><span class="pre">loc</span></span><a class="headerlink" href="#sharrow.Dataset.loc" title="Permalink to this definition">¶</a></dt>
+<dd><p>Attribute for location based indexing. Only supports __getitem__,
+and only when the key is a dict of the form {dim: labels}, or when
+there is only one dimension.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="sharrow.Dataset.iloc">
+<span class="sig-prename descclassname"><span class="pre">Dataset.</span></span><span class="sig-name descname"><span class="pre">iloc</span></span><a class="headerlink" href="#sharrow.Dataset.iloc" title="Permalink to this definition">¶</a></dt>
+<dd><p>Attribute for position based indexing. Only supports __getitem__,
+and only when there is only one dimension.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="shared-memory">
+<h3>Shared Memory<a class="headerlink" href="#shared-memory" title="Permalink to this headline">¶</a></h3>
+<dl class="py method">
+<dt class="sig sig-object py" id="sharrow.Dataset.to_shared_memory">
+<span class="sig-prename descclassname"><span class="pre">Dataset.</span></span><span class="sig-name descname"><span class="pre">to_shared_memory</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">key</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'r+'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sharrow/dataset.html#Dataset.to_shared_memory"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#sharrow.Dataset.to_shared_memory" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load this Dataset into shared memory.</p>
+<p>The returned Dataset object references the shared memory and is the
+“owner” of this data.  When this object is destroyed, the data backing
+it may also be freed, which can result in a segfault or other unfortunate
+condition if that memory is still accessed from elsewhere.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>key</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a>) – An identifying key for this shared memory.  Use the same key
+in <cite>from_shared_memory</cite> to recreate this Dataset elsewhere.</p></li>
+<li><p><strong>mode</strong> (<em>{‘r+’</em><em>, </em><em>‘r’</em><em>, </em><em>‘w+’</em><em>, </em><em>‘c’}</em><em>, </em><em>optional</em>) – This methid returns a copy of the Dataset in shared memory.
+If memmapped, that copy can be opened in various modes.
+See numpy.memmap() for details.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#sharrow.Dataset" title="sharrow.Dataset">Dataset</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="sharrow.Dataset.from_shared_memory">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">Dataset.</span></span><span class="sig-name descname"><span class="pre">from_shared_memory</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">key</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">own_data</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'r+'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sharrow/dataset.html#Dataset.from_shared_memory"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#sharrow.Dataset.from_shared_memory" title="Permalink to this definition">¶</a></dt>
+<dd><p>Connect to an existing Dataset in shared memory.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>key</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a>) – An identifying key for this shared memory.  Use the same key
+in <cite>from_shared_memory</cite> to recreate this Dataset elsewhere.</p></li>
+<li><p><strong>own_data</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a><em>, </em><em>default False</em>) – The returned Dataset object references the shared memory but is
+not the “owner” of this data unless this flag is set.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#sharrow.Dataset" title="sharrow.Dataset">Dataset</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="sharrow.Dataset.release_shared_memory">
+<span class="sig-prename descclassname"><span class="pre">Dataset.</span></span><span class="sig-name descname"><span class="pre">release_shared_memory</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/sharrow/dataset.html#Dataset.release_shared_memory"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#sharrow.Dataset.release_shared_memory" title="Permalink to this definition">¶</a></dt>
+<dd><p>Release shared memory allocated to this Dataset.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="sharrow.Dataset.preload_shared_memory_size">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">Dataset.</span></span><span class="sig-name descname"><span class="pre">preload_shared_memory_size</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">key</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sharrow/dataset.html#Dataset.preload_shared_memory_size"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#sharrow.Dataset.preload_shared_memory_size" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the size in bytes of a shared Dataset without actually loading it.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>key</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a>) – The identifying key for this shared memory.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)">int</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="sharrow.Dataset.shared_memory_key">
+<span class="sig-prename descclassname"><span class="pre">Dataset.</span></span><span class="sig-name descname"><span class="pre">shared_memory_key</span></span><a class="headerlink" href="#sharrow.Dataset.shared_memory_key" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="sharrow.Dataset.shared_memory_size">
+<span class="sig-prename descclassname"><span class="pre">Dataset.</span></span><span class="sig-name descname"><span class="pre">shared_memory_size</span></span><a class="headerlink" href="#sharrow.Dataset.shared_memory_size" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="sharrow.Dataset.is_shared_memory">
+<span class="sig-prename descclassname"><span class="pre">Dataset.</span></span><span class="sig-name descname"><span class="pre">is_shared_memory</span></span><a class="headerlink" href="#sharrow.Dataset.is_shared_memory" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="digital-encoding">
+<h3>Digital Encoding<a class="headerlink" href="#digital-encoding" title="Permalink to this headline">¶</a></h3>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="sharrow.Dataset.digital_encodings">
+<span class="sig-prename descclassname"><span class="pre">Dataset.</span></span><span class="sig-name descname"><span class="pre">digital_encodings</span></span><a class="headerlink" href="#sharrow.Dataset.digital_encodings" title="Permalink to this definition">¶</a></dt>
+<dd><p>All digital_encoding attributes from Dataset variables.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.10)">dict</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="sharrow.Dataset.set_digital_encoding">
+<span class="sig-prename descclassname"><span class="pre">Dataset.</span></span><span class="sig-name descname"><span class="pre">set_digital_encoding</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sharrow/dataset.html#Dataset.set_digital_encoding"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#sharrow.Dataset.set_digital_encoding" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+</div>
+</div>
+
+    <script type="text/x-thebe-config">
+    {
+        requestKernel: true,
+        binderOptions: {
+            repo: "binder-examples/jupyter-stacks-datascience",
+            ref: "master",
+        },
+        codeMirrorConfig: {
+            theme: "abcdef",
+            mode: "python"
+        },
+        kernelOptions: {
+            kernelName: "python3",
+            path: "./."
+        },
+        predefinedOutput: true
+    }
+    </script>
+    <script>kernelName = 'python3'</script>
+
+              </div>
+              
+            
+                <!-- Previous / next buttons -->
+<div class='prev-next-area'> 
+    <a class='left-prev' id="prev-link" href="walkthrough/encoding.html" title="previous page">
+        <i class="fas fa-angle-left"></i>
+        <div class="prev-next-info">
+            <p class="prev-next-subtitle">previous</p>
+            <p class="prev-next-title">Data Encoding</p>
+        </div>
+    </a>
+</div>
+            
+        </div>
+    </div>
+    <footer class="footer">
+  <p>
+    
+      By Sharrow contributors, for the <a href="https://activitysim.github.io/">ActivitySim Consortium</a><br/>
+    
+        &copy; Copyright 2022 AMPO Research Foundation.<br/>
+  </p>
+</footer>
+</main>
+
+
+      </div>
+    </div>
+  
+  <script src="_static/js/index.be7d3bbb2ef33a8344ce.js"></script>
+
+  </body>
+</html>
