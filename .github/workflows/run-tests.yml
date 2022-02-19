@@ -80,9 +80,9 @@ jobs:
         activate-environment: testing-env
         auto-activate-base: false
         auto-update-conda: false
-    - name: Install Jupyterbook
+    - name: Install Jupyterbook and ruamel.yaml
       run: |
-        mamba install jupyter-book -c conda-forge
+        mamba install jupyter-book ruamel.yaml -c conda-forge
     - name: Install sharrow
       run: |
         python -m pip install --no-deps -e .
