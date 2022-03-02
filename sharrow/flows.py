@@ -780,7 +780,7 @@ class Flow:
                     )
                     dim_slots[k1] = toks
                 try:
-                    digital_encodings = spacearrays.digital_encodings
+                    digital_encodings = spacearrays.digital_encoding.info()
                 except AttributeError:
                     digital_encodings = {}
                 meta_data[spacename] = (dim_slots, digital_encodings)
@@ -797,7 +797,7 @@ class Flow:
 
                     dim_slots[k1] = [index_slots[z] for z in _dims]
                 try:
-                    digital_encodings = spacearrays.digital_encodings
+                    digital_encodings = spacearrays.digital_encoding.info()
                 except AttributeError:
                     digital_encodings = {}
                 meta_data[spacename] = (dim_slots, digital_encodings)

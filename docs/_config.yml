@@ -35,11 +35,14 @@ html:
 sphinx:
   extra_extensions:
   - sphinx.ext.autodoc
+  - sphinx.ext.autosummary
   - sphinx.ext.napoleon
   - sphinx.ext.viewcode
   - sphinx.ext.intersphinx
+  - sphinx_autosummary_accessors
   config:
     add_module_names: false
+    napoleon_use_rtype: false
     html_theme_options:
       home_page_in_toc: false
       search_bar_text: Search these docs...

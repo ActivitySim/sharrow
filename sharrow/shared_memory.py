@@ -5,7 +5,10 @@ import os
 import pickle
 from multiprocessing.shared_memory import ShareableList, SharedMemory
 
+import dask
+import dask.array as da
 import numpy as np
+import xarray as xr
 
 __GLOBAL_MEMORY_ARRAYS = {}
 __GLOBAL_MEMORY_LISTS = {}
@@ -200,3 +203,242 @@ def delete_shared_memory_files(key):
             os.unlink(mmap_filename)
         if os.path.isfile(mmap_filename + ".meta.pkl"):
             os.unlink(mmap_filename + ".meta.pkl")
+
+
+@xr.register_dataset_accessor("shm")
+class SharedMemDatasetAccessor:
+
+    _parent_class = xr.Dataset
+
+    def __init__(self, xarray_obj):
+        self._obj = xarray_obj
+        self._shared_memory_key_ = None
+        self._shared_memory_objs_ = []
+        self._shared_memory_owned_ = False
+
+    def _repr_html_(self):
+        html = self._obj._repr_html_()
+        html = html.replace("xarray.Dataset", "xarray.Dataset.shm")
+        return html
+
+    def __repr__(self):
+        r = self._obj.__repr__()
+        r = r.replace("xarray.Dataset", "xarray.Dataset.shm")
+        return r
+
+    def release_shared_memory(self):
+        """
+        Release shared memory allocated to this Dataset.
+        """
+        release_shared_memory(self._shared_memory_key_)
+
+    @staticmethod
+    def delete_shared_memory_files(key):
+        delete_shared_memory_files(key)
+
+    def to_shared_memory(self, key=None, mode="r+"):
+        """
+        Load this Dataset into shared memory.
+
+        The returned Dataset object references the shared memory and is the
+        "owner" of this data.  When this object is destroyed, the data backing
+        it may also be freed, which can result in a segfault or other unfortunate
+        condition if that memory is still accessed from elsewhere.
+
+        Parameters
+        ----------
+        key : str
+            An identifying key for this shared memory.  Use the same key
+            in `from_shared_memory` to recreate this Dataset elsewhere.
+        mode : {‘r+’, ‘r’, ‘w+’, ‘c’}, optional
+            This methid returns a copy of the Dataset in shared memory.
+            If memmapped, that copy can be opened in various modes.
+            See numpy.memmap() for details.
+
+        Returns
+        -------
+        Dataset
+        """
+        logger.info(f"sharrow.Dataset.to_shared_memory({key})")
+        if key is None:
+            import random
+
+            key = random.randbytes(4).hex()
+        self._shared_memory_key_ = key
+        self._shared_memory_owned_ = False
+        self._shared_memory_objs_ = []
+
+        wrappers = []
+        sizes = []
+        names = []
+        position = 0
+
+        def emit(k, a, is_coord):
+            nonlocal names, wrappers, sizes, position
+            wrappers.append(
+                {
+                    "dims": a.dims,
+                    "name": a.name,
+                    "attrs": a.attrs,
+                    "dtype": a.dtype,
+                    "shape": a.shape,
+                    "coord": is_coord,
+                    "nbytes": a.nbytes,
+                    "position": position,
+                }
+            )
+            sizes.append(a.nbytes)
+            names.append(k)
+            position += a.nbytes
+
+        for k, a in self._obj.coords.items():
+            emit(k, a, True)
+        for k in self._obj.variables:
+            if k in names:
+                continue
+            a = self._obj[k]
+            emit(k, a, False)
+
+        mem = create_shared_memory_array(key, size=position)
+        if key.startswith("memmap:"):
+            buffer = memoryview(mem)
+        else:
+            buffer = mem.buf
+
+        tasks = []
+        for w in wrappers:
+            _size = w["nbytes"]
+            _name = w["name"]
+            _pos = w["position"]
+            a = self._obj[_name]
+            mem_arr = np.ndarray(
+                shape=a.shape, dtype=a.dtype, buffer=buffer[_pos : _pos + _size]
+            )
+            if isinstance(a, xr.DataArray) and isinstance(a.data, da.Array):
+                tasks.append(da.store(a.data, mem_arr, lock=False, compute=False))
+            else:
+                mem_arr[:] = a[:]
+        if tasks:
+            dask.compute(tasks, scheduler="threads")
+
+        if key.startswith("memmap:"):
+            mem.flush()
+
+        create_shared_list([pickle.dumps(i) for i in wrappers], key)
+        return type(self).from_shared_memory(key, own_data=True, mode=mode)
+
+    @property
+    def shared_memory_key(self):
+        try:
+            return self._shared_memory_key_
+        except AttributeError:
+            raise ValueError("this dataset is not in shared memory")
+
+    @classmethod
+    def from_shared_memory(cls, key, own_data=False, mode="r+"):
+        """
+        Connect to an existing Dataset in shared memory.
+
+        Parameters
+        ----------
+        key : str
+            An identifying key for this shared memory.  Use the same key
+            in `from_shared_memory` to recreate this Dataset elsewhere.
+        own_data : bool, default False
+            The returned Dataset object references the shared memory but is
+            not the "owner" of this data unless this flag is set.
+
+        Returns
+        -------
+        Dataset
+        """
+        import pickle
+
+        from xarray import DataArray
+
+        _shared_memory_objs_ = []
+
+        shr_list = read_shared_list(key)
+        try:
+            _shared_memory_objs_.append(shr_list.shm)
+        except AttributeError:
+            # for memmap, list is loaded from pickle, not shared ram
+            pass
+        mem = open_shared_memory_array(key, mode=mode)
+        _shared_memory_objs_.append(mem)
+        if key.startswith("memmap:"):
+            buffer = memoryview(mem)
+        else:
+            buffer = mem.buf
+
+        content = {}
+
+        for w in shr_list:
+            t = pickle.loads(w)
+            shape = t.pop("shape")
+            dtype = t.pop("dtype")
+            name = t.pop("name")
+            coord = t.pop("coord", False)  # noqa: F841
+            position = t.pop("position")
+            nbytes = t.pop("nbytes")
+            mem_arr = np.ndarray(
+                shape, dtype=dtype, buffer=buffer[position : position + nbytes]
+            )
+            content[name] = DataArray(mem_arr, **t)
+
+        obj = cls._parent_class(content)
+        obj.shm._shared_memory_key_ = key
+        obj.shm._shared_memory_owned_ = own_data
+        obj.shm._shared_memory_objs_ = _shared_memory_objs_
+        return obj
+
+    @property
+    def shared_memory_size(self):
+        """int : Size (in bytes) in shared memory, raises ValueError if not shared."""
+        try:
+            return sum(i.size for i in self._shared_memory_objs_)
+        except AttributeError:
+            raise ValueError("this dataset is not in shared memory")
+
+    @property
+    def is_shared_memory(self):
+        """bool : Whether this Dataset is in shared memory."""
+        try:
+            return sum(i.size for i in self._shared_memory_objs_) > 0
+        except AttributeError:
+            return False
+
+    @staticmethod
+    def preload_shared_memory_size(key):
+        """
+        Compute the size in bytes of a shared Dataset without actually loading it.
+
+        Parameters
+        ----------
+        key : str
+            The identifying key for this shared memory.
+
+        Returns
+        -------
+        int
+        """
+        memsize = 0
+        try:
+            n = get_shared_list_nbytes(key)
+        except FileNotFoundError:
+            pass
+        else:
+            memsize += n
+        try:
+            mem = open_shared_memory_array(key, mode="r")
+        except FileNotFoundError:
+            pass
+        else:
+            memsize += mem.size
+        return memsize
+
+    def __getattr__(self, item):
+        return getattr(self._obj, item)
+
+    def __getitem__(self, item):
+        return self._obj[item]

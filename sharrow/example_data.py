@@ -7,15 +7,15 @@ import pandas as pd
 def get_skims():
     import openmatrix
 
-    from .dataset import Dataset
+    from . import dataset
 
     zfilename = os.path.join(os.path.dirname(__file__), "example_data", "skims.zarr")
     if os.path.exists(zfilename):
-        skims = Dataset.from_zarr(zfilename, consolidated=False)
+        skims = dataset.from_zarr(zfilename, consolidated=False)
     else:
         filename = os.path.join(os.path.dirname(__file__), "example_data", "skims.omx")
         with openmatrix.open_file(filename) as f:
-            skims = Dataset.from_omx_3d(
+            skims = dataset.from_omx_3d(
                 f,
                 index_names=("otaz", "dtaz", "time_period"),
                 indexes=None,
