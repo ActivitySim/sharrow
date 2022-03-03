@@ -1,5 +1,6 @@
 import dask.array as da
 import numpy as np
+import xarray as xr
 
 
 def array_encode(
@@ -18,10 +19,31 @@ def array_encode(
     Parameters
     ----------
     x : DataArray
+        The original array to be encoded.
+    missing_value : Numeric, optional
+        If the current array has "missing" values encoded with something
+        other that NaN, give that value here.
+    bitwidth : {16, 8}
+        Number of bits to use in the encoded integers.
+    min_value, max_value : Numeric, optional
+        Explicitly give the min and max values represented in the array.
+        If not given, they are inferred from `x`. It is useful to give
+        these values if x does not necessarily include all the values that
+        might need to be inserted into `x` later.
+    scale : Numeric, optional
+        Explicitly give the scaling factor.  This is inferred from the
+        min and max values if not provided.
+    offset : Numeric, optional
+        Explicitly give the offset factor.  This is inferred from the
+        min value if not provided.
+    by_dict : bool or {8, 16, 32}, optional
+        Encode by dictionary, using this bitwidth, or set to `True`
+        and give the `bitwidth` argument.  If given, all other
+        arguments setting encoding parameters are ignored.
 
     Returns
     -------
-
+    encoded_values : DataArray
     """
     x = array_decode(x)
     if by_dict:
@@ -136,3 +158,86 @@ def digitize_by_dictionary(arr, bitwidth=8):
         "dictionary": bins,
     }
     return result
+
+
+@xr.register_dataset_accessor("digital_encoding")
+class _DigitalEncodings:
+    def __init__(self, xarray_obj):
+        self._obj = xarray_obj
+
+    def info(self):
+        """
+        All digital_encoding attributes from Dataset variables.
+
+        Returns
+        -------
+        dict
+        """
+        result = {}
+        for k in self._obj.variables:
+            k_attrs = self._obj._variables[k].attrs
+            if "digital_encoding" in k_attrs:
+                result[k] = k_attrs["digital_encoding"]
+        return result
+
+    def set(self, name, *args, **kwargs):
+        """
+        Digitally encode one or more variables in this dataset.
+
+        All variables are encoded using the same given parameters.
+        To encode various variables differently, make multiple calls
+        to this function.
+
+        Parameters
+        ----------
+        name : str or Collection[str]
+            The name(s) of the variable to be encoded.
+        missing_value : Numeric, optional
+            If the current array has "missing" values encoded with something
+            other that NaN, give that value here.
+        bitwidth : {16, 8}
+            Number of bits to use in the encoded integers.
+        min_value, max_value : Numeric, optional
+            Explicitly give the min and max values represented in the array.
+            If not given, they are inferred from `x`. It is useful to give
+            these values if x does not necessarily include all the values that
+            might need to be inserted into `x` later.
+        scale : Numeric, optional
+            Explicitly give the scaling factor.  This is inferred from the
+            min and max values if not provided.
+        offset : Numeric, optional
+            Explicitly give the offset factor.  This is inferred from the
+            min value if not provided.
+        by_dict : {8, 16, 32}, optional
+            Encode by dictionary, using this bitwidth.  If given, all
+            arguments other than this and `x` are ignored.
+
+        Returns
+        -------
+        Dataset
+            A copy of the dataset, with the named variable digitally encoded.
+        """
+        updates = {}
+        if isinstance(name, str):
+            updates[name] = array_encode(self._obj[name], *args, **kwargs)
+        else:
+            for n in name:
+                updates[n] = array_encode(self._obj[n], *args, **kwargs)
+        return self._obj.assign(updates)
+
+    def strip(self, name):
+        """
+        Digitally decode one or more variables in this dataset.
+
+        Parameters
+        ----------
+        name : str or Collection[str]
+            The name(s) of the variable to be decoded.
+        """
+        updates = {}
+        if isinstance(name, str):
+            updates[name] = array_decode(self._obj[name])
+        else:
+            for n in name:
+                updates[n] = array_decode(self._obj[n])
+        return self._obj.assign(updates)

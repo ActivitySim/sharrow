@@ -73,54 +73,54 @@ Convenience
 --------------------------------------------------------------------------------
 Dataset
 --------------------------------------------------------------------------------
-.. autoclass:: sharrow.Dataset
-    :show-inheritance:
+Sharrow uses the :py:class:`xarray.Dataset` class extensively.  Refer to the
+`xarray documentation <https://docs.xarray.dev/en/stable/>` for standard usage.
+The attributes and methods documented here are added to :py:class:`xarray.Dataset`
+when you import sharrow.
 
 Constructors
 ~~~~~~~~~~~~
-.. automethod:: sharrow.Dataset.construct
-.. automethod:: sharrow.Dataset.from_table
-.. automethod:: sharrow.Dataset.from_omx
-.. automethod:: sharrow.Dataset.from_omx_3d
-.. automethod:: sharrow.Dataset.from_zarr
-.. automethod:: sharrow.Dataset.from_named_objects
+
+The sharrow library provides several constructors for :py:class:`Dataset` objects.
+These functions can be found in the :py:mod:`sharrow.dataset` module.
+
+.. autofunction:: sharrow.dataset.construct
+.. autofunction:: sharrow.dataset.from_table
+.. autofunction:: sharrow.dataset.from_omx
+.. autofunction:: sharrow.dataset.from_omx_3d
+.. autofunction:: sharrow.dataset.from_zarr
+.. autofunction:: sharrow.dataset.from_named_objects
 
 Editing
 ~~~~~~~
-.. automethod:: sharrow.Dataset.update
 .. automethod:: sharrow.Dataset.ensure_integer
 
 Indexing
 ~~~~~~~~
-.. automethod:: sharrow.Dataset.at
-.. automethod:: sharrow.Dataset.iat
-.. automethod:: sharrow.Dataset.at_df
-.. automethod:: sharrow.Dataset.iat_df
+.. autoaccessor:: sharrow.Dataset.iloc
+.. autoaccessor:: sharrow.Dataset.at
+.. autoaccessormethod:: sharrow.Dataset.at.df
+.. autoaccessor:: sharrow.Dataset.iat
+.. autoaccessormethod:: sharrow.Dataset.iat.df
 
-Convenience
-~~~~~~~~~~~
-In many ways, a dataset with a single dimensions is like a pandas DataFrame,
-with the one dimension giving the rows, and the variables as columns.  This
-analogy eventually breaks down (DataFrame columns are ordered, Dataset
-variables are not) but the similarities are enought that it's sometimes convenient
-to have `loc` and `iloc` functionality enabled.  This only works for indexing on
-the rows, but if there's only the one dimension the complexity of `sel` and `isel`
-are not needed.
-
-.. autoattribute:: sharrow.Dataset.loc
-.. autoattribute:: sharrow.Dataset.iloc
 
 Shared Memory
 ~~~~~~~~~~~~~
-.. automethod:: sharrow.Dataset.to_shared_memory
-.. automethod:: sharrow.Dataset.from_shared_memory
-.. automethod:: sharrow.Dataset.release_shared_memory
-.. automethod:: sharrow.Dataset.preload_shared_memory_size
-.. autoattribute:: sharrow.Dataset.shared_memory_key
-.. autoattribute:: sharrow.Dataset.shared_memory_size
-.. autoattribute:: sharrow.Dataset.is_shared_memory
+Sharrow's shared memory system is consolidated into the :py:class:`Dataset.shm`
+accessor.
+
+.. autoaccessormethod:: sharrow.Dataset.shm.to_shared_memory
+.. autoaccessormethod:: sharrow.Dataset.shm.from_shared_memory
+.. autoaccessormethod:: sharrow.Dataset.shm.release_shared_memory
+.. autoaccessormethod:: sharrow.Dataset.shm.preload_shared_memory_size
+.. autoaccessorattribute:: sharrow.Dataset.shm.shared_memory_key
+.. autoaccessorattribute:: sharrow.Dataset.shm.shared_memory_size
+.. autoaccessorattribute:: sharrow.Dataset.shm.is_shared_memory
 
 Digital Encoding
 ~~~~~~~~~~~~~~~~
-.. autoattribute:: sharrow.Dataset.digital_encodings
-.. automethod:: sharrow.Dataset.set_digital_encoding
+Sharrow's digital encoding management is consolidated into the
+:py:class:`Dataset.digital_encoding` accessor.
+
+.. autoaccessormethod:: sharrow.Dataset.digital_encoding.info
+.. autoaccessormethod:: sharrow.Dataset.digital_encoding.set

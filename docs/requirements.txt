@@ -7,3 +7,4 @@ xarray >= 0.20.0
 numba >= 0.53
 numexpr
 filelock
+sphinx-autosummary-accessors

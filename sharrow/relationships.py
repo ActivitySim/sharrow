@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
-from .dataset import Dataset
+from .dataset import Dataset, construct
 
 logger = logging.getLogger("sharrow")
 
@@ -450,7 +450,7 @@ class DataTree:
             Set this new node as the root of the tree, displacing any existing
             root.
         """
-        self._graph.add_node(name, dataset=self.DatasetType.construct(dataset))
+        self._graph.add_node(name, dataset=construct(dataset))
         if self.root_node_name is None or as_root:
             self.root_node_name = name
         if isinstance(relationships, str):
@@ -498,7 +498,7 @@ class DataTree:
         from .dataset import Dataset
 
         if not isinstance(x, Dataset):
-            x = self.DatasetType.construct(x)
+            x = construct(x)
         self._graph.nodes[self.root_node_name]["dataset"] = x
 
     def _get_relationship(self, edge):
@@ -828,7 +828,7 @@ class DataTree:
         for k in replacements:
             if k not in graph.nodes:
                 raise KeyError(k)
-            x = self.DatasetType.construct(replacements[k])
+            x = construct(replacements[k])
             if validate:
                 if x.dims != graph.nodes[k]["dataset"].dims:
                     # when replacement dimensions do not match, check for

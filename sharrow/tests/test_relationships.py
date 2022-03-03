@@ -5,6 +5,7 @@ from pytest import raises
 
 import sharrow
 from sharrow import Dataset, DataTree, example_data
+from sharrow.dataset import from_named_objects
 
 
 def test_shared_data(dataframe_regression):
@@ -188,7 +189,7 @@ def test_with_2d_base(dataframe_regression):
     households["time5"] = prng.choice(["EA", "AM", "MD", "PM", "EV"], 5000)
     households["time3"] = prng.choice(["AM", "MD", "PM"], 5000)
 
-    blank = Dataset.from_named_objects(households.index, skims["dtaz"])
+    blank = from_named_objects(households.index, skims["dtaz"])
     assert sorted(blank.coords) == ["HHID", "dtaz"]
     assert blank.coords["HHID"].dims == ("HHID",)
     assert blank.coords["dtaz"].dims == ("dtaz",)
@@ -242,7 +243,7 @@ def test_with_2d_base(dataframe_regression):
 
 
 def _get_target(q):
-    skims_ = Dataset.from_shared_memory("skims")
+    skims_ = Dataset.shm.from_shared_memory("skims")
     q.put(skims_.SOV_TIME.sum())
 
 
@@ -250,12 +251,12 @@ def test_shared_memory():
 
     skims = example_data.get_skims()
 
-    skims_2 = skims.to_shared_memory("skims")
+    skims_2 = skims.shm.to_shared_memory("skims")
     target = skims.SOV_TIME.sum()
     assert skims_2.SOV_TIME.sum() == target
 
     # reconstruct in same process
-    skims_3 = Dataset.from_shared_memory("skims")
+    skims_3 = Dataset.shm.from_shared_memory("skims")
     assert skims_3.SOV_TIME.sum() == target
 
     # reconstruct in different process
