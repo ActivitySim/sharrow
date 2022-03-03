@@ -100,7 +100,7 @@ def construct(source):
     elif isinstance(source, Sequence) and all(isinstance(i, str) for i in source):
         source = xr.Dataset.from_table(pa.table({i: [] for i in source}))
     else:
-        raise TypeError(f"source cannot be type {type(source)}")
+        source = xr.Dataset(source)
     return source
 
 

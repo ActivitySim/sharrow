@@ -21,3 +21,11 @@ def register_dataarray_method(func):
 
     wrapper.__doc__ = func.__doc__
     return xr.register_dataarray_accessor(func.__name__)(wrapper)
+
+
+def register_dataarray_staticmethod(func):
+    return xr.register_dataarray_accessor(func.__name__)(func)
+
+
+def register_dataset_staticmethod(func):
+    return xr.register_dataset_accessor(func.__name__)(func)
