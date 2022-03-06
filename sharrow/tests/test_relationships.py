@@ -1,7 +1,9 @@
+import sys
+
 import numpy as np
 import pandas as pd
 from numpy.random import SeedSequence, default_rng
-from pytest import raises
+from pytest import mark, raises
 
 import sharrow
 from sharrow import Dataset, DataTree, example_data
@@ -247,6 +249,9 @@ def _get_target(q):
     q.put(skims_.SOV_TIME.sum())
 
 
+@mark.skipif(
+    sys.version_info < (3, 8), reason="shared memory requires python3.8 or higher"
+)
 def test_shared_memory():
 
     skims = example_data.get_skims()
