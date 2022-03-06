@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>sharrow.flows &#8212; v2.0.0</title>
+    <title>sharrow.flows &#8212; v2.0.1</title>
     
   <link href="../../_static/css/theme.css" rel="stylesheet">
   <link href="../../_static/css/index.ff1ffe594081f20da1ef19478df9384b.css" rel="stylesheet">
@@ -83,7 +83,7 @@ const thebe_selector_output = ".output, .cell_output"
       <img src="../../_static/logo.png" class="logo" alt="logo">
       
       
-      <h1 class="site-logo" id="site-title">v2.0.0</h1>
+      <h1 class="site-logo" id="site-title">v2.0.1</h1>
       
     </a>
 </div><form class="bd-search d-flex align-items-center" action="../../search.html" method="get">
@@ -940,9 +940,9 @@ const thebe_selector_output = ".output, .cell_output"
         <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">extra_hash_data</span><span class="p">:</span>
             <span class="n">_flow_hash_push</span><span class="p">(</span><span class="n">k</span><span class="p">)</span>
 
-        <span class="n">_flow_hash_push</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">boundscheck</span><span class="si">=}</span><span class="s2">&quot;</span><span class="p">)</span>
-        <span class="n">_flow_hash_push</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">error_model</span><span class="si">=}</span><span class="s2">&quot;</span><span class="p">)</span>
-        <span class="n">_flow_hash_push</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">fastmath</span><span class="si">=}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">_flow_hash_push</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;boundscheck=</span><span class="si">{</span><span class="n">boundscheck</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">_flow_hash_push</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;error_model=</span><span class="si">{</span><span class="n">error_model</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">_flow_hash_push</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;fastmath=</span><span class="si">{</span><span class="n">fastmath</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">flow_hash</span> <span class="o">=</span> <span class="n">base64</span><span class="o">.</span><span class="n">b32encode</span><span class="p">(</span><span class="n">flow_hash</span><span class="o">.</span><span class="n">digest</span><span class="p">())</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">flow_hash_audit</span> <span class="o">=</span> <span class="s2">&quot;]</span><span class="se">\n</span><span class="s2"># [&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">flow_hash_audit</span><span class="p">)</span>
@@ -1003,9 +1003,6 @@ const thebe_selector_output = ".output, .cell_output"
                         <span class="n">_dims</span> <span class="o">=</span> <span class="n">spacearrays</span><span class="o">.</span><span class="n">_variables</span><span class="p">[</span><span class="n">k1</span><span class="p">]</span><span class="o">.</span><span class="n">dims</span>
                     <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
                         <span class="n">_dims</span> <span class="o">=</span> <span class="n">spacearrays</span><span class="p">[</span><span class="n">k1</span><span class="p">]</span><span class="o">.</span><span class="n">dims</span>
-
-                    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  YO </span><span class="si">{</span><span class="n">_dims</span><span class="si">=}</span><span class="s2">&quot;</span><span class="p">)</span>
-
                     <span class="n">dim_slots</span><span class="p">[</span><span class="n">k1</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">index_slots</span><span class="p">[</span><span class="n">z</span><span class="p">]</span> <span class="k">for</span> <span class="n">z</span> <span class="ow">in</span> <span class="n">_dims</span><span class="p">]</span>
                 <span class="k">try</span><span class="p">:</span>
                     <span class="n">digital_encodings</span> <span class="o">=</span> <span class="n">spacearrays</span><span class="o">.</span><span class="n">digital_encoding</span><span class="o">.</span><span class="n">info</span><span class="p">()</span>

@@ -74,7 +74,7 @@ Convenience
 Dataset
 --------------------------------------------------------------------------------
 Sharrow uses the :py:class:`xarray.Dataset` class extensively.  Refer to the
-`xarray documentation <https://docs.xarray.dev/en/stable/>` for standard usage.
+`xarray documentation <https://docs.xarray.dev/en/stable/>`_ for standard usage.
 The attributes and methods documented here are added to :py:class:`xarray.Dataset`
 when you import sharrow.
 
