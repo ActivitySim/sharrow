@@ -729,9 +729,9 @@ class Flow:
         for k in extra_hash_data:
             _flow_hash_push(k)
 
-        _flow_hash_push(f"{boundscheck=}")
-        _flow_hash_push(f"{error_model=}")
-        _flow_hash_push(f"{fastmath=}")
+        _flow_hash_push(f"boundscheck={boundscheck}")
+        _flow_hash_push(f"error_model={error_model}")
+        _flow_hash_push(f"fastmath={fastmath}")
 
         self.flow_hash = base64.b32encode(flow_hash.digest()).decode()
         self.flow_hash_audit = "]\n# [".join(flow_hash_audit)
@@ -792,9 +792,6 @@ class Flow:
                         _dims = spacearrays._variables[k1].dims
                     except AttributeError:
                         _dims = spacearrays[k1].dims
-
-                    print(f"  YO {_dims=}")
-
                     dim_slots[k1] = [index_slots[z] for z in _dims]
                 try:
                     digital_encodings = spacearrays.digital_encoding.info()

@@ -3,12 +3,17 @@ import hashlib
 import logging
 import os
 import pickle
-from multiprocessing.shared_memory import ShareableList, SharedMemory
 
 import dask
 import dask.array as da
 import numpy as np
 import xarray as xr
+
+try:
+    from multiprocessing.shared_memory import ShareableList, SharedMemory
+except ImportError:
+    ShareableList, SharedMemory = None, None
+
 
 __GLOBAL_MEMORY_ARRAYS = {}
 __GLOBAL_MEMORY_LISTS = {}

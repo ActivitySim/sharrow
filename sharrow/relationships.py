@@ -8,6 +8,14 @@ import xarray as xr
 
 from .dataset import Dataset, construct
 
+try:
+    from ast import unparse
+except ImportError:
+    from astunparse import unparse as _unparse
+
+    unparse = lambda *args: _unparse(*args).strip("\n")
+
+
 logger = logging.getLogger("sharrow")
 
 well_known_names = {
@@ -1098,7 +1106,7 @@ class DataTree:
                     parent_data, parent_name, exclude_dims=exclude_dims
                 )
                 try:
-                    upside = ", ".join(ast.unparse(t) for t in upside_ast)
+                    upside = ", ".join(unparse(t) for t in upside_ast)
                 except:  # noqa: E722
                     for t in upside_ast:
                         print(f"t:{t}")

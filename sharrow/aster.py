@@ -1,15 +1,30 @@
 import ast
 import io
 import logging
+import sys
 import tokenize
 
+try:
+    from ast import unparse
+except ImportError:
+    from astunparse import unparse as _unparse
+
+    unparse = lambda *args: _unparse(*args).strip("\n")
+
 logger = logging.getLogger("sharrow.aster")
+
+if sys.version_info >= (3, 8):
+    ast_Constant_Type = ast.Constant
+    ast_String_value = lambda x: x
+else:
+    ast_Constant_Type = (ast.Index, ast.Constant)
+    ast_String_value = lambda x: x.s if isinstance(x, ast.Str) else x
 
 
 def _isNone(c):
     if c is None:
         return True
-    if isinstance(c, ast.Constant) and c.value is None:
+    if isinstance(c, ast_Constant_Type) and c.value is None:
         return True
     return False
 
@@ -319,7 +334,7 @@ class RewriteForNumba(ast.NodeTransformer):
                 )
             elif node2 is None:
                 try:
-                    unparsed = ast.unparse(node1)
+                    unparsed = unparse(node1)
                 except:  # noqa: E722
                     unparsed = f"{type(node1)} not unparseable"
                 logger.log(
@@ -328,11 +343,11 @@ class RewriteForNumba(ast.NodeTransformer):
                 )
             else:
                 try:
-                    unparsed1 = ast.unparse(node1)
+                    unparsed1 = unparse(node1)
                 except:  # noqa: E722
                     unparsed1 = f"{type(node1).__name__} not unparseable"
                 try:
-                    unparsed2 = ast.unparse(node2)
+                    unparsed2 = unparse(node2)
                 except:  # noqa: E722
                     unparsed2 = f"{type(node2).__name__} not unparseable"
                 logger.log(
@@ -428,13 +443,15 @@ class RewriteForNumba(ast.NodeTransformer):
                         keywords=[],
                     )
                 else:
-                    if (scale := digital_encoding.get("scale", 1)) != 1:
+                    scale = digital_encoding.get("scale", 1)
+                    offset = digital_encoding.get("offset", 0)
+                    if scale != 1:
                         result = ast.BinOp(
                             left=result,
                             op=ast.Mult(),
                             right=ast.Num(scale),
                         )
-                    if offset := digital_encoding.get("offset", 0):
+                    if offset:
                         result = ast.BinOp(
                             left=result,
                             op=ast.Add(),
@@ -447,23 +464,31 @@ class RewriteForNumba(ast.NodeTransformer):
         if isinstance(node.value, ast.Name):
             if (
                 node.value.id == self.spacename
-                and isinstance(node.slice, ast.Constant)
-                and isinstance(node.slice.value, str)
+                and isinstance(node.slice, ast_Constant_Type)
+                and isinstance(ast_String_value(node.slice.value), str)
             ):
                 self.log_event(f"visit_Subscript(Constant {node.slice.value})")
-                return self._replacement(node.slice.value, node.ctx, node)
+                return self._replacement(
+                    ast_String_value(node.slice.value), node.ctx, node
+                )
             if (
                 node.value.id == self.rawalias
-                and isinstance(node.slice, ast.Constant)
-                and isinstance(node.slice.value, str)
-                and node.slice.value in self.spacevars
+                and isinstance(node.slice, ast_Constant_Type)
+                and isinstance(ast_String_value(node.slice.value), str)
+                and ast_String_value(node.slice.value) in self.spacevars
             ):
                 result = ast.Subscript(
                     value=ast.Name(id=self.rawname, ctx=ast.Load()),
-                    slice=ast.Constant(self.spacevars[node.slice.value]),
+                    slice=ast.Constant(
+                        self.spacevars[ast_String_value(node.slice.value)]
+                    ),
                     ctx=node.ctx,
                 )
-                self.log_event(f"visit_Subscript(Raw {node.slice.value})", node, result)
+                self.log_event(
+                    f"visit_Subscript(Raw {ast_String_value(node.slice.value)})",
+                    node,
+                    result,
+                )
                 return result
         self.log_event("visit_Subscript(no change)", node)
         return node
@@ -550,9 +575,14 @@ class RewriteForNumba(ast.NodeTransformer):
         if isinstance(node.func, ast.Attribute) and node.func.attr == "reverse":
             if isinstance(node.func.value, ast.Name):
                 if node.func.value.id == self.spacename:
-                    if len(node.args) == 1 and isinstance(node.args[0], ast.Constant):
+                    if len(node.args) == 1 and isinstance(
+                        node.args[0], ast_Constant_Type
+                    ):
                         result = self._replacement(
-                            node.args[0].value, node.func.ctx, None, transpose_lead=True
+                            ast_String_value(node.args[0].value),
+                            node.func.ctx,
+                            None,
+                            transpose_lead=True,
                         )
         # handle clip as a method
         if isinstance(node.func, ast.Attribute) and node.func.attr == "clip":
@@ -623,12 +653,17 @@ class RewriteForNumba(ast.NodeTransformer):
         if isinstance(node.func, ast.Attribute) and node.func.attr == "max":
             if isinstance(node.func.value, ast.Name):
                 if node.func.value.id == self.spacename:
-                    if len(node.args) == 1 and isinstance(node.args[0], ast.Constant):
+                    if len(node.args) == 1 and isinstance(
+                        node.args[0], ast_Constant_Type
+                    ):
                         forward = self._replacement(
-                            node.args[0].value, node.func.ctx, None
+                            ast_String_value(node.args[0].value), node.func.ctx, None
                         )
                         backward = self._replacement(
-                            node.args[0].value, node.func.ctx, None, transpose_lead=True
+                            ast_String_value(node.args[0].value),
+                            node.func.ctx,
+                            None,
+                            transpose_lead=True,
                         )
                         result = ast.Call(
                             func=ast.Name("max", ctx=ast.Load()),
@@ -673,7 +708,7 @@ def expression_for_numba(
     digital_encodings=None,
     prefer_name=None,
 ):
-    return ast.unparse(
+    return unparse(
         RewriteForNumba(
             spacename,
             dim_slots,
@@ -703,7 +738,7 @@ class Asterize:
                     )
                 target = a.targets[0].id
                 new_tree = a.value
-            result = ast.unparse(new_tree)
+            result = unparse(new_tree)
             self._cache[expr] = (target, result)
         return target, result
 
