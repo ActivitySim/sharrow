@@ -267,11 +267,10 @@ class Table:
         else:
             stopper = 1e99
         n = 0
-        rowfile = lambda n: os.path.join(path, f"block.{n:03d}.rows")  # noqa: E731
-        colfile = lambda n: os.path.join(path, f"block.{n:03d}.cols")  # noqa: E731
+        rowfile = lambda n: os.path.join(path, f"block.{n:03d}.rows")
+        colfile = lambda n: os.path.join(path, f"block.{n:03d}.cols")
         builder = None
         look = True
-        print(f"{stopper=}")
         while look and n <= stopper:
             look = False
             if os.path.exists(rowfile(n)):
