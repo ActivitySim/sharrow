@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>sharrow.flows &#8212; v2.0.1</title>
+    <title>sharrow.flows &#8212; v2.0.2</title>
     
   <link href="../../_static/css/theme.css" rel="stylesheet">
   <link href="../../_static/css/index.ff1ffe594081f20da1ef19478df9384b.css" rel="stylesheet">
@@ -83,7 +83,7 @@ const thebe_selector_output = ".output, .cell_output"
       <img src="../../_static/logo.png" class="logo" alt="logo">
       
       
-      <h1 class="site-logo" id="site-title">v2.0.1</h1>
+      <h1 class="site-logo" id="site-title">v2.0.2</h1>
       
     </a>
 </div><form class="bd-search d-flex align-items-center" action="../../search.html" method="get">
@@ -1343,10 +1343,10 @@ const thebe_selector_output = ".output, .cell_output"
                         <span class="k">if</span> <span class="n">f_args_j</span><span class="p">:</span>
                             <span class="n">f_args_j</span> <span class="o">+=</span> <span class="s2">&quot;, &quot;</span>
                         <span class="n">meta_code</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
-                            <span class="sa">f</span><span class="s2">&quot;result[</span><span class="si">{</span><span class="n">js</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">n</span><span class="si">}</span><span class="s2">] = </span><span class="si">{</span><span class="n">clean</span><span class="p">(</span><span class="n">k</span><span class="p">)</span><span class="si">}</span><span class="s2">(</span><span class="si">{</span><span class="n">f_args_j</span><span class="si">}</span><span class="s2">result[</span><span class="si">{</span><span class="n">js</span><span class="si">}</span><span class="s2">], </span><span class="si">{</span><span class="n">f_name_tokens</span><span class="si">}</span><span class="s2">)&quot;</span>
+                            <span class="sa">f</span><span class="s2">&quot;result[</span><span class="si">{</span><span class="n">js</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">n</span><span class="si">}</span><span class="s2">] = (</span><span class="si">{</span><span class="n">clean</span><span class="p">(</span><span class="n">k</span><span class="p">)</span><span class="si">}</span><span class="s2">(</span><span class="si">{</span><span class="n">f_args_j</span><span class="si">}</span><span class="s2">result[</span><span class="si">{</span><span class="n">js</span><span class="si">}</span><span class="s2">], </span><span class="si">{</span><span class="n">f_name_tokens</span><span class="si">}</span><span class="s2">)).item()&quot;</span>
                         <span class="p">)</span>
                         <span class="n">meta_code_dot</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
-                            <span class="sa">f</span><span class="s2">&quot;intermediate[</span><span class="si">{</span><span class="n">n</span><span class="si">}</span><span class="s2">] = </span><span class="si">{</span><span class="n">clean</span><span class="p">(</span><span class="n">k</span><span class="p">)</span><span class="si">}</span><span class="s2">(</span><span class="si">{</span><span class="n">f_args_j</span><span class="si">}</span><span class="s2">intermediate, </span><span class="si">{</span><span class="n">f_name_tokens</span><span class="si">}</span><span class="s2">)&quot;</span>
+                            <span class="sa">f</span><span class="s2">&quot;intermediate[</span><span class="si">{</span><span class="n">n</span><span class="si">}</span><span class="s2">] = (</span><span class="si">{</span><span class="n">clean</span><span class="p">(</span><span class="n">k</span><span class="p">)</span><span class="si">}</span><span class="s2">(</span><span class="si">{</span><span class="n">f_args_j</span><span class="si">}</span><span class="s2">intermediate, </span><span class="si">{</span><span class="n">f_name_tokens</span><span class="si">}</span><span class="s2">)).item()&quot;</span>
                         <span class="p">)</span>
                     <span class="n">meta_code_stack</span> <span class="o">=</span> <span class="n">textwrap</span><span class="o">.</span><span class="n">indent</span><span class="p">(</span>
                         <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">meta_code</span><span class="p">),</span> <span class="s2">&quot; &quot;</span> <span class="o">*</span> <span class="mi">12</span>
@@ -1362,15 +1362,31 @@ const thebe_selector_output = ".output, .cell_output"
                     <span class="k">if</span> <span class="ow">not</span> <span class="n">meta_code_stack_dot</span><span class="p">:</span>
                         <span class="n">meta_code_stack_dot</span> <span class="o">=</span> <span class="s2">&quot;pass&quot;</span>
                     <span class="k">if</span> <span class="n">n_root_dims</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-                        <span class="n">meta_template</span> <span class="o">=</span> <span class="n">IRUNNER_1D_TEMPLATE</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">**</span><span class="nb">locals</span><span class="p">())</span>
-                        <span class="n">meta_template_dot</span> <span class="o">=</span> <span class="n">IDOTTER_1D_TEMPLATE</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">**</span><span class="nb">locals</span><span class="p">())</span>
-                        <span class="n">line_template</span> <span class="o">=</span> <span class="n">ILINER_1D_TEMPLATE</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">**</span><span class="nb">locals</span><span class="p">())</span>
-                        <span class="n">mnl_template</span> <span class="o">=</span> <span class="n">MNL_1D_TEMPLATE</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">**</span><span class="nb">locals</span><span class="p">())</span>
+                        <span class="n">meta_template</span> <span class="o">=</span> <span class="n">IRUNNER_1D_TEMPLATE</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">**</span><span class="nb">locals</span><span class="p">())</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                            <span class="o">**</span><span class="nb">locals</span><span class="p">()</span>
+                        <span class="p">)</span>
+                        <span class="n">meta_template_dot</span> <span class="o">=</span> <span class="n">IDOTTER_1D_TEMPLATE</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                            <span class="o">**</span><span class="nb">locals</span><span class="p">()</span>
+                        <span class="p">)</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">**</span><span class="nb">locals</span><span class="p">())</span>
+                        <span class="n">line_template</span> <span class="o">=</span> <span class="n">ILINER_1D_TEMPLATE</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">**</span><span class="nb">locals</span><span class="p">())</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                            <span class="o">**</span><span class="nb">locals</span><span class="p">()</span>
+                        <span class="p">)</span>
+                        <span class="n">mnl_template</span> <span class="o">=</span> <span class="n">MNL_1D_TEMPLATE</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">**</span><span class="nb">locals</span><span class="p">())</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                            <span class="o">**</span><span class="nb">locals</span><span class="p">()</span>
+                        <span class="p">)</span>
                     <span class="k">elif</span> <span class="n">n_root_dims</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
-                        <span class="n">meta_template</span> <span class="o">=</span> <span class="n">IRUNNER_2D_TEMPLATE</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">**</span><span class="nb">locals</span><span class="p">())</span>
-                        <span class="n">meta_template_dot</span> <span class="o">=</span> <span class="n">IDOTTER_2D_TEMPLATE</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">**</span><span class="nb">locals</span><span class="p">())</span>
-                        <span class="n">line_template</span> <span class="o">=</span> <span class="n">ILINER_2D_TEMPLATE</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">**</span><span class="nb">locals</span><span class="p">())</span>
-                        <span class="n">mnl_template</span> <span class="o">=</span> <span class="n">MNL_2D_TEMPLATE</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">**</span><span class="nb">locals</span><span class="p">())</span>
+                        <span class="n">meta_template</span> <span class="o">=</span> <span class="n">IRUNNER_2D_TEMPLATE</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">**</span><span class="nb">locals</span><span class="p">())</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                            <span class="o">**</span><span class="nb">locals</span><span class="p">()</span>
+                        <span class="p">)</span>
+                        <span class="n">meta_template_dot</span> <span class="o">=</span> <span class="n">IDOTTER_2D_TEMPLATE</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                            <span class="o">**</span><span class="nb">locals</span><span class="p">()</span>
+                        <span class="p">)</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">**</span><span class="nb">locals</span><span class="p">())</span>
+                        <span class="n">line_template</span> <span class="o">=</span> <span class="n">ILINER_2D_TEMPLATE</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">**</span><span class="nb">locals</span><span class="p">())</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                            <span class="o">**</span><span class="nb">locals</span><span class="p">()</span>
+                        <span class="p">)</span>
+                        <span class="n">mnl_template</span> <span class="o">=</span> <span class="n">MNL_2D_TEMPLATE</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">**</span><span class="nb">locals</span><span class="p">())</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                            <span class="o">**</span><span class="nb">locals</span><span class="p">()</span>
+                        <span class="p">)</span>
                     <span class="k">else</span><span class="p">:</span>
                         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;invalid n_root_dims </span><span class="si">{</span><span class="n">n_root_dims</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
