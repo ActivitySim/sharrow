@@ -1132,10 +1132,10 @@ class Flow:
                         if f_args_j:
                             f_args_j += ", "
                         meta_code.append(
-                            f"result[{js}, {n}] = {clean(k)}({f_args_j}result[{js}], {f_name_tokens})"
+                            f"result[{js}, {n}] = np.{{dtype}}({clean(k)}({f_args_j}result[{js}], {f_name_tokens}))"
                         )
                         meta_code_dot.append(
-                            f"intermediate[{n}] = {clean(k)}({f_args_j}intermediate, {f_name_tokens})"
+                            f"intermediate[{n}] = np.{{dtype}}({clean(k)}({f_args_j}intermediate, {f_name_tokens}))"
                         )
                     meta_code_stack = textwrap.indent(
                         "\n".join(meta_code), " " * 12
@@ -1151,15 +1151,31 @@ class Flow:
                     if not meta_code_stack_dot:
                         meta_code_stack_dot = "pass"
                     if n_root_dims == 1:
-                        meta_template = IRUNNER_1D_TEMPLATE.format(**locals())
-                        meta_template_dot = IDOTTER_1D_TEMPLATE.format(**locals())
-                        line_template = ILINER_1D_TEMPLATE.format(**locals())
-                        mnl_template = MNL_1D_TEMPLATE.format(**locals())
+                        meta_template = IRUNNER_1D_TEMPLATE.format(**locals()).format(
+                            **locals()
+                        )
+                        meta_template_dot = IDOTTER_1D_TEMPLATE.format(
+                            **locals()
+                        ).format(**locals())
+                        line_template = ILINER_1D_TEMPLATE.format(**locals()).format(
+                            **locals()
+                        )
+                        mnl_template = MNL_1D_TEMPLATE.format(**locals()).format(
+                            **locals()
+                        )
                     elif n_root_dims == 2:
-                        meta_template = IRUNNER_2D_TEMPLATE.format(**locals())
-                        meta_template_dot = IDOTTER_2D_TEMPLATE.format(**locals())
-                        line_template = ILINER_2D_TEMPLATE.format(**locals())
-                        mnl_template = MNL_2D_TEMPLATE.format(**locals())
+                        meta_template = IRUNNER_2D_TEMPLATE.format(**locals()).format(
+                            **locals()
+                        )
+                        meta_template_dot = IDOTTER_2D_TEMPLATE.format(
+                            **locals()
+                        ).format(**locals())
+                        line_template = ILINER_2D_TEMPLATE.format(**locals()).format(
+                            **locals()
+                        )
+                        mnl_template = MNL_2D_TEMPLATE.format(**locals()).format(
+                            **locals()
+                        )
                     else:
                         raise ValueError(f"invalid n_root_dims {n_root_dims}")
 
