@@ -61,7 +61,6 @@ def extract_names_2(command):
     for i in ast.walk(z):
         if isinstance(i, ast.Attribute):
             if not isinstance(i.value, ast.Name):
-                # print("skip", i.attr, i.value)
                 continue
             k = i.value.id
             a = i.attr
@@ -75,7 +74,6 @@ def extract_names_2(command):
     for i in ast.walk(z):
         if isinstance(i, ast.Subscript):
             if not isinstance(i.value, ast.Name):
-                # print("skip", i.attr, i.value)
                 continue
             k = i.value.id
             try:
@@ -360,7 +358,13 @@ class RewriteForNumba(ast.NodeTransformer):
         return super().generic_visit(node)
 
     def _replacement(
-        self, attr, ctx, original_node, topname=None, transpose_lead=False
+        self,
+        attr,
+        ctx,
+        original_node,
+        topname=None,
+        transpose_lead=False,
+        missing_dim_value=None,
     ):
         if topname is None:
             topname = self.spacename
@@ -386,15 +390,18 @@ class RewriteForNumba(ast.NodeTransformer):
 
         if isinstance(dim_slots, (tuple, list)):
             if len(dim_slots):
-                s = ast.Tuple(
-                    elts=[
-                        (
-                            ast.Name(id=f"_arg{n:02}", ctx=ast.Load())
-                            if isinstance(n, int)
-                            else n
+                elts = []
+                for n in dim_slots:
+                    if isinstance(n, int):
+                        elts.append(ast.Name(id=f"_arg{n:02}", ctx=ast.Load()))
+                    elif isinstance(n, dict):
+                        elts.append(
+                            ast.Constant(n=n[missing_dim_value], ctx=ast.Load())
                         )
-                        for n in dim_slots
-                    ],
+                    else:
+                        elts.append(n)
+                s = ast.Tuple(
+                    elts=elts,
                     ctx=ast.Load(),
                 )
                 result = ast.Subscript(
@@ -462,6 +469,7 @@ class RewriteForNumba(ast.NodeTransformer):
 
     def visit_Subscript(self, node):
         if isinstance(node.value, ast.Name):
+            # for XXX[YYY], XXX is a space name and YYY is a literal value: skims['DIST']
             if (
                 node.value.id == self.spacename
                 and isinstance(node.slice, ast_Constant_Type)
@@ -471,6 +479,7 @@ class RewriteForNumba(ast.NodeTransformer):
                 return self._replacement(
                     ast_String_value(node.slice.value), node.ctx, node
                 )
+            # for XXX[YYY], XXX is the raw placeholds and YYY is a literal value: ____['income']
             if (
                 node.value.id == self.rawalias
                 and isinstance(node.slice, ast_Constant_Type)
@@ -490,6 +499,25 @@ class RewriteForNumba(ast.NodeTransformer):
                     result,
                 )
                 return result
+            # for XXX[YYY,ZZZ], XXX is a space name and YYY is a literal value and ZZZ is a literal value: skims['SOV_TIME','MD']
+            if (
+                node.value.id == self.spacename
+                and isinstance(node.slice, ast.Tuple)
+                and len(node.slice.elts) == 2
+                and isinstance(node.slice.elts[0], ast_Constant_Type)
+                and isinstance(node.slice.elts[1], ast_Constant_Type)
+                and isinstance(ast_String_value(node.slice.elts[0].value), str)
+                and isinstance(ast_String_value(node.slice.elts[1].value), str)
+            ):
+                _a = ast_String_value(node.slice.elts[0].value)
+                _b = ast_String_value(node.slice.elts[1].value)
+                self.log_event(f"visit_Subscript(Tuple ({_a}, {_b}))")
+                return self._replacement(
+                    _a,
+                    node.ctx,
+                    node,
+                    missing_dim_value=_b,
+                )
         self.log_event("visit_Subscript(no change)", node)
         return node
 

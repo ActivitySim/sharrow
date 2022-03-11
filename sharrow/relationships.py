@@ -1094,7 +1094,9 @@ class DataTree:
 
         tokens = []
 
+        n_missing_tokens = 0
         for dimname in from_dims:
+            found_token = False
             for e in self._graph.in_edges(spacename, keys=True):
                 this_dim_name = self._graph.edges[e]["child_name"]
                 if dimname != this_dim_name:
@@ -1112,15 +1114,32 @@ class DataTree:
                         print(f"t:{t}")
                     raise
                 tokens.append(f"__{parent_data}__{parent_name}[{upside}]")
+                found_token = True
+                break
+            if not found_token:
+                ix = self.subspaces[spacename].indexes[dimname]
+                ix = {i: n for n, i in enumerate(ix)}
+                tokens.append(ix)
+                n_missing_tokens += 1
 
+        if n_missing_tokens > 1:
+            raise ValueError("at most one missing dimension is allowed")
         result = []
         for t in tokens:
-            result.append(ast.parse(t, mode="eval").body)
+            if isinstance(t, str):
+                result.append(ast.parse(t, mode="eval").body)
+            else:
+                result.append(t)
         return tuple(result)
 
     @property
     def coords(self):
         return self.root_dataset.coords
+
+    def get_index(self, dim):
+        for spacename, subspace in self.subspaces.items():
+            if dim in subspace.coords:
+                return subspace.indexes[dim]
 
     def copy(self):
         return type(self)(
