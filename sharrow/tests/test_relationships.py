@@ -244,6 +244,49 @@ def test_with_2d_base(dataframe_regression):
     np.testing.assert_array_almost_equal(check_vs, dot_result.to_numpy())
 
 
+def test_mixed_dtypes(dataframe_regression):
+    data = example_data.get_data()
+    skims = data["skims"]
+    households = data["hhs"]
+
+    prng = default_rng(SeedSequence(42))
+    households["otaz_idx"] = households["TAZ"] - 1
+    households["dtaz_idx"] = prng.choice(np.arange(25), 5000)
+    households["timeperiod5"] = prng.choice(np.arange(5), 5000)
+    households["timeperiod3"] = np.clip(households["timeperiod5"], 1, 3) - 1
+    households["rownum"] = np.arange(len(households))
+
+    tree = DataTree(
+        base=households,
+        skims=skims,
+        relationships=(
+            "base.otaz_idx->skims.otaz",
+            "base.dtaz_idx->skims.dtaz",
+            "base.timeperiod5->skims.time_period",
+        ),
+    )
+
+    ss = tree.setup_flow(
+        {
+            "income": "base.income",
+            "sov_time_by_income": "skims.SOV_TIME/base.income",
+            "sov_time_by_workers": "np.where(base.workers > 0, skims.SOV_TIME / base.workers, 0)",
+        }
+    )
+    result = ss._load(tree, as_dataframe=True, dtype=np.float32)
+    dataframe_regression.check(result)
+
+    ss_undot = tree.setup_flow(
+        {
+            "income": "income",
+            "sov_time_by_income": "SOV_TIME/income",
+            "sov_time_by_workers": "np.where(workers > 0, SOV_TIME / workers, 0)",
+        }
+    )
+    result = ss_undot._load(tree, as_dataframe=True, dtype=np.float32)
+    dataframe_regression.check(result)
+
+
 def _get_target(q):
     skims_ = Dataset.shm.from_shared_memory("skims")
     q.put(skims_.SOV_TIME.sum())
