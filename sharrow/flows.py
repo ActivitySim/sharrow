@@ -1132,10 +1132,10 @@ class Flow:
                         if f_args_j:
                             f_args_j += ", "
                         meta_code.append(
-                            f"result[{js}, {n}] = np.{{dtype}}({clean(k)}({f_args_j}result[{js}], {f_name_tokens}))"
+                            f"result[{js}, {n}] = ({clean(k)}({f_args_j}result[{js}], {f_name_tokens})).item()"
                         )
                         meta_code_dot.append(
-                            f"intermediate[{n}] = np.{{dtype}}({clean(k)}({f_args_j}intermediate, {f_name_tokens}))"
+                            f"intermediate[{n}] = ({clean(k)}({f_args_j}intermediate, {f_name_tokens})).item()"
                         )
                     meta_code_stack = textwrap.indent(
                         "\n".join(meta_code), " " * 12
