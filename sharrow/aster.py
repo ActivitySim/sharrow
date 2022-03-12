@@ -712,6 +712,20 @@ class RewriteForNumba(ast.NodeTransformer):
                 args=apply_args,
                 keywords=[self.visit(i) for i in node.keywords],
             )
+        # change `x.isin([2,3,4])` to `x == 2 or x == 3 or x == 4`
+        if isinstance(node.func, ast.Attribute) and node.func.attr == "isin":
+            ante = self.visit(node.func.value)
+            targets = node.args
+            if len(targets) == 1 and isinstance(targets[0], (ast.List, ast.Tuple)):
+                elts = targets[0].elts
+                ors = []
+                for elt in elts:
+                    ors.append(
+                        ast.Compare(
+                            left=ante, ops=[ast.Eq()], comparators=[self.visit(elt)]
+                        )
+                    )
+                result = ast.BoolOp(op=ast.Or(), values=ors)
 
         # if no other changes
         if result is None:

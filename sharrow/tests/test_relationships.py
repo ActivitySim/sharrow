@@ -316,6 +316,41 @@ def test_tuple_slice(dataframe_regression):
     dataframe_regression.check(result)
 
 
+def test_isin(dataframe_regression):
+    data = example_data.get_data()
+    skims = data["skims"]
+    households = data["hhs"]
+
+    prng = default_rng(SeedSequence(42))
+    households["otaz_idx"] = households["TAZ"] - 1
+    households["dtaz_idx"] = prng.choice(np.arange(25), 5000)
+    households["timeperiod5"] = prng.choice(np.arange(5), 5000)
+    households["timeperiod3"] = np.clip(households["timeperiod5"], 1, 3) - 1
+    households["rownum"] = np.arange(len(households))
+    tree = DataTree(
+        base=households,
+        skims=skims,
+        relationships=(
+            "base.otaz_idx->skims.otaz",
+            "base.dtaz_idx->skims.dtaz",
+        ),
+        extra_vars={
+            "twenty_two_hundred": 2200,
+            "sixteen_five": 16500,
+        },
+    )
+    ss = tree.setup_flow(
+        {
+            "income": "base.income",
+            "income2": "base.income.isin([361000, 197000])",
+            "income3": "base.income.isin([twenty_two_hundred, sixteen_five])",
+            "income4": "base.income.isin((twenty_two_hundred, 197000))",
+        }
+    )
+    result = ss._load(tree, as_dataframe=True, dtype=np.float32)
+    dataframe_regression.check(result)
+
+
 def _get_target(q):
     skims_ = Dataset.shm.from_shared_memory("skims")
     q.put(skims_.SOV_TIME.sum())
