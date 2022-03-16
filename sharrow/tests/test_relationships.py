@@ -395,3 +395,51 @@ def test_relationship_init():
     assert r.child_data == "Gg"
     assert r.child_name == "hh"
     assert r.indexing == "label"
+
+
+def test_replacement_filters(dataframe_regression):
+    data = example_data.get_data()
+    skims = data["skims"]
+    households = data["hhs"]
+
+    prng = default_rng(SeedSequence(42))
+    households["otaz_idx"] = households["TAZ"] - 1
+    households["dtaz_idx"] = prng.choice(np.arange(25), 5000)
+    households["timeperiod5"] = prng.choice(np.arange(5), 5000)
+    households["timeperiod3"] = np.clip(households["timeperiod5"], 1, 3) - 1
+    households["rownum"] = np.arange(len(households))
+
+    tree = DataTree(
+        base=households,
+        skims=skims,
+        relationships=(
+            "base.otaz_idx->skims.otaz",
+            "base.dtaz_idx->skims.dtaz",
+            "base.timeperiod5->skims.time_period",
+        ),
+    )
+
+    ss = tree.setup_flow(
+        {
+            "income": "base.income",
+            "sov_time_by_income": "skims.SOV_TIME/base.income",
+            "sov_cost_by_income": "skims.HOV3_TIME",
+        }
+    )
+    result = ss._load(tree, as_dataframe=True)
+    dataframe_regression.check(result, basename="test_shared_data")
+
+    households_malformed = households.rename(columns={"income": "jncome"})
+    tree_malformed = ss.tree.replace_datasets(base=households_malformed)
+    with raises(KeyError, match=".*income.*"):
+        ss._load(tree_malformed, as_dataframe=True)
+
+    def rename_jncome(x):
+        return x.rename({"jncome": "income"})
+
+    ss.tree.replacement_filters["base"] = rename_jncome
+
+    result = ss._load(
+        ss.tree.replace_datasets(base=households_malformed), as_dataframe=True
+    )
+    dataframe_regression.check(result, basename="test_shared_data")
