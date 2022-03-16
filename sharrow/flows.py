@@ -1310,7 +1310,10 @@ class Flow:
                         "pick_counted",
                     }:
                         continue
-                    arguments.append(np.asarray(rg.get_named_array(arg)))
+                    argument = np.asarray(rg.get_named_array(arg))
+                    if argument.dtype.kind == "O":
+                        argument = argument.astype("unicode")
+                    arguments.append(argument)
                 kwargs = {}
                 if dtype is not None:
                     kwargs["dtype"] = dtype
