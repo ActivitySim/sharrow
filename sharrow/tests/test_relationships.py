@@ -216,8 +216,8 @@ def test_with_2d_base(dataframe_regression):
 
     ss = tree.setup_flow(
         {
-            "income": "base.income",
-            "sov_time_by_income": "odt_skims.SOV_TIME/base.income",
+            "income": "hh.income",
+            "sov_time_by_income": "odt_skims.SOV_TIME/hh.income",
             "round_trip_hov3_time": "dot_skims.HOV3_TIME + odt_skims.HOV3_TIME",
             "double_hov3_time": "odt_skims.HOV3_TIME * 2",
             "a_trip_hov3_time": "dot_skims.HOV3_TIME",
@@ -442,4 +442,81 @@ def test_replacement_filters(dataframe_regression):
     result = ss._load(
         ss.tree.replace_datasets(base=households_malformed), as_dataframe=True
     )
+    dataframe_regression.check(result, basename="test_shared_data")
+
+
+def test_name_in_wrong_subspace(dataframe_regression):
+    data = example_data.get_data()
+    skims = data["skims"]
+    households = data["hhs"]
+
+    prng = default_rng(SeedSequence(42))
+    households["otaz_idx"] = households["TAZ"] - 1
+    households["dtaz_idx"] = prng.choice(np.arange(25), 5000)
+    households["timeperiod5"] = prng.choice(np.arange(5), 5000)
+    households["timeperiod3"] = np.clip(households["timeperiod5"], 1, 3) - 1
+    households["rownum"] = np.arange(len(households))
+
+    tree = DataTree(
+        base=households,
+        skims=skims,
+        relationships=(
+            "base.otaz_idx->skims.otaz",
+            "base.dtaz_idx->skims.dtaz",
+            "base.timeperiod5->skims.time_period",
+        ),
+    )
+
+    with raises(KeyError):
+        tree.setup_flow(
+            {
+                "income": "base.income",
+                "sov_time_by_income": "base.SOV_TIME/base.income",
+                "sov_cost_by_income": "base.HOV3_TIME",
+            }
+        )
+
+    tree = DataTree(
+        base=households,
+        od_skims=skims.drop_dims("time_period"),
+        odt_skims=skims,
+        relationships=(
+            "base.otaz_idx->od_skims.otaz",
+            "base.dtaz_idx->od_skims.dtaz",
+            "base.otaz_idx->odt_skims.otaz",
+            "base.dtaz_idx->odt_skims.dtaz",
+            "base.timeperiod5->odt_skims.time_period",
+        ),
+    )
+    with raises(KeyError):
+        tree.setup_flow(
+            {
+                "income": "base.income",
+                "SOV_TIMEbyINC": "SOV_TIME/base.income",
+                "SOV_TIMEbyINC1": "od_skims.SOV_TIME/base.income",
+                "SOV_TIME": "od_skims.SOV_TIME",
+                "HOV3_TIME": "od_skims.HOV3_TIME",
+                "SOV_TIME_t": "odt_skims.SOV_TIME",
+                "HOV3_TIME_t": "odt_skims.HOV3_TIME",
+            }
+        )
+    with raises(KeyError):
+        tree.setup_flow(
+            {
+                "income": "base.income",
+                "SOV_TIME": "od_skims.SOV_TIME",
+                "HOV3_TIME": "od_skims.HOV3_TIME",
+                "SOV_TIME_t": "odt_skims.SOV_TIME",
+                "HOV3_TIME_t": "odt_skims.HOV3_TIME",
+            }
+        )
+
+    ss_undot = tree.setup_flow(
+        {
+            "income": "income",
+            "sov_time_by_income": "SOV_TIME/income",
+            "sov_cost_by_income": "HOV3_TIME",
+        }
+    )
+    result = ss_undot._load(tree, as_dataframe=True)
     dataframe_regression.check(result, basename="test_shared_data")
