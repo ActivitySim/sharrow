@@ -804,23 +804,14 @@ class Flow:
             expr = str(expr).lstrip()
             init_expr = expr
             for spacename, spacearrays in self.tree.subspaces.items():
-                if spacename == "":
-                    expr = expression_for_numba(
-                        expr,
-                        spacename,
-                        (),
-                        {},  # input name positions not used
-                        rawalias=self.tree.root_node_name or "____",
-                    )
-                else:
-                    dim_slots, digital_encodings = meta_data[spacename]
-                    expr = expression_for_numba(
-                        expr,
-                        spacename,
-                        dim_slots,
-                        dim_slots,
-                        digital_encodings=digital_encodings,
-                    )
+                dim_slots, digital_encodings = meta_data[spacename]
+                expr = expression_for_numba(
+                    expr,
+                    spacename,
+                    dim_slots,
+                    dim_slots,
+                    digital_encodings=digital_encodings,
+                )
 
             # now find instances where an identifier is previously created in this flow.
             expr = expression_for_numba(

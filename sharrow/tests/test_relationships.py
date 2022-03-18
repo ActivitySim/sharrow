@@ -520,3 +520,43 @@ def test_name_in_wrong_subspace(dataframe_regression):
     )
     result = ss_undot._load(tree, as_dataframe=True)
     dataframe_regression.check(result, basename="test_shared_data")
+
+
+def test_shared_data_encoded(dataframe_regression):
+
+    data = example_data.get_data()
+    skims = data["skims"]
+    households = data["hhs"]
+
+    prng = default_rng(SeedSequence(42))
+    households["otaz_idx"] = households["TAZ"] - 1
+    households["dtaz_idx"] = prng.choice(np.arange(25), 5000)
+    households["timeperiod5"] = prng.choice(np.arange(5), 5000)
+    households["timeperiod3"] = np.clip(households["timeperiod5"], 1, 3) - 1
+    households["rownum"] = np.arange(len(households))
+    households = sharrow.dataset.construct(households).digital_encoding.set(
+        "income",
+        bitwidth=32,
+        scale=0.001,
+    )
+
+    tree = DataTree(
+        base=households,
+        skims=skims,
+        relationships=(
+            "base.otaz_idx->skims.otaz",
+            "base.dtaz_idx->skims.dtaz",
+            "base.timeperiod5->skims.time_period",
+        ),
+    )
+
+    ss = tree.setup_flow(
+        {
+            "income": "base.income",
+            "sov_time_by_income": "skims.SOV_TIME/base.income",
+            "sov_cost_by_income": "skims.HOV3_TIME",
+        },
+        extra_hash_data=("income_encoded",),
+    )
+    result = ss._load(tree, as_dataframe=True)
+    dataframe_regression.check(result, basename="test_shared_data")
