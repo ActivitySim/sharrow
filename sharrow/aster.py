@@ -30,7 +30,11 @@ if sys.version_info >= (3, 8):
     ast_Index_Value = lambda x: x
 else:
     ast_Constant_Type = (ast.Index, ast.Constant, ast.Str)
-    ast_String_value = lambda x: x.s if isinstance(x, ast.Str) else x
+    ast_String_value = (
+        lambda x: x.s
+        if isinstance(x, ast.Str)
+        else (ast_String_value(x.value) if isinstance(x, ast.Index) else x)
+    )
     ast_TupleIndex_Type = (ast.Index, ast.Tuple)
     ast_Index_Value = lambda x: x.value if isinstance(x, ast.Index) else x
 
