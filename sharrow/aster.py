@@ -13,12 +13,30 @@ except ImportError:
 
 logger = logging.getLogger("sharrow.aster")
 
+
+def unparse_(*args):
+    # spit out a ast dump on error
+    try:
+        return unparse(*args)
+    except Exception:
+        logger.warning(ast.dump(*args))
+        raise
+
+
 if sys.version_info >= (3, 8):
     ast_Constant_Type = ast.Constant
-    ast_String_value = lambda x: x
+    ast_String_value = lambda x: x.value if isinstance(x, ast.Str) else x
+    ast_TupleIndex_Type = ast.Tuple
+    ast_Index_Value = lambda x: x
 else:
-    ast_Constant_Type = (ast.Index, ast.Constant)
-    ast_String_value = lambda x: x.s if isinstance(x, ast.Str) else x
+    ast_Constant_Type = (ast.Index, ast.Constant, ast.Str)
+    ast_String_value = (
+        lambda x: x.s
+        if isinstance(x, ast.Str)
+        else (ast_String_value(x.value) if isinstance(x, ast.Index) else x)
+    )
+    ast_TupleIndex_Type = (ast.Index, ast.Tuple)
+    ast_Index_Value = lambda x: x.value if isinstance(x, ast.Index) else x
 
 
 def _isNone(c):
@@ -61,7 +79,6 @@ def extract_names_2(command):
     for i in ast.walk(z):
         if isinstance(i, ast.Attribute):
             if not isinstance(i.value, ast.Name):
-                # print("skip", i.attr, i.value)
                 continue
             k = i.value.id
             a = i.attr
@@ -75,7 +92,6 @@ def extract_names_2(command):
     for i in ast.walk(z):
         if isinstance(i, ast.Subscript):
             if not isinstance(i.value, ast.Name):
-                # print("skip", i.attr, i.value)
                 continue
             k = i.value.id
             try:
@@ -334,7 +350,7 @@ class RewriteForNumba(ast.NodeTransformer):
                 )
             elif node2 is None:
                 try:
-                    unparsed = unparse(node1)
+                    unparsed = unparse_(node1)
                 except:  # noqa: E722
                     unparsed = f"{type(node1)} not unparseable"
                 logger.log(
@@ -343,11 +359,11 @@ class RewriteForNumba(ast.NodeTransformer):
                 )
             else:
                 try:
-                    unparsed1 = unparse(node1)
+                    unparsed1 = unparse_(node1)
                 except:  # noqa: E722
                     unparsed1 = f"{type(node1).__name__} not unparseable"
                 try:
-                    unparsed2 = unparse(node2)
+                    unparsed2 = unparse_(node2)
                 except:  # noqa: E722
                     unparsed2 = f"{type(node2).__name__} not unparseable"
                 logger.log(
@@ -360,7 +376,13 @@ class RewriteForNumba(ast.NodeTransformer):
         return super().generic_visit(node)
 
     def _replacement(
-        self, attr, ctx, original_node, topname=None, transpose_lead=False
+        self,
+        attr,
+        ctx,
+        original_node,
+        topname=None,
+        transpose_lead=False,
+        missing_dim_value=None,
     ):
         if topname is None:
             topname = self.spacename
@@ -386,15 +408,25 @@ class RewriteForNumba(ast.NodeTransformer):
 
         if isinstance(dim_slots, (tuple, list)):
             if len(dim_slots):
+                elts = []
+                for n in dim_slots:
+                    if isinstance(n, int):
+                        elts.append(ast.Name(id=f"_arg{n:02}", ctx=ast.Load()))
+                    elif isinstance(n, dict):
+                        if sys.version_info >= (3, 8):
+                            elts.append(
+                                ast.Constant(n=n[missing_dim_value], ctx=ast.Load())
+                            )
+                        else:
+                            elts.append(
+                                ast.Constant(
+                                    n[missing_dim_value], kind=None, ctx=ast.Load()
+                                )
+                            )
+                    else:
+                        elts.append(n)
                 s = ast.Tuple(
-                    elts=[
-                        (
-                            ast.Name(id=f"_arg{n:02}", ctx=ast.Load())
-                            if isinstance(n, int)
-                            else n
-                        )
-                        for n in dim_slots
-                    ],
+                    elts=elts,
                     ctx=ast.Load(),
                 )
                 result = ast.Subscript(
@@ -462,34 +494,55 @@ class RewriteForNumba(ast.NodeTransformer):
 
     def visit_Subscript(self, node):
         if isinstance(node.value, ast.Name):
+            # for XXX[YYY], XXX is a space name and YYY is a literal value: skims['DIST']
             if (
                 node.value.id == self.spacename
                 and isinstance(node.slice, ast_Constant_Type)
-                and isinstance(ast_String_value(node.slice.value), str)
+                and isinstance(ast_String_value(node.slice), str)
             ):
                 self.log_event(f"visit_Subscript(Constant {node.slice.value})")
-                return self._replacement(
-                    ast_String_value(node.slice.value), node.ctx, node
-                )
+                return self._replacement(ast_String_value(node.slice), node.ctx, node)
+            # for XXX[YYY], XXX is the raw placeholds and YYY is a literal value: ____['income']
             if (
                 node.value.id == self.rawalias
                 and isinstance(node.slice, ast_Constant_Type)
-                and isinstance(ast_String_value(node.slice.value), str)
-                and ast_String_value(node.slice.value) in self.spacevars
+                and isinstance(ast_String_value(node.slice), str)
+                and ast_String_value(node.slice) in self.spacevars
             ):
                 result = ast.Subscript(
                     value=ast.Name(id=self.rawname, ctx=ast.Load()),
-                    slice=ast.Constant(
-                        self.spacevars[ast_String_value(node.slice.value)]
-                    ),
+                    slice=ast.Constant(self.spacevars[ast_String_value(node.slice)]),
                     ctx=node.ctx,
                 )
                 self.log_event(
-                    f"visit_Subscript(Raw {ast_String_value(node.slice.value)})",
+                    f"visit_Subscript(Raw {ast_String_value(node.slice)})",
                     node,
                     result,
                 )
                 return result
+            # for XXX[YYY,ZZZ], XXX is a space name and YYY is a literal value and ZZZ is a literal value: skims['SOV_TIME','MD']
+            if (
+                node.value.id == self.spacename
+                and isinstance(ast_Index_Value(node.slice), ast.Tuple)
+                and len(ast_Index_Value(node.slice).elts) == 2
+                and isinstance(ast_Index_Value(node.slice).elts[0], ast_Constant_Type)
+                and isinstance(ast_Index_Value(node.slice).elts[1], ast_Constant_Type)
+                and isinstance(
+                    ast_String_value(ast_Index_Value(node.slice).elts[0]), str
+                )
+                and isinstance(
+                    ast_String_value(ast_Index_Value(node.slice).elts[1]), str
+                )
+            ):
+                _a = ast_String_value(ast_Index_Value(node.slice).elts[0])
+                _b = ast_String_value(ast_Index_Value(node.slice).elts[1])
+                self.log_event(f"visit_Subscript(Tuple ({_a}, {_b}))")
+                return self._replacement(
+                    _a,
+                    node.ctx,
+                    node,
+                    missing_dim_value=_b,
+                )
         self.log_event("visit_Subscript(no change)", node)
         return node
 
@@ -579,7 +632,7 @@ class RewriteForNumba(ast.NodeTransformer):
                         node.args[0], ast_Constant_Type
                     ):
                         result = self._replacement(
-                            ast_String_value(node.args[0].value),
+                            ast_String_value(node.args[0]),
                             node.func.ctx,
                             None,
                             transpose_lead=True,
@@ -657,10 +710,10 @@ class RewriteForNumba(ast.NodeTransformer):
                         node.args[0], ast_Constant_Type
                     ):
                         forward = self._replacement(
-                            ast_String_value(node.args[0].value), node.func.ctx, None
+                            ast_String_value(node.args[0]), node.func.ctx, None
                         )
                         backward = self._replacement(
-                            ast_String_value(node.args[0].value),
+                            ast_String_value(node.args[0]),
                             node.func.ctx,
                             None,
                             transpose_lead=True,
@@ -684,6 +737,20 @@ class RewriteForNumba(ast.NodeTransformer):
                 args=apply_args,
                 keywords=[self.visit(i) for i in node.keywords],
             )
+        # change `x.isin([2,3,4])` to `x == 2 or x == 3 or x == 4`
+        if isinstance(node.func, ast.Attribute) and node.func.attr == "isin":
+            ante = self.visit(node.func.value)
+            targets = node.args
+            if len(targets) == 1 and isinstance(targets[0], (ast.List, ast.Tuple)):
+                elts = targets[0].elts
+                ors = []
+                for elt in elts:
+                    ors.append(
+                        ast.Compare(
+                            left=ante, ops=[ast.Eq()], comparators=[self.visit(elt)]
+                        )
+                    )
+                result = ast.BoolOp(op=ast.Or(), values=ors)
 
         # if no other changes
         if result is None:
@@ -708,7 +775,7 @@ def expression_for_numba(
     digital_encodings=None,
     prefer_name=None,
 ):
-    return unparse(
+    return unparse_(
         RewriteForNumba(
             spacename,
             dim_slots,
@@ -738,7 +805,7 @@ class Asterize:
                     )
                 target = a.targets[0].id
                 new_tree = a.value
-            result = unparse(new_tree)
+            result = unparse_(new_tree)
             self._cache[expr] = (target, result)
         return target, result
 
