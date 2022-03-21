@@ -804,47 +804,40 @@ class Flow:
             expr = str(expr).lstrip()
             init_expr = expr
             for spacename, spacearrays in self.tree.subspaces.items():
-                if spacename == "":
+                dim_slots, digital_encodings = meta_data[spacename]
+                try:
                     expr = expression_for_numba(
                         expr,
                         spacename,
-                        (),
-                        {},  # input name positions not used
-                        rawalias=self.tree.root_node_name or "____",
+                        dim_slots,
+                        dim_slots,
+                        digital_encodings=digital_encodings,
                     )
-                else:
-                    dim_slots, digital_encodings = meta_data[spacename]
-                    try:
-                        expr = expression_for_numba(
-                            expr,
-                            spacename,
-                            dim_slots,
-                            dim_slots,
-                            digital_encodings=digital_encodings,
-                        )
-                    except KeyError:
-                        # check if we can resolve this name on any other subspace
-                        other_way = False
-                        for other_spacename in self.tree.subspaces:
-                            if other_spacename == spacename:
-                                continue
-                            dim_slots, digital_encodings = meta_data[other_spacename]
-                            try:
-                                expr = expression_for_numba(
-                                    expr,
-                                    spacename,
-                                    dim_slots,
-                                    dim_slots,
-                                    digital_encodings=digital_encodings,
-                                    prefer_name=other_spacename,
-                                )
-                            except KeyError:
-                                pass
-                            else:
-                                other_way = True
-                                break
-                        if not other_way:
-                            raise
+                except KeyError as key_err:
+                    if ".." in key_err.args[0]:
+                        topkey, attrkey = key_err.args[0].split("..")
+                    else:
+                        raise
+                    # check if we can resolve this name on any other subspace
+                    other_way = False
+                    for other_spacename in self.tree.subspace_fallbacks.get(topkey, []):
+                        dim_slots, digital_encodings = meta_data[other_spacename]
+                        try:
+                            expr = expression_for_numba(
+                                expr,
+                                spacename,
+                                dim_slots,
+                                dim_slots,
+                                digital_encodings=digital_encodings,
+                                prefer_name=other_spacename,
+                            )
+                        except KeyError:
+                            pass
+                        else:
+                            other_way = True
+                            break
+                    if not other_way:
+                        raise
 
             # now find instances where an identifier is previously created in this flow.
             expr = expression_for_numba(
@@ -1310,7 +1303,10 @@ class Flow:
                         "pick_counted",
                     }:
                         continue
-                    arguments.append(np.asarray(rg.get_named_array(arg)))
+                    argument = np.asarray(rg.get_named_array(arg))
+                    if argument.dtype.kind == "O":
+                        argument = argument.astype("unicode")
+                    arguments.append(argument)
                 kwargs = {}
                 if dtype is not None:
                     kwargs["dtype"] = dtype

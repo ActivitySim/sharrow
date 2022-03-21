@@ -297,6 +297,25 @@ class DataTree:
         if force_digitization:
             self.digitize_relationships(inplace=True)
 
+        # These filters are applied to incoming datasets when using `replace_datasets`.
+        self.replacement_filters = {}
+        """Dict[Str,Callable]: Filters that are automatically applied to data on replacement.
+
+        When individual datasets are replaced in the tree, the incoming dataset is
+        passed through the filter with a matching name-key (if it exists).  The filter
+        should be a function that accepts one argument (the incoming dataset) and returns
+        one value (the dataset to save in the tree).  These filters can be used to ensure
+        data quality, e.g. renaming variables, ensuring particular data types, etc.
+        """
+
+        self.subspace_fallbacks = {}
+        """Dict[Str:List[Str]]: Allowable fallback subspace lookups.
+
+        When a named variable is not found in a given subspace, the default result is
+        raising a KeyError. But, if fallbacks are defined for a given subspace, the
+        fallbacks are searched in order for the desired variable.
+        """
+
     @property
     def shape(self):
         """Tuple[int]: base shape of arrays that will be loaded when using this DataTree."""
@@ -507,6 +526,8 @@ class DataTree:
 
         if not isinstance(x, Dataset):
             x = construct(x)
+        if self.root_node_name in self.replacement_filters:
+            x = self.replacement_filters[self.root_node_name](x)
         self._graph.nodes[self.root_node_name]["dataset"] = x
 
     def _get_relationship(self, edge):
@@ -852,6 +873,8 @@ class DataTree:
                                     f"receiving {x.dims} "
                                     f"expected {graph.nodes[k]['dataset'].dims}"
                                 )
+            if k in self.replacement_filters:
+                x = self.replacement_filters[k](x)
             graph.nodes[k]["dataset"] = x
         result = type(self)(graph, self.root_node_name, **self.__shallow_copy_extras())
         if redigitize:
@@ -1094,7 +1117,9 @@ class DataTree:
 
         tokens = []
 
+        n_missing_tokens = 0
         for dimname in from_dims:
+            found_token = False
             for e in self._graph.in_edges(spacename, keys=True):
                 this_dim_name = self._graph.edges[e]["child_name"]
                 if dimname != this_dim_name:
@@ -1112,15 +1137,32 @@ class DataTree:
                         print(f"t:{t}")
                     raise
                 tokens.append(f"__{parent_data}__{parent_name}[{upside}]")
+                found_token = True
+                break
+            if not found_token:
+                ix = self.subspaces[spacename].indexes[dimname]
+                ix = {i: n for n, i in enumerate(ix)}
+                tokens.append(ix)
+                n_missing_tokens += 1
 
+        if n_missing_tokens > 1:
+            raise ValueError("at most one missing dimension is allowed")
         result = []
         for t in tokens:
-            result.append(ast.parse(t, mode="eval").body)
+            if isinstance(t, str):
+                result.append(ast.parse(t, mode="eval").body)
+            else:
+                result.append(t)
         return tuple(result)
 
     @property
     def coords(self):
         return self.root_dataset.coords
+
+    def get_index(self, dim):
+        for spacename, subspace in self.subspaces.items():
+            if dim in subspace.coords:
+                return subspace.indexes[dim]
 
     def copy(self):
         return type(self)(
