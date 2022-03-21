@@ -11,6 +11,7 @@ Attributes
 .. autoattribute:: sharrow.DataTree.root_node_name
 .. autoattribute:: sharrow.DataTree.subspaces
 .. autoattribute:: sharrow.DataTree.relationships_are_digitized
+.. autoattribute:: sharrow.DataTree.replacement_filters
 
 Setup Flow
 ~~~~~~~~~~

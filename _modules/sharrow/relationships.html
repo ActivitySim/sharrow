@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>sharrow.relationships &#8212; v2.0.2</title>
+    <title>sharrow.relationships &#8212; v2.1.0</title>
     
   <link href="../../_static/css/theme.css" rel="stylesheet">
   <link href="../../_static/css/index.ff1ffe594081f20da1ef19478df9384b.css" rel="stylesheet">
@@ -83,7 +83,7 @@ const thebe_selector_output = ".output, .cell_output"
       <img src="../../_static/logo.png" class="logo" alt="logo">
       
       
-      <h1 class="site-logo" id="site-title">v2.0.2</h1>
+      <h1 class="site-logo" id="site-title">v2.1.0</h1>
       
     </a>
 </div><form class="bd-search d-flex align-items-center" action="../../search.html" method="get">
@@ -508,6 +508,25 @@ const thebe_selector_output = ".output, .cell_output"
         <span class="k">if</span> <span class="n">force_digitization</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">digitize_relationships</span><span class="p">(</span><span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
+        <span class="c1"># These filters are applied to incoming datasets when using `replace_datasets`.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">replacement_filters</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="sd">&quot;&quot;&quot;Dict[Str,Callable]: Filters that are automatically applied to data on replacement.</span>
+
+<span class="sd">        When individual datasets are replaced in the tree, the incoming dataset is</span>
+<span class="sd">        passed through the filter with a matching name-key (if it exists).  The filter</span>
+<span class="sd">        should be a function that accepts one argument (the incoming dataset) and returns</span>
+<span class="sd">        one value (the dataset to save in the tree).  These filters can be used to ensure</span>
+<span class="sd">        data quality, e.g. renaming variables, ensuring particular data types, etc.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">subspace_fallbacks</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="sd">&quot;&quot;&quot;Dict[Str:List[Str]]: Allowable fallback subspace lookups.</span>
+
+<span class="sd">        When a named variable is not found in a given subspace, the default result is</span>
+<span class="sd">        raising a KeyError. But, if fallbacks are defined for a given subspace, the</span>
+<span class="sd">        fallbacks are searched in order for the desired variable.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">shape</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Tuple[int]: base shape of arrays that will be loaded when using this DataTree.&quot;&quot;&quot;</span>
@@ -718,6 +737,8 @@ const thebe_selector_output = ".output, .cell_output"
 
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">Dataset</span><span class="p">):</span>
             <span class="n">x</span> <span class="o">=</span> <span class="n">construct</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">root_node_name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">replacement_filters</span><span class="p">:</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">replacement_filters</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">root_node_name</span><span class="p">](</span><span class="n">x</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">root_node_name</span><span class="p">][</span><span class="s2">&quot;dataset&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">x</span>
 
     <span class="k">def</span> <span class="nf">_get_relationship</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">edge</span><span class="p">):</span>
@@ -1063,6 +1084,8 @@ const thebe_selector_output = ".output, .cell_output"
                                     <span class="sa">f</span><span class="s2">&quot;receiving </span><span class="si">{</span><span class="n">x</span><span class="o">.</span><span class="n">dims</span><span class="si">}</span><span class="s2"> &quot;</span>
                                     <span class="sa">f</span><span class="s2">&quot;expected </span><span class="si">{</span><span class="n">graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">k</span><span class="p">][</span><span class="s1">&#39;dataset&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">dims</span><span class="si">}</span><span class="s2">&quot;</span>
                                 <span class="p">)</span>
+            <span class="k">if</span> <span class="n">k</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">replacement_filters</span><span class="p">:</span>
+                <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">replacement_filters</span><span class="p">[</span><span class="n">k</span><span class="p">](</span><span class="n">x</span><span class="p">)</span>
             <span class="n">graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">k</span><span class="p">][</span><span class="s2">&quot;dataset&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">x</span>
         <span class="n">result</span> <span class="o">=</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)(</span><span class="n">graph</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">root_node_name</span><span class="p">,</span> <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">__shallow_copy_extras</span><span class="p">())</span>
         <span class="k">if</span> <span class="n">redigitize</span><span class="p">:</span>
@@ -1305,7 +1328,9 @@ const thebe_selector_output = ".output, .cell_output"
 
         <span class="n">tokens</span> <span class="o">=</span> <span class="p">[]</span>
 
+        <span class="n">n_missing_tokens</span> <span class="o">=</span> <span class="mi">0</span>
         <span class="k">for</span> <span class="n">dimname</span> <span class="ow">in</span> <span class="n">from_dims</span><span class="p">:</span>
+            <span class="n">found_token</span> <span class="o">=</span> <span class="kc">False</span>
             <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_graph</span><span class="o">.</span><span class="n">in_edges</span><span class="p">(</span><span class="n">spacename</span><span class="p">,</span> <span class="n">keys</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
                 <span class="n">this_dim_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_graph</span><span class="o">.</span><span class="n">edges</span><span class="p">[</span><span class="n">e</span><span class="p">][</span><span class="s2">&quot;child_name&quot;</span><span class="p">]</span>
                 <span class="k">if</span> <span class="n">dimname</span> <span class="o">!=</span> <span class="n">this_dim_name</span><span class="p">:</span>
@@ -1323,15 +1348,32 @@ const thebe_selector_output = ".output, .cell_output"
                         <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;t:</span><span class="si">{</span><span class="n">t</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
                     <span class="k">raise</span>
                 <span class="n">tokens</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;__</span><span class="si">{</span><span class="n">parent_data</span><span class="si">}</span><span class="s2">__</span><span class="si">{</span><span class="n">parent_name</span><span class="si">}</span><span class="s2">[</span><span class="si">{</span><span class="n">upside</span><span class="si">}</span><span class="s2">]&quot;</span><span class="p">)</span>
+                <span class="n">found_token</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="k">break</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">found_token</span><span class="p">:</span>
+                <span class="n">ix</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">subspaces</span><span class="p">[</span><span class="n">spacename</span><span class="p">]</span><span class="o">.</span><span class="n">indexes</span><span class="p">[</span><span class="n">dimname</span><span class="p">]</span>
+                <span class="n">ix</span> <span class="o">=</span> <span class="p">{</span><span class="n">i</span><span class="p">:</span> <span class="n">n</span> <span class="k">for</span> <span class="n">n</span><span class="p">,</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">ix</span><span class="p">)}</span>
+                <span class="n">tokens</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ix</span><span class="p">)</span>
+                <span class="n">n_missing_tokens</span> <span class="o">+=</span> <span class="mi">1</span>
 
+        <span class="k">if</span> <span class="n">n_missing_tokens</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;at most one missing dimension is allowed&quot;</span><span class="p">)</span>
         <span class="n">result</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">tokens</span><span class="p">:</span>
-            <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ast</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;eval&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">body</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+                <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ast</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;eval&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">body</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
         <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">coords</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">root_dataset</span><span class="o">.</span><span class="n">coords</span>
+
+    <span class="k">def</span> <span class="nf">get_index</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dim</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">spacename</span><span class="p">,</span> <span class="n">subspace</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">subspaces</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">dim</span> <span class="ow">in</span> <span class="n">subspace</span><span class="o">.</span><span class="n">coords</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">subspace</span><span class="o">.</span><span class="n">indexes</span><span class="p">[</span><span class="n">dim</span><span class="p">]</span>
 
     <span class="k">def</span> <span class="nf">copy</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)(</span>

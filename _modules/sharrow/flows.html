@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>sharrow.flows &#8212; v2.0.2</title>
+    <title>sharrow.flows &#8212; v2.1.0</title>
     
   <link href="../../_static/css/theme.css" rel="stylesheet">
   <link href="../../_static/css/index.ff1ffe594081f20da1ef19478df9384b.css" rel="stylesheet">
@@ -83,7 +83,7 @@ const thebe_selector_output = ".output, .cell_output"
       <img src="../../_static/logo.png" class="logo" alt="logo">
       
       
-      <h1 class="site-logo" id="site-title">v2.0.2</h1>
+      <h1 class="site-logo" id="site-title">v2.1.0</h1>
       
     </a>
 </div><form class="bd-search d-flex align-items-center" action="../../search.html" method="get">
@@ -1015,47 +1015,40 @@ const thebe_selector_output = ".output, .cell_output"
             <span class="n">expr</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">expr</span><span class="p">)</span><span class="o">.</span><span class="n">lstrip</span><span class="p">()</span>
             <span class="n">init_expr</span> <span class="o">=</span> <span class="n">expr</span>
             <span class="k">for</span> <span class="n">spacename</span><span class="p">,</span> <span class="n">spacearrays</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">tree</span><span class="o">.</span><span class="n">subspaces</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-                <span class="k">if</span> <span class="n">spacename</span> <span class="o">==</span> <span class="s2">&quot;&quot;</span><span class="p">:</span>
+                <span class="n">dim_slots</span><span class="p">,</span> <span class="n">digital_encodings</span> <span class="o">=</span> <span class="n">meta_data</span><span class="p">[</span><span class="n">spacename</span><span class="p">]</span>
+                <span class="k">try</span><span class="p">:</span>
                     <span class="n">expr</span> <span class="o">=</span> <span class="n">expression_for_numba</span><span class="p">(</span>
                         <span class="n">expr</span><span class="p">,</span>
                         <span class="n">spacename</span><span class="p">,</span>
-                        <span class="p">(),</span>
-                        <span class="p">{},</span>  <span class="c1"># input name positions not used</span>
-                        <span class="n">rawalias</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">tree</span><span class="o">.</span><span class="n">root_node_name</span> <span class="ow">or</span> <span class="s2">&quot;____&quot;</span><span class="p">,</span>
+                        <span class="n">dim_slots</span><span class="p">,</span>
+                        <span class="n">dim_slots</span><span class="p">,</span>
+                        <span class="n">digital_encodings</span><span class="o">=</span><span class="n">digital_encodings</span><span class="p">,</span>
                     <span class="p">)</span>
-                <span class="k">else</span><span class="p">:</span>
-                    <span class="n">dim_slots</span><span class="p">,</span> <span class="n">digital_encodings</span> <span class="o">=</span> <span class="n">meta_data</span><span class="p">[</span><span class="n">spacename</span><span class="p">]</span>
-                    <span class="k">try</span><span class="p">:</span>
-                        <span class="n">expr</span> <span class="o">=</span> <span class="n">expression_for_numba</span><span class="p">(</span>
-                            <span class="n">expr</span><span class="p">,</span>
-                            <span class="n">spacename</span><span class="p">,</span>
-                            <span class="n">dim_slots</span><span class="p">,</span>
-                            <span class="n">dim_slots</span><span class="p">,</span>
-                            <span class="n">digital_encodings</span><span class="o">=</span><span class="n">digital_encodings</span><span class="p">,</span>
-                        <span class="p">)</span>
-                    <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
-                        <span class="c1"># check if we can resolve this name on any other subspace</span>
-                        <span class="n">other_way</span> <span class="o">=</span> <span class="kc">False</span>
-                        <span class="k">for</span> <span class="n">other_spacename</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">tree</span><span class="o">.</span><span class="n">subspaces</span><span class="p">:</span>
-                            <span class="k">if</span> <span class="n">other_spacename</span> <span class="o">==</span> <span class="n">spacename</span><span class="p">:</span>
-                                <span class="k">continue</span>
-                            <span class="n">dim_slots</span><span class="p">,</span> <span class="n">digital_encodings</span> <span class="o">=</span> <span class="n">meta_data</span><span class="p">[</span><span class="n">other_spacename</span><span class="p">]</span>
-                            <span class="k">try</span><span class="p">:</span>
-                                <span class="n">expr</span> <span class="o">=</span> <span class="n">expression_for_numba</span><span class="p">(</span>
-                                    <span class="n">expr</span><span class="p">,</span>
-                                    <span class="n">spacename</span><span class="p">,</span>
-                                    <span class="n">dim_slots</span><span class="p">,</span>
-                                    <span class="n">dim_slots</span><span class="p">,</span>
-                                    <span class="n">digital_encodings</span><span class="o">=</span><span class="n">digital_encodings</span><span class="p">,</span>
-                                    <span class="n">prefer_name</span><span class="o">=</span><span class="n">other_spacename</span><span class="p">,</span>
-                                <span class="p">)</span>
-                            <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
-                                <span class="k">pass</span>
-                            <span class="k">else</span><span class="p">:</span>
-                                <span class="n">other_way</span> <span class="o">=</span> <span class="kc">True</span>
-                                <span class="k">break</span>
-                        <span class="k">if</span> <span class="ow">not</span> <span class="n">other_way</span><span class="p">:</span>
-                            <span class="k">raise</span>
+                <span class="k">except</span> <span class="ne">KeyError</span> <span class="k">as</span> <span class="n">key_err</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="s2">&quot;..&quot;</span> <span class="ow">in</span> <span class="n">key_err</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+                        <span class="n">topkey</span><span class="p">,</span> <span class="n">attrkey</span> <span class="o">=</span> <span class="n">key_err</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;..&quot;</span><span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="k">raise</span>
+                    <span class="c1"># check if we can resolve this name on any other subspace</span>
+                    <span class="n">other_way</span> <span class="o">=</span> <span class="kc">False</span>
+                    <span class="k">for</span> <span class="n">other_spacename</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">tree</span><span class="o">.</span><span class="n">subspace_fallbacks</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">topkey</span><span class="p">,</span> <span class="p">[]):</span>
+                        <span class="n">dim_slots</span><span class="p">,</span> <span class="n">digital_encodings</span> <span class="o">=</span> <span class="n">meta_data</span><span class="p">[</span><span class="n">other_spacename</span><span class="p">]</span>
+                        <span class="k">try</span><span class="p">:</span>
+                            <span class="n">expr</span> <span class="o">=</span> <span class="n">expression_for_numba</span><span class="p">(</span>
+                                <span class="n">expr</span><span class="p">,</span>
+                                <span class="n">spacename</span><span class="p">,</span>
+                                <span class="n">dim_slots</span><span class="p">,</span>
+                                <span class="n">dim_slots</span><span class="p">,</span>
+                                <span class="n">digital_encodings</span><span class="o">=</span><span class="n">digital_encodings</span><span class="p">,</span>
+                                <span class="n">prefer_name</span><span class="o">=</span><span class="n">other_spacename</span><span class="p">,</span>
+                            <span class="p">)</span>
+                        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+                            <span class="k">pass</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="n">other_way</span> <span class="o">=</span> <span class="kc">True</span>
+                            <span class="k">break</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="n">other_way</span><span class="p">:</span>
+                        <span class="k">raise</span>
 
             <span class="c1"># now find instances where an identifier is previously created in this flow.</span>
             <span class="n">expr</span> <span class="o">=</span> <span class="n">expression_for_numba</span><span class="p">(</span>
@@ -1521,7 +1514,10 @@ const thebe_selector_output = ".output, .cell_output"
                         <span class="s2">&quot;pick_counted&quot;</span><span class="p">,</span>
                     <span class="p">}:</span>
                         <span class="k">continue</span>
-                    <span class="n">arguments</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">rg</span><span class="o">.</span><span class="n">get_named_array</span><span class="p">(</span><span class="n">arg</span><span class="p">)))</span>
+                    <span class="n">argument</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">rg</span><span class="o">.</span><span class="n">get_named_array</span><span class="p">(</span><span class="n">arg</span><span class="p">))</span>
+                    <span class="k">if</span> <span class="n">argument</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">kind</span> <span class="o">==</span> <span class="s2">&quot;O&quot;</span><span class="p">:</span>
+                        <span class="n">argument</span> <span class="o">=</span> <span class="n">argument</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">&quot;unicode&quot;</span><span class="p">)</span>
+                    <span class="n">arguments</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">argument</span><span class="p">)</span>
                 <span class="n">kwargs</span> <span class="o">=</span> <span class="p">{}</span>
                 <span class="k">if</span> <span class="n">dtype</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
                     <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;dtype&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">dtype</span>

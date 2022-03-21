@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>API Reference &#8212; v2.0.2</title>
+    <title>API Reference &#8212; v2.1.0</title>
     
   <link href="_static/css/theme.css" rel="stylesheet">
   <link href="_static/css/index.ff1ffe594081f20da1ef19478df9384b.css" rel="stylesheet">
@@ -84,7 +84,7 @@ const thebe_selector_output = ".output, .cell_output"
       <img src="_static/logo.png" class="logo" alt="logo">
       
       
-      <h1 class="site-logo" id="site-title">v2.0.2</h1>
+      <h1 class="site-logo" id="site-title">v2.1.0</h1>
       
     </a>
 </div><form class="bd-search d-flex align-items-center" action="search.html" method="get">
@@ -502,6 +502,22 @@ if there are multiple dimensions in the root dataset.</p></li>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
 <dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)">bool</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="sharrow.DataTree.replacement_filters">
+<span class="sig-prename descclassname"><span class="pre">DataTree.</span></span><span class="sig-name descname"><span class="pre">replacement_filters</span></span><a class="headerlink" href="#sharrow.DataTree.replacement_filters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Filters that are automatically applied to data on replacement.</p>
+<p>When individual datasets are replaced in the tree, the incoming dataset is
+passed through the filter with a matching name-key (if it exists).  The filter
+should be a function that accepts one argument (the incoming dataset) and returns
+one value (the dataset to save in the tree).  These filters can be used to ensure
+data quality, e.g. renaming variables, ensuring particular data types, etc.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>Dict[Str,Callable]</p>
 </dd>
 </dl>
 </dd></dl>
