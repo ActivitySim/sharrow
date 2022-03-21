@@ -308,6 +308,14 @@ class DataTree:
         data quality, e.g. renaming variables, ensuring particular data types, etc.
         """
 
+        self.subspace_fallbacks = {}
+        """Dict[Str:List[Str]]: Allowable fallback subspace lookups.
+
+        When a named variable is not found in a given subspace, the default result is
+        raising a KeyError. But, if fallbacks are defined for a given subspace, the
+        fallbacks are searched in order for the desired variable.
+        """
+
     @property
     def shape(self):
         """Tuple[int]: base shape of arrays that will be loaded when using this DataTree."""

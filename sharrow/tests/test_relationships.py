@@ -511,11 +511,13 @@ def test_name_in_wrong_subspace(dataframe_regression):
             }
         )
 
+    tree.subspace_fallbacks["od_skims"] = ["odt_skims"]
+
     ss_undot = tree.setup_flow(
         {
             "income": "income",
-            "sov_time_by_income": "SOV_TIME/income",
-            "sov_cost_by_income": "HOV3_TIME",
+            "sov_time_by_income": "od_skims.SOV_TIME/income",
+            "sov_cost_by_income": "od_skims.HOV3_TIME",
         }
     )
     result = ss_undot._load(tree, as_dataframe=True)
