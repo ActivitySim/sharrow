@@ -287,6 +287,7 @@ class _DigitalEncodings:
 
 
 def multivalue_digitize_by_dictionary(ds, encode_vars=None, encoding_name=None):
+    logger = logging.getLogger("sharrow")
     if not isinstance(encoding_name, str):
         i = 0
         while f"joined_{i}" in ds.dims:
@@ -312,25 +313,30 @@ def multivalue_digitize_by_dictionary(ds, encode_vars=None, encoding_name=None):
         assert (
             encode_var_dims == ds[v].dims
         ), f"dims must match, {encode_var_dims} != {ds[v].dims}"
+    logger.info("assembling data stack")
     conjoined = np.stack(
         [array_decode(ds[v].compute(), aux_data=ds) for v in encode_vars], axis=-1
     )
+    logger.info("constructing stack view")
     baseshape = conjoined.shape[:-1]
     conjoined = conjoined.reshape([-1, conjoined.shape[-1]])
     voidview = np.ascontiguousarray(conjoined).view(
         np.dtype((np.void, conjoined.dtype.itemsize * conjoined.shape[1]))
     )
+    logger.info("finding unique value combinations")
     unique_values, pointers = np.unique(voidview, return_inverse=True)
     pointers = pointers.reshape(baseshape)
     unique_values = unique_values.view(np.dtype(conjoined.dtype)).reshape(
         [-1, len(encode_vars)]
     )
+    logger.info("downsampling offsets")
     if unique_values.shape[0] < 1 << 8:
         pointers = pointers.astype(np.uint8)
     elif unique_values.shape[0] < 1 << 16:
         pointers = pointers.astype(np.uint16)
     elif unique_values.shape[0] < 1 << 32:
         pointers = pointers.astype(np.uint32)
+    logger.info("formatting output")
     out = ds.drop_vars(encode_vars)
 
     original_footprint = 0
@@ -354,7 +360,7 @@ def multivalue_digitize_by_dictionary(ds, encode_vars=None, encoding_name=None):
 
     bytes_saved = original_footprint - encoded_footprint
     savings_ratio = bytes_saved / original_footprint
-    logging.getLogger("sharrow").info(
+    logger.info(
         f"multivalue_digitize_by_dictionary {encoding_name} "
         f"saved {si_units(bytes_saved)} {savings_ratio:.1%}"
     )
