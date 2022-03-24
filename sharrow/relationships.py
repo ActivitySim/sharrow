@@ -1111,9 +1111,16 @@ class DataTree:
             )
 
         if isinstance(spacearray, str):
-            from_dims = self._graph.nodes[spacename]["dataset"][spacearray].dims
+            spacearray_ = self._graph.nodes[spacename]["dataset"][spacearray]
         else:
-            from_dims = spacearray.dims
+            spacearray_ = spacearray
+
+        from_dims = spacearray_.dims
+        offset_source = spacearray_.attrs.get("digital_encoding", {}).get(
+            "offset_source", None
+        )
+        if offset_source is not None:
+            from_dims = self._graph.nodes[spacename]["dataset"][offset_source].dims
 
         tokens = []
 

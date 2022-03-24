@@ -397,14 +397,28 @@ class RewriteForNumba(ast.NodeTransformer):
         if isinstance(self.spacevars, dict):
             dim_slots = self.spacevars[attr]
 
-        if transpose_lead:
-            decorated_name = ast.Call(
-                func=ast.Name("transpose_leading", ctx=ast.Load()),
-                args=[ast.Name(id=f"__{pref_topname}__{attr}", ctx=ast.Load())],
-                keywords=[],
-            )
-        else:
-            decorated_name = ast.Name(id=f"__{pref_topname}__{attr}", ctx=ast.Load())
+        def maybe_transpose(thing):
+            if transpose_lead:
+                return ast.Call(
+                    func=ast.Name("transpose_leading", ctx=ast.Load()),
+                    args=[thing],
+                    keywords=[],
+                )
+            else:
+                return thing
+
+        def _maybe_transpose_first_two_args(_slice):
+            if transpose_lead:
+                elts = _slice.elts
+                if len(elts) >= 2:
+                    elts = [elts[1], elts[0], *elts[2:]]
+                return type(_slice)(elts=elts)
+            else:
+                return _slice
+
+        decorated_name = maybe_transpose(
+            ast.Name(id=f"__{pref_topname}__{attr}", ctx=ast.Load())
+        )
 
         if isinstance(dim_slots, (tuple, list)):
             if len(dim_slots):
@@ -451,11 +465,27 @@ class RewriteForNumba(ast.NodeTransformer):
         if digital_encoding is not None:
 
             dictionary = digital_encoding.get("dictionary", None)
+            offset_source = digital_encoding.get("offset_source", None)
             if dictionary is not None:
                 result = ast.Subscript(
                     value=ast.Name(
                         id=f"__encoding_dict__{pref_topname}__{attr}", ctx=ast.Load()
                     ),
+                    slice=result,
+                    ctx=ctx,
+                )
+            elif offset_source is not None:
+                result = ast.Subscript(
+                    value=maybe_transpose(
+                        ast.Name(
+                            id=f"__{pref_topname}__{offset_source}", ctx=ast.Load()
+                        )
+                    ),
+                    slice=result.slice,
+                    ctx=ctx,
+                )
+                result = ast.Subscript(
+                    value=ast.Name(id=f"__{pref_topname}__{attr}", ctx=ast.Load()),
                     slice=result,
                     ctx=ctx,
                 )

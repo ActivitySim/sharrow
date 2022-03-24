@@ -562,3 +562,68 @@ def test_shared_data_encoded(dataframe_regression):
     )
     result = ss._load(tree, as_dataframe=True)
     dataframe_regression.check(result, basename="test_shared_data")
+
+
+def test_dict_encoded(dataframe_regression):
+    data = example_data.get_data()
+    skims = data["skims"]
+    pairs = pd.DataFrame({"orig": [0, 0, 0, 1, 1, 1], "dest": [0, 1, 2, 0, 1, 2]})
+    skims1 = skims.digital_encoding.set("WLK_LOC_WLK_FAR", bitwidth=8, by_dict=True)
+    tree1 = DataTree(
+        base=pairs,
+        skims=skims1,
+        relationships=(
+            "base.orig -> skims.otaz",
+            "base.dest -> skims.dtaz",
+        ),
+    )
+    flow1 = tree1.setup_flow(
+        {
+            "d1": 'skims["WLK_LOC_WLK_FAR", "AM"]',
+            "d2": 'skims["WLK_LOC_WLK_FAR", "AM"]**2',
+        }
+    )
+    arr1 = flow1.load_dataframe()
+    dataframe_regression.check(arr1)
+
+
+def test_joint_dict_encoded(dataframe_regression):
+    data = example_data.get_data()
+    skims = data["skims"]
+    pairs = pd.DataFrame({"orig": [0, 0, 0, 1, 1, 1], "dest": [0, 1, 2, 0, 1, 2]})
+    skims1 = skims.digital_encoding.set(
+        "WLK_LOC_WLK_FAR",
+        "WLK_LOC_WLK_BOARDS",
+        "WLK_LOC_WLK_IWAIT",
+        "WLK_LOC_WLK_WAIT",
+        joint_dict=True,
+    )
+    skims1 = skims1.digital_encoding.set(
+        ["DISTBIKE", "DISTWALK"],
+        joint_dict="jointWB",
+    )
+    tree1 = DataTree(
+        base=pairs,
+        skims=skims1,
+        rskims=skims1,
+        relationships=(
+            "base.orig -> skims.otaz",
+            "base.dest -> skims.dtaz",
+            "base.orig -> rskims.dtaz",
+            "base.dest -> rskims.otaz",
+        ),
+    )
+    flow1 = tree1.setup_flow(
+        {
+            "f1": 'skims["WLK_LOC_WLK_FAR", "AM"]',
+            "f2": 'skims["WLK_LOC_WLK_FAR", "AM"]**2',
+            "w1": "skims.DISTWALK",
+            "w2": 'skims.reverse("DISTWALK")',
+            "w3": "rskims.DISTWALK",
+            "x1": "skims.DIST",
+            "x2": 'skims.reverse("DIST")',
+        },
+        extra_hash_data=("joint",),
+    )
+    arr1 = flow1.load_dataframe()
+    dataframe_regression.check(arr1)

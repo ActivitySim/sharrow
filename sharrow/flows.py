@@ -879,7 +879,7 @@ class Flow:
             self._raw_functions[k] = (init_expr, expr, f_name_tokens, argtokens)
             self.output_name_positions[k] = n
 
-        return blacken(func_code), all_name_tokens
+        return func_code, all_name_tokens
 
     def __initialize_2(
         self,
@@ -1091,7 +1091,7 @@ class Flow:
                         f_code.write(f"# - {str(k)}\n")
 
                 f_code.write("\n\n# function code\n")
-                f_code.write(f"\n\n{func_code}")
+                f_code.write(f"\n\n{blacken(func_code)}")
 
                 f_code.write("\n\n# machinery code\n\n")
 

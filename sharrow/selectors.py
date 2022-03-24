@@ -32,6 +32,44 @@ class _Df_Accessor:
             result.index = df.index
         return result
 
+    def _filter(
+        self,
+        *,
+        _name=None,
+        _names=None,
+        _load=False,
+        _index_name=None,
+        _func=None,
+        **idxs,
+    ):
+        loaders = {}
+        if _index_name is None:
+            _index_name = "index"
+        for k, v in idxs.items():
+            loaders[k] = xr.DataArray(v, dims=[_index_name])
+        if _name is not None:
+            assert isinstance(_name, str)
+            _names = [_name]
+        if _names:
+            _baggage = list(self._obj.digital_encoding.baggage(_names))
+            _all_names = list(_names) + _baggage
+            ds = self._obj[_all_names]
+        else:
+            _baggage = []
+            ds = self._obj
+        if _load:
+            ds = ds.load()
+        if _names:
+            result = (
+                getattr(ds, _func)(**loaders)
+                .digital_encoding.strip(_names)
+                .drop_vars(_baggage)
+            )
+            if _name is not None:
+                result = result[_name]
+            return result
+        return getattr(ds, _func)(**loaders)
+
 
 @xr.register_dataset_accessor("iat")
 class _Iat_Accessor(_Df_Accessor):
@@ -46,6 +84,8 @@ class _Iat_Accessor(_Df_Accessor):
 
     Parameters
     ----------
+    _name : str, optional
+        Only process this variable of this Dataset, and return a DataArray.
     _names : Collection[str], optional
         Only include these variables of this Dataset.
     _load : bool, default False
@@ -59,22 +99,20 @@ class _Iat_Accessor(_Df_Accessor):
 
     Returns
     -------
-    Dataset
+    Dataset or DataArray
     """
 
-    def __call__(self, *, _names=None, _load=False, _index_name=None, **idxs):
-        loaders = {}
-        if _index_name is None:
-            _index_name = "index"
-        for k, v in idxs.items():
-            loaders[k] = xr.DataArray(v, dims=[_index_name])
-        if _names:
-            ds = self._obj[_names]
-        else:
-            ds = self._obj
-        if _load:
-            ds = ds.load()
-        return ds.isel(**loaders)
+    def __call__(
+        self, *, _name=None, _names=None, _load=False, _index_name=None, **idxs
+    ):
+        return self._filter(
+            _name=_name,
+            _names=_names,
+            _load=_load,
+            _index_name=_index_name,
+            _func="isel",
+            **idxs,
+        )
 
 
 @xr.register_dataset_accessor("at")
@@ -90,6 +128,8 @@ class _At_Accessor(_Df_Accessor):
 
     Parameters
     ----------
+    _name : str, optional
+        Only process this variable of this Dataset, and return a DataArray.
     _names : Collection[str], optional
         Only include these variables of this Dataset.
     _load : bool, default False
@@ -103,22 +143,20 @@ class _At_Accessor(_Df_Accessor):
 
     Returns
     -------
-    Dataset
+    Dataset or DataArray
     """
 
-    def __call__(self, *, _names=None, _load=False, _index_name=None, **idxs):
-        loaders = {}
-        if _index_name is None:
-            _index_name = "index"
-        for k, v in idxs.items():
-            loaders[k] = xr.DataArray(v, dims=[_index_name])
-        if _names:
-            ds = self._obj[_names]
-        else:
-            ds = self._obj
-        if _load:
-            ds = ds.load()
-        return ds.sel(**loaders)
+    def __call__(
+        self, *, _name=None, _names=None, _load=False, _index_name=None, **idxs
+    ):
+        return self._filter(
+            _name=_name,
+            _names=_names,
+            _load=_load,
+            _index_name=_index_name,
+            _func="sel",
+            **idxs,
+        )
 
 
 @register_dataset_method

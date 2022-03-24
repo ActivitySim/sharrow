@@ -1,3 +1,4 @@
+import ast
 import base64
 import hashlib
 import logging
@@ -515,6 +516,22 @@ def from_zarr(store, *args, **kwargs):
     return xr.Dataset(xr.open_zarr(store, *args, **kwargs))
 
 
+def from_zarr_with_attr(*args, **kwargs):
+    obj = from_zarr(*args, **kwargs)
+    for k in obj:
+        attrs = {}
+        for aname, avalue in obj[k].attrs.items():
+            if (
+                isinstance(avalue, str)
+                and avalue.startswith(" {")
+                and avalue.endswith("} ")
+            ):
+                avalue = ast.literal_eval(avalue[1:-1])
+            attrs[aname] = avalue
+        obj[k] = obj[k].assign_attrs(attrs)
+    return obj
+
+
 def coerce_to_range_index(idx):
     if isinstance(idx, pd.RangeIndex):
         return idx
@@ -658,6 +675,93 @@ def to_zarr_zip(self, *args, **kwargs):
                 self.to_zarr(store)
             return
     return super().to_zarr(*args, **kwargs)
+
+
+@register_dataset_method
+def to_zarr_with_attr(self, *args, **kwargs):
+    """
+    Write dataset contents to a zarr group.
+
+    Parameters
+    ----------
+    store : MutableMapping, str or Path, optional
+        Store or path to directory in file system.  If given with a
+        ".zarr.zip" extension, and keyword arguments limited to 'mode' and
+        'compression', then a ZipStore will be created, populated, and then
+        immediately closed.
+    chunk_store : MutableMapping, str or Path, optional
+        Store or path to directory in file system only for Zarr array chunks.
+        Requires zarr-python v2.4.0 or later.
+    mode : {"w", "w-", "a", None}, optional
+        Persistence mode: "w" means create (overwrite if exists);
+        "w-" means create (fail if exists);
+        "a" means override existing variables (create if does not exist).
+        If ``append_dim`` is set, ``mode`` can be omitted as it is
+        internally set to ``"a"``. Otherwise, ``mode`` will default to
+        `w-` if not set.
+    synchronizer : object, optional
+        Zarr array synchronizer.
+    group : str, optional
+        Group path. (a.k.a. `path` in zarr terminology.)
+    encoding : dict, optional
+        Nested dictionary with variable names as keys and dictionaries of
+        variable specific encodings as values, e.g.,
+        ``{"my_variable": {"dtype": "int16", "scale_factor": 0.1,}, ...}``
+    compute : bool, optional
+        If True write array data immediately, otherwise return a
+        ``dask.delayed.Delayed`` object that can be computed to write
+        array data later. Metadata is always updated eagerly.
+    consolidated : bool, optional
+        If True, apply zarr's `consolidate_metadata` function to the store
+        after writing metadata.
+    append_dim : hashable, optional
+        If set, the dimension along which the data will be appended. All
+        other dimensions on overriden variables must remain the same size.
+    region : dict, optional
+        Optional mapping from dimension names to integer slices along
+        dataset dimensions to indicate the region of existing zarr array(s)
+        in which to write this dataset's data. For example,
+        ``{'x': slice(0, 1000), 'y': slice(10000, 11000)}`` would indicate
+        that values should be written to the region ``0:1000`` along ``x``
+        and ``10000:11000`` along ``y``.
+
+        Two restrictions apply to the use of ``region``:
+
+        - If ``region`` is set, _all_ variables in a dataset must have at
+          least one dimension in common with the region. Other variables
+          should be written in a separate call to ``to_zarr()``.
+        - Dimensions cannot be included in both ``region`` and
+          ``append_dim`` at the same time. To create empty arrays to fill
+          in with ``region``, use a separate call to ``to_zarr()`` with
+          ``compute=False``. See "Appending to existing Zarr stores" in
+          the reference documentation for full details.
+    compression : int, optional
+        Only used for ".zarr.zip" files.  By default zarr uses blosc
+        compression for chunks, so adding another layer of compression here
+        is typically redundant.
+
+    References
+    ----------
+    https://zarr.readthedocs.io/
+
+    Notes
+    -----
+    Zarr chunking behavior:
+        If chunks are found in the encoding argument or attribute
+        corresponding to any DataArray, those chunks are used.
+        If a DataArray is a dask array, it is written with those chunks.
+        If not other chunks are found, Zarr uses its own heuristics to
+        choose automatic chunk sizes.
+    """
+    obj = self.copy()
+    for k in self:
+        attrs = {}
+        for aname, avalue in self[k].attrs.items():
+            if isinstance(avalue, dict):
+                avalue = f" {avalue!r} "
+            attrs[aname] = avalue
+        obj[k] = self[k].assign_attrs(attrs)
+    return obj.to_zarr(*args, **kwargs)
 
 
 @register_dataset_method
