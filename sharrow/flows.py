@@ -1542,7 +1542,7 @@ class Flow:
             Override the default dtype for the result. May trigger re-compilation
             of the underlying code.
         compile_watch : bool, default False
-            Set the `compile_recently` flag on this flow to True if any file
+            Set the `compiled_recently` flag on this flow to True if any file
             modification activity is observed in the cache directory.
 
         Returns
@@ -1564,7 +1564,7 @@ class Flow:
             Override the default dtype for the result. May trigger re-compilation
             of the underlying code.
         compile_watch : bool, default False
-            Set the `compile_recently` flag on this flow to True if any file
+            Set the `compiled_recently` flag on this flow to True if any file
             modification activity is observed in the cache directory.
 
         Returns
@@ -1588,7 +1588,7 @@ class Flow:
             Override the default dtype for the result. May trigger re-compilation
             of the underlying code.
         compile_watch : bool, default False
-            Set the `compile_recently` flag on this flow to True if any file
+            Set the `compiled_recently` flag on this flow to True if any file
             modification activity is observed in the cache directory.
 
         Returns
@@ -1617,7 +1617,7 @@ class Flow:
             Override the default dtype for the result. May trigger re-compilation
             of the underlying code.
         compile_watch : bool, default False
-            Set the `compile_recently` flag on this flow to True if any file
+            Set the `compiled_recently` flag on this flow to True if any file
             modification activity is observed in the cache directory.
 
         Returns
@@ -1649,7 +1649,7 @@ class Flow:
             Override the default dtype for the result. May trigger re-compilation
             of the underlying code.
         compile_watch : bool, default False
-            Set the `compile_recently` flag on this flow to True if any file
+            Set the `compiled_recently` flag on this flow to True if any file
             modification activity is observed in the cache directory.
 
         Returns
@@ -1699,7 +1699,7 @@ class Flow:
             of the underlying code.  The choices and pick counts (if included)
             are always integers.
         compile_watch : bool, default False
-            Set the `compile_recently` flag on this flow to True if any file
+            Set the `compiled_recently` flag on this flow to True if any file
             modification activity is observed in the cache directory.
 
         Returns
