@@ -1355,6 +1355,7 @@ class Flow:
         dot=None,
         mnl_draws=None,
         pick_counted=False,
+        compile_watch=False,
     ):
         """
         Compute the flow outputs.
@@ -1387,8 +1388,11 @@ class Flow:
             also be provided. The dot-product is treated as the utility function
             for a multinomial logit model, and these draws are used to simulate
             choices from the implied probabilities.
-
+        compile_watch : bool, default False
+            Watch for compiled code.
         """
+        if compile_watch:
+            compile_watch = time.time()
         if (as_dataframe or as_table) and dot is not None:
             raise ValueError("cannot format output other than as array if using dot")
         if source is None:
@@ -1501,6 +1505,23 @@ class Flow:
         elif mnl_collapse:
             result = np.squeeze(result, -1)
             result_p = np.squeeze(result_p, -1)
+        if compile_watch:
+            self.compiled_recently = False
+            for i in os.walk(os.path.join(self.cache_dir, self.name)):
+                for f in i[2]:
+                    fi = os.path.join(i[0], f)
+                    t = os.path.getmtime(fi)
+                    if t > compile_watch:
+                        self.compiled_recently = True
+                        logger.warning(f"compilation activity detected for {self.name}")
+                        break
+                if self.compiled_recently:
+                    break
+        else:
+            try:
+                del self.compiled_recently
+            except AttributeError:
+                pass
         if result_p is not None:
             if pick_counted:
                 return result, result_p, pick_count
@@ -1508,7 +1529,7 @@ class Flow:
                 return result, result_p
         return result
 
-    def load(self, source=None, dtype=None):
+    def load(self, source=None, dtype=None, compile_watch=False):
         """
         Compute the flow outputs as a numpy array.
 
@@ -1520,14 +1541,17 @@ class Flow:
         dtype : str or dtype
             Override the default dtype for the result. May trigger re-compilation
             of the underlying code.
+        compile_watch : bool, default False
+            Set the `compile_recently` flag on this flow to True if any file
+            modification activity is observed in the cache directory.
 
         Returns
         -------
         numpy.array
         """
-        return self._load(source=source, dtype=dtype)
+        return self._load(source=source, dtype=dtype, compile_watch=compile_watch)
 
-    def load_dataframe(self, source=None, dtype=None):
+    def load_dataframe(self, source=None, dtype=None, compile_watch=False):
         """
         Compute the flow outputs as a pandas.DataFrame.
 
@@ -1539,14 +1563,19 @@ class Flow:
         dtype : str or dtype
             Override the default dtype for the result. May trigger re-compilation
             of the underlying code.
+        compile_watch : bool, default False
+            Set the `compile_recently` flag on this flow to True if any file
+            modification activity is observed in the cache directory.
 
         Returns
         -------
         pandas.DataFrame
         """
-        return self._load(source=source, dtype=dtype, as_dataframe=True)
+        return self._load(
+            source=source, dtype=dtype, as_dataframe=True, compile_watch=compile_watch
+        )
 
-    def load_dataarray(self, source=None, dtype=None):
+    def load_dataarray(self, source=None, dtype=None, compile_watch=False):
         """
         Compute the flow outputs as a xarray.DataArray.
 
@@ -1558,14 +1587,19 @@ class Flow:
         dtype : str or dtype
             Override the default dtype for the result. May trigger re-compilation
             of the underlying code.
+        compile_watch : bool, default False
+            Set the `compile_recently` flag on this flow to True if any file
+            modification activity is observed in the cache directory.
 
         Returns
         -------
         xarray.DataArray
         """
-        return self._load(source=source, dtype=dtype, as_dataarray=True)
+        return self._load(
+            source=source, dtype=dtype, as_dataarray=True, compile_watch=compile_watch
+        )
 
-    def dot(self, coefficients, source=None, dtype=None):
+    def dot(self, coefficients, source=None, dtype=None, compile_watch=False):
         """
         Compute the dot-product of expression results and coefficients.
 
@@ -1582,6 +1616,9 @@ class Flow:
         dtype : str or dtype
             Override the default dtype for the result. May trigger re-compilation
             of the underlying code.
+        compile_watch : bool, default False
+            Set the `compile_recently` flag on this flow to True if any file
+            modification activity is observed in the cache directory.
 
         Returns
         -------
@@ -1591,9 +1628,10 @@ class Flow:
             source,
             dot=coefficients,
             dtype=dtype,
+            compile_watch=compile_watch,
         )
 
-    def dot_dataarray(self, coefficients, source=None, dtype=None):
+    def dot_dataarray(self, coefficients, source=None, dtype=None, compile_watch=False):
         """
         Compute the dot-product of expression results and coefficients.
 
@@ -1610,6 +1648,9 @@ class Flow:
         dtype : str or dtype
             Override the default dtype for the result. May trigger re-compilation
             of the underlying code.
+        compile_watch : bool, default False
+            Set the `compile_recently` flag on this flow to True if any file
+            modification activity is observed in the cache directory.
 
         Returns
         -------
@@ -1620,10 +1661,17 @@ class Flow:
             dot=coefficients,
             dtype=dtype,
             as_dataarray=True,
+            compile_watch=compile_watch,
         )
 
     def mnl_draws(
-        self, coefficients, draws, source=None, pick_counted=False, dtype=None
+        self,
+        coefficients,
+        draws,
+        source=None,
+        pick_counted=False,
+        dtype=None,
+        compile_watch=False,
     ):
         """
         Make random simulated choices for a multinomial logit model.
@@ -1650,6 +1698,9 @@ class Flow:
             Override the default dtype for the probability. May trigger re-compilation
             of the underlying code.  The choices and pick counts (if included)
             are always integers.
+        compile_watch : bool, default False
+            Set the `compile_recently` flag on this flow to True if any file
+            modification activity is observed in the cache directory.
 
         Returns
         -------
@@ -1667,6 +1718,7 @@ class Flow:
             mnl_draws=draws,
             dtype=dtype,
             pick_counted=pick_counted,
+            compile_watch=compile_watch,
         )
 
     @property
