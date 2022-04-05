@@ -388,6 +388,7 @@ def mnl_transform(
     dotarray=None,
     random_draws=None,
     pick_counted=False,
+    logsums=False,
 ):
     if dotarray is None:
         raise ValueError("dotarray cannot be None")
@@ -398,7 +399,10 @@ def mnl_transform(
         pick_count = np.zeros((argshape[0], random_draws.shape[1]), dtype=np.int32)
     else:
         pick_count = np.zeros((argshape[0], 0), dtype=np.int32)
-    ###result = np.empty((argshape[0], dotarray.shape[1]), dtype=dtype)
+    if logsums:
+        _logsums = np.zeros((argshape[0], ), dtype=dtype)
+    else:
+        _logsums = np.zeros((0, ), dtype=dtype)
     if argshape[0] > 1000:
         for j0 in nb.prange(argshape[0]):
             intermediate = np.zeros({len_self_raw_functions}, dtype=dtype)
@@ -406,6 +410,8 @@ def mnl_transform(
             partial = np.exp(np.dot(intermediate, dotarray))
             local_sum = np.sum(partial)
             partial /= local_sum
+            if logsums:
+                _logsums[j0] = np.log(local_sum)
             if pick_counted:
                 _sample_choices_maker_counted(partial, random_draws[j0], result[j0], result_p[j0], pick_count[j0])
             else:
@@ -417,11 +423,13 @@ def mnl_transform(
             partial = np.exp(np.dot(intermediate, dotarray))
             local_sum = np.sum(partial)
             partial /= local_sum
+            if logsums:
+                _logsums[j0] = np.log(local_sum)
             if pick_counted:
                 _sample_choices_maker_counted(partial, random_draws[j0], result[j0], result_p[j0], pick_count[j0])
             else:
                 _sample_choices_maker(partial, random_draws[j0], result[j0], result_p[j0])
-    return result, result_p, pick_count
+    return result, result_p, pick_count, _logsums
 
 """
 )
@@ -439,6 +447,7 @@ def mnl_transform(
     dotarray=None,
     random_draws=None,
     pick_counted=False,
+    logsums=False,
 ):
     if dotarray is None:
         raise ValueError("dotarray cannot be None")
@@ -455,6 +464,10 @@ def mnl_transform(
         pick_count = np.zeros((argshape[0], random_draws.shape[1]), dtype=np.int32)
     else:
         pick_count = np.zeros((argshape[0], 0), dtype=np.int32)
+    if logsums:
+        _logsums = np.zeros((argshape[0], ), dtype=dtype)
+    else:
+        _logsums = np.zeros((0, ), dtype=dtype)
     if argshape[0] > 1000:
         for j0 in nb.prange(argshape[0]):
           partial = np.zeros(argshape[1], dtype=dtype)
@@ -463,6 +476,8 @@ def mnl_transform(
             {meta_code_stack_dot}
             partial[j1] = np.exp(np.dot(intermediate, dotarray))[0]
           local_sum = np.sum(partial)
+          if logsums:
+            _logsums[j0] = np.log(local_sum)
           partial /= local_sum
           if pick_counted:
             _sample_choices_maker_counted(partial, random_draws[j0], result[j0], result_p[j0], pick_count[j0])
@@ -476,12 +491,14 @@ def mnl_transform(
             {meta_code_stack_dot}
             partial[j1] = np.exp(np.dot(intermediate, dotarray))[0]
           local_sum = np.sum(partial)
+          if logsums:
+            _logsums[j0] = np.log(local_sum)
           partial /= local_sum
           if pick_counted:
             _sample_choices_maker_counted(partial, random_draws[j0], result[j0], result_p[j0], pick_count[j0])
           else:
             _sample_choices_maker(partial, random_draws[j0], result[j0], result_p[j0])
-    return result, result_p, pick_count
+    return result, result_p, pick_count, _logsums
 """
 )
 
@@ -1275,7 +1292,14 @@ class Flow:
                     raise err
 
     def iload_raw(
-        self, rg, runner=None, dtype=None, dot=None, mnl=None, pick_counted=False
+        self,
+        rg,
+        runner=None,
+        dtype=None,
+        dot=None,
+        mnl=None,
+        pick_counted=False,
+        logsums=False,
     ):
         assert isinstance(rg, DataTree)
         with warnings.catch_warnings():
@@ -1301,6 +1325,7 @@ class Flow:
                         "argshape",
                         "random_draws",
                         "pick_counted",
+                        "logsums",
                     }:
                         continue
                     argument = np.asarray(rg.get_named_array(arg))
@@ -1315,6 +1340,7 @@ class Flow:
                 if mnl is not None:
                     kwargs["random_draws"] = mnl
                     kwargs["pick_counted"] = pick_counted
+                    kwargs["logsums"] = logsums
                 tree_root_dims = rg.root_dataset.dims
                 argshape = [
                     tree_root_dims[i]
@@ -1356,6 +1382,7 @@ class Flow:
         mnl_draws=None,
         pick_counted=False,
         compile_watch=False,
+        logsums=False,
     ):
         """
         Compute the flow outputs.
@@ -1390,6 +1417,8 @@ class Flow:
             choices from the implied probabilities.
         compile_watch : bool, default False
             Watch for compiled code.
+        logsums : bool, default False
+            Also return logsums when making draws from MNL models.
         """
         if compile_watch:
             compile_watch = time.time()
@@ -1402,6 +1431,7 @@ class Flow:
         dot_collapse = False
         result_p = None
         pick_count = None
+        out_logsum = None
         if dot is not None and dot.ndim == 1:
             dot = np.expand_dims(dot, -1)
             dot_collapse = True
@@ -1415,13 +1445,14 @@ class Flow:
             if mnl_draws is None:
                 result = self.iload_raw(source, runner=runner, dtype=dtype, dot=dot)
             else:
-                result, result_p, pick_count = self.iload_raw(
+                result, result_p, pick_count, out_logsum = self.iload_raw(
                     source,
                     runner=runner,
                     dtype=dtype,
                     dot=dot,
                     mnl=mnl_draws,
                     pick_counted=pick_counted,
+                    logsums=logsums,
                 )
         else:
             raise RuntimeError("please digitize")
@@ -1523,6 +1554,8 @@ class Flow:
             except AttributeError:
                 pass
         if result_p is not None:
+            if logsums:
+                return result, result_p, pick_count, out_logsum
             if pick_counted:
                 return result, result_p, pick_count
             else:
@@ -1670,6 +1703,7 @@ class Flow:
         draws,
         source=None,
         pick_counted=False,
+        logsums=False,
         dtype=None,
         compile_watch=False,
     ):
@@ -1694,6 +1728,8 @@ class Flow:
             tree used to initialize this flow is used.
         pick_counted : bool, default False
             Whether to tally multiple repeated choices with a pick count.
+        logsums : bool, default False
+            Whether to also return logsums.
         dtype : str or dtype
             Override the default dtype for the probability. May trigger re-compilation
             of the underlying code.  The choices and pick counts (if included)
@@ -1719,6 +1755,7 @@ class Flow:
             dtype=dtype,
             pick_counted=pick_counted,
             compile_watch=compile_watch,
+            logsums=logsums,
         )
 
     @property
