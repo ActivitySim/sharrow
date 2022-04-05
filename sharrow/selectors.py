@@ -11,9 +11,9 @@ class _Df_Accessor:
     def __call__(self, *args, **kwargs) -> xr.Dataset:
         raise NotImplementedError()
 
-    def df(self, df):
+    def df(self, df, *, append=False, mapping=None):
         """
-        Extract values by label on the coordinates indicated by columns of a DataFrame.
+        Extract values based on the coordinates indicated by columns of a DataFrame.
 
         Parameters
         ----------
@@ -22,14 +22,80 @@ class _Df_Accessor:
             this Dataset.  The resulting extracted DataFrame will have one row
             per row of `df`, columns matching the data variables in this dataset,
             and each value is looked from the source Dataset.
+        append : bool or str, default False
+            Assign the results of this extraction to variables in a copy of the
+            dataframe `df`.  Set to a string to make that a prefix for the variable
+            names.
+        mapping : dict, optional
+            Apply this rename mapping to the column names before extracting data.
 
         Returns
         -------
         pandas.DataFrame
         """
-        result = self(**df).reset_coords(drop=True).to_dataframe()
+        if mapping is not None:
+            df_ = df.rename(columns=mapping)
+        else:
+            df_ = df
+        keys = {i: df_[i] for i in self._obj.dims}
+        result = self(**keys).reset_coords(drop=True).to_dataframe()
         if isinstance(df, pd.DataFrame):
             result.index = df.index
+        if append:
+            if isinstance(append, str):
+                result = result.add_prefix(append)
+            result = df.assign(**result)
+        return result
+
+    def ds(self, ds, *, append=False, mapping=None, compute=False):
+        """
+        Extract values based on the coordinates indicated by variables of a Dataset.
+
+        Parameters
+        ----------
+        ds : xr.Dataset or Mapping[str, array-like]
+            The variables (or keys) of `ds` should match the named dimensions of
+            this Dataset, and should all be the same shape.  The resulting
+            extracted Dataset will have that common shape, variables matching the
+            data variables in this dataset, and each value is looked from the
+            source Dataset.
+        append : bool or str, default False
+            Assign the results of this extraction to variables in a copy of the
+            dataset `ds`.  Set to a string to make that a prefix for the variable
+            names.
+        mapping : dict, optional
+            Apply this rename mapping to the variable names before extracting data.
+        compute : bool, default False
+            Trigger a `compute` on dask arrays in the result.
+
+        Returns
+        -------
+        xarray.Dataset
+        """
+        if mapping is not None:
+            ds_ = ds.rename(mapping)
+        else:
+            ds_ = ds
+        keys = {i: ds_[i].data for i in self._obj.dims}
+        key_dims = None
+        for i in self._obj.dims:
+            if key_dims is None:
+                key_dims = ds_[i].dims
+            else:
+                assert key_dims == ds_[i].dims
+        if len(key_dims) > 1:
+            raise NotImplementedError(
+                "dataset with more than one dimension not implemented"
+            )
+        else:
+            result = self(**keys, _index_name=key_dims[0]).reset_coords(drop=True)
+        if compute:
+            result = result.compute()
+        if append:
+            if isinstance(append, str):
+                renames = {k: f"{append}{k}" for k in result.variables}
+                result = result.rename(renames)
+            result = ds.assign(result)
         return result
 
     def _filter(
