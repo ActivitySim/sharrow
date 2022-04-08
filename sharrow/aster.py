@@ -333,6 +333,7 @@ class RewriteForNumba(ast.NodeTransformer):
         rawalias="____",
         digital_encodings=None,
         preferred_spacename=None,
+        extra_vars=None,
     ):
         self.spacename = spacename
         self.dim_slots = dim_slots
@@ -341,6 +342,7 @@ class RewriteForNumba(ast.NodeTransformer):
         self.rawalias = rawalias
         self.digital_encodings = digital_encodings or {}
         self.preferred_spacename = preferred_spacename
+        self.extra_vars = extra_vars or {}
 
     def log_event(self, tag, node1=None, node2=None):
         if logger.getEffectiveLevel() <= -1:
@@ -771,8 +773,14 @@ class RewriteForNumba(ast.NodeTransformer):
         if isinstance(node.func, ast.Attribute) and node.func.attr == "isin":
             ante = self.visit(node.func.value)
             targets = node.args
+            elts = None
             if len(targets) == 1 and isinstance(targets[0], (ast.List, ast.Tuple)):
                 elts = targets[0].elts
+            elif len(targets) == 1 and isinstance(targets[0], ast.Name):
+                extra_val = self.extra_vars.get(targets[0].id, None)
+                if isinstance(extra_val, (list, tuple)):
+                    elts = [ast.Constant(i) for i in extra_val]
+            if elts is not None:
                 ors = []
                 for elt in elts:
                     ors.append(
@@ -817,6 +825,7 @@ def expression_for_numba(
     rawalias="____",
     digital_encodings=None,
     prefer_name=None,
+    extra_vars=None,
 ):
     return unparse_(
         RewriteForNumba(
@@ -827,6 +836,7 @@ def expression_for_numba(
             rawalias,
             digital_encodings,
             prefer_name,
+            extra_vars,
         ).visit(ast.parse(expr))
     )
 

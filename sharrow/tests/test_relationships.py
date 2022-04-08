@@ -627,3 +627,56 @@ def test_joint_dict_encoded(dataframe_regression):
     )
     arr1 = flow1.load_dataframe()
     dataframe_regression.check(arr1)
+
+
+def test_isin_and_between(dataframe_regression):
+
+    data = example_data.get_data()
+    persons = data["persons"]
+
+    tree = DataTree(
+        base=persons,
+        extra_vars={
+            "pt1": 1,
+            "pt5": 5,
+            "pt34": [3, 4],
+        },
+    )
+
+    ss = tree.setup_flow(
+        {
+            "pt": "base.ptype",
+            "pt_in_15": "base.ptype.isin([pt1,pt5])",
+            "pt_in_34": "base.ptype.isin(pt34)",
+            "pt_tween_15": "base.ptype.between(pt1,pt5)",
+            "pt_tween_25": "base.ptype.between(2,pt5)",
+            "pt_tween_35": "base.ptype.between(3,5)",
+        }
+    )
+    result = ss.load_dataframe(tree)
+    pd.testing.assert_series_equal(
+        result["pt"].isin([1, 5]).astype(np.float32),
+        result["pt_in_15"],
+        check_names=False,
+    )
+    pd.testing.assert_series_equal(
+        result["pt"].isin([3, 4]).astype(np.float32),
+        result["pt_in_34"],
+        check_names=False,
+    )
+    pd.testing.assert_series_equal(
+        result["pt"].between(1, 5).astype(np.float32),
+        result["pt_tween_15"],
+        check_names=False,
+    )
+    pd.testing.assert_series_equal(
+        result["pt"].between(2, 5).astype(np.float32),
+        result["pt_tween_25"],
+        check_names=False,
+    )
+    pd.testing.assert_series_equal(
+        result["pt"].between(3, 5).astype(np.float32),
+        result["pt_tween_35"],
+        check_names=False,
+    )
+    dataframe_regression.check(result)

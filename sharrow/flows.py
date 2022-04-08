@@ -829,6 +829,7 @@ class Flow:
                         dim_slots,
                         dim_slots,
                         digital_encodings=digital_encodings,
+                        extra_vars=self.tree.extra_vars,
                     )
                 except KeyError as key_err:
                     if ".." in key_err.args[0]:
@@ -847,6 +848,7 @@ class Flow:
                                 dim_slots,
                                 digital_encodings=digital_encodings,
                                 prefer_name=other_spacename,
+                                extra_vars=self.tree.extra_vars,
                             )
                         except KeyError:
                             pass
@@ -863,6 +865,7 @@ class Flow:
                 (),
                 self.output_name_positions,
                 "_outputs",
+                extra_vars=self.tree.extra_vars,
             )
             if (k == init_expr) and (init_expr == expr) and k.isidentifier():
                 logger.error(f"unable to rewrite '{k}' to itself")
