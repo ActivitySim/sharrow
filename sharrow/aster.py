@@ -781,6 +781,19 @@ class RewriteForNumba(ast.NodeTransformer):
                         )
                     )
                 result = ast.BoolOp(op=ast.Or(), values=ors)
+        # change `x.between(a,b)` to `(a <= x) & (x <= b)`
+        if isinstance(node.func, ast.Attribute) and node.func.attr == "between":
+            ante = self.visit(node.func.value)
+            targets = node.args
+            if len(targets) == 2:
+                lb, ub = targets
+                left = ast.Compare(
+                    left=ante, ops=[ast.GtE()], comparators=[self.visit(lb)]
+                )
+                right = ast.Compare(
+                    left=ante, ops=[ast.LtE()], comparators=[self.visit(ub)]
+                )
+                result = ast.BinOp(left=left, op=ast.BitAnd(), right=right)
 
         # if no other changes
         if result is None:
