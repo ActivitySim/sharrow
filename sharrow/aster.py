@@ -28,8 +28,9 @@ if sys.version_info >= (3, 8):
     ast_String_value = lambda x: x.value if isinstance(x, ast.Str) else x
     ast_TupleIndex_Type = ast.Tuple
     ast_Index_Value = lambda x: x
+    ast_Constant = ast.Constant
 else:
-    ast_Constant_Type = (ast.Index, ast.Constant, ast.Str)
+    ast_Constant_Type = (ast.Index, ast.Constant, ast.Str, ast.Num)
     ast_String_value = (
         lambda x: x.s
         if isinstance(x, ast.Str)
@@ -37,6 +38,7 @@ else:
     )
     ast_TupleIndex_Type = (ast.Index, ast.Tuple)
     ast_Index_Value = lambda x: x.value if isinstance(x, ast.Index) else x
+    ast_Constant = lambda x: ast.Constant(x, kind=None)
 
 
 def _isNone(c):
@@ -779,7 +781,7 @@ class RewriteForNumba(ast.NodeTransformer):
             elif len(targets) == 1 and isinstance(targets[0], ast.Name):
                 extra_val = self.extra_vars.get(targets[0].id, None)
                 if isinstance(extra_val, (list, tuple)):
-                    elts = [ast.Constant(i) for i in extra_val]
+                    elts = [ast_Constant(i) for i in extra_val]
             if elts is not None:
                 ors = []
                 for elt in elts:
