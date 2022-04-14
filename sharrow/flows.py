@@ -801,7 +801,7 @@ class Flow:
                     digital_encodings = spacearrays.digital_encoding.info()
                 except AttributeError:
                     digital_encodings = {}
-                blenders = None
+                blenders = spacearrays.redirection.blenders
                 meta_data[spacename] = (dim_slots, digital_encodings, blenders)
         else:
             for spacename, spacearrays in self.tree.subspaces.items():
@@ -816,7 +816,7 @@ class Flow:
                     digital_encodings = spacearrays.digital_encoding.info()
                 except AttributeError:
                     digital_encodings = {}
-                blenders = None
+                blenders = spacearrays.redirection.blenders
                 meta_data[spacename] = (dim_slots, digital_encodings, blenders)
 
         # write individual function files for each expression
@@ -1009,6 +1009,7 @@ class Flow:
                 "from contextlib import suppress",
                 "from numpy import log, exp, log1p, expm1",
                 "from sharrow.maths import piece, hard_sigmoid, transpose_leading, clip, digital_decode",
+                "from sharrow.sparse import get_blended_2",
             }
 
             func_code = self._func_code

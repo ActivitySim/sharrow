@@ -418,8 +418,9 @@ class RewriteForNumba(ast.NodeTransformer):
             else:
                 return _slice
 
+        raw_decorated_name = f"__{pref_topname}__{attr}"
         decorated_name = maybe_transpose(
-            ast.Name(id=f"__{pref_topname}__{attr}", ctx=ast.Load())
+            ast.Name(id=raw_decorated_name, ctx=ast.Load())
         )
         logger.debug(f"    decorated_name= {unparse_(decorated_name)}")
 
@@ -530,13 +531,36 @@ class RewriteForNumba(ast.NodeTransformer):
 
         blender = self.blenders.get(attr, None)
         if blender is not None:
-            result = ast.Call(
-                func=ast.Name("get_blended", cts=ast.Load()),
-                args=[
-                    result,
-                ],
-                keywords=[],
-            )
+            # get_blended_2(backstop, indices, indptr, data, i, j, blend_limit=np.inf)
+            result_args = result.slice.elts
+            # inside the blender, the args will be maz-taz mapped, but we need the plain maz too now
+            result_arg_ = [
+                ast.Subscript(
+                    value=ast.Name(id=j.value.id.replace("___digitized_", "__")),
+                    slice=j.slice,
+                )
+                for j in result_args
+            ]
+            if len(result_args) == 2:
+                result = ast.Call(
+                    func=ast.Name("get_blended_2", cts=ast.Load()),
+                    args=[
+                        result,
+                        ast.Name(
+                            id=f"__{pref_topname}___{attr}_indices", ctx=ast.Load()
+                        ),
+                        ast.Name(
+                            id=f"__{pref_topname}___{attr}_indptr", ctx=ast.Load()
+                        ),
+                        ast.Name(id=f"__{pref_topname}___{attr}_data", ctx=ast.Load()),
+                        result_arg_[0],
+                        result_arg_[1],
+                        # blend_limit = TODO
+                    ],
+                    keywords=[],
+                )
+            else:
+                raise NotImplementedError()
 
         self.log_event(f"_replacement({attr}, {topname})", original_node, result)
         return result

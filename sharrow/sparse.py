@@ -83,8 +83,7 @@ class SparseArray2D:
 class RedirectionAccessor:
     def __init__(self, xarray_obj):
         self._obj = xarray_obj
-        self.m2m = {}
-        # self.m2t = {}
+        self.blenders = {}
 
     def set(self, m2t, map_to, map_also=None, name=None):
         """
@@ -130,6 +129,7 @@ class RedirectionAccessor:
         self._obj[f"_{name}_data"] = xr.DataArray(
             sparse_data.data, dims=f"{name}_indices"
         )
+        self.blenders[name] = True
 
     def is_blended(self, name):
         return (
@@ -140,3 +140,14 @@ class RedirectionAccessor:
 
     def target(self, name):
         return self._obj.attrs.get(f"dim_redirection_{name}", None)
+
+
+@nb.njit
+def get_blended_2(backstop_value, indices, indptr, data, i, j, blend_limit=np.inf):
+    micro_v = _get_idx(indices, indptr, data, i, j)
+    if np.isnan(micro_v) or micro_v > blend_limit:
+        return backstop_value
+    if blend_limit == np.inf:
+        return micro_v
+    macro_ratio = micro_v / blend_limit
+    return macro_ratio * backstop_value + (1 - macro_ratio) * micro_v
