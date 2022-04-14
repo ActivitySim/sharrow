@@ -336,6 +336,7 @@ class RewriteForNumba(ast.NodeTransformer):
         digital_encodings=None,
         preferred_spacename=None,
         extra_vars=None,
+        blenders=None,
     ):
         self.spacename = spacename
         self.dim_slots = dim_slots
@@ -345,20 +346,18 @@ class RewriteForNumba(ast.NodeTransformer):
         self.digital_encodings = digital_encodings or {}
         self.preferred_spacename = preferred_spacename
         self.extra_vars = extra_vars or {}
+        self.blenders = blenders or {}
 
     def log_event(self, tag, node1=None, node2=None):
-        if logger.getEffectiveLevel() <= -1:
+        if logger.getEffectiveLevel() <= 0:
             if node1 is None:
-                logger.log(
-                    5, f"RewriteForNumba({self.spacename}|{self.rawalias}).{tag}"
-                )
+                logger.debug(f"RewriteForNumba({self.spacename}|{self.rawalias}).{tag}")
             elif node2 is None:
                 try:
                     unparsed = unparse_(node1)
                 except:  # noqa: E722
                     unparsed = f"{type(node1)} not unparseable"
-                logger.log(
-                    5,
+                logger.debug(
                     f"RewriteForNumba({self.spacename}|{self.rawalias}).{tag} [{type(node1).__name__}]= {unparsed}",
                 )
             else:
@@ -370,8 +369,7 @@ class RewriteForNumba(ast.NodeTransformer):
                     unparsed2 = unparse_(node2)
                 except:  # noqa: E722
                     unparsed2 = f"{type(node2).__name__} not unparseable"
-                logger.log(
-                    5,
+                logger.debug(
                     f"RewriteForNumba({self.spacename}|{self.rawalias}).{tag} [{type(node1).__name__},{type(node2).__name__}]= {unparsed1} => {unparsed2}",
                 )
 
@@ -423,6 +421,7 @@ class RewriteForNumba(ast.NodeTransformer):
         decorated_name = maybe_transpose(
             ast.Name(id=f"__{pref_topname}__{attr}", ctx=ast.Load())
         )
+        logger.debug(f"    decorated_name= {unparse_(decorated_name)}")
 
         if isinstance(dim_slots, (tuple, list)):
             if len(dim_slots):
@@ -443,6 +442,7 @@ class RewriteForNumba(ast.NodeTransformer):
                             )
                     else:
                         elts.append(n)
+                    logger.debug(f"ELT {unparse_(elts[-1])}")
                 s = ast.Tuple(
                     elts=elts,
                     ctx=ast.Load(),
@@ -452,9 +452,11 @@ class RewriteForNumba(ast.NodeTransformer):
                     slice=s,
                     ctx=ctx,
                 )
+                logger.debug(f"two+ dim_slots on decorated_name {unparse_(result)}")
             else:
                 # no indexing, just name replacement
                 result = decorated_name
+                logger.debug(f"just decorated_name {unparse_(result)}")
         else:
             if isinstance(dim_slots, int):
                 s = ast.Name(id=f"_arg{dim_slots:02}", ctx=ast.Load())
@@ -465,6 +467,8 @@ class RewriteForNumba(ast.NodeTransformer):
                 slice=s,
                 ctx=ctx,
             )
+            logger.debug(f"one dim_slots on decorated_name {unparse_(result)}")
+
         digital_encoding = self.digital_encodings.get(attr, None)
         if digital_encoding is not None:
 
@@ -523,6 +527,17 @@ class RewriteForNumba(ast.NodeTransformer):
                             op=ast.Add(),
                             right=ast.Num(offset),
                         )
+
+        blender = self.blenders.get(attr, None)
+        if blender is not None:
+            result = ast.Call(
+                func=ast.Name("get_blended", cts=ast.Load()),
+                args=[
+                    result,
+                ],
+                keywords=[],
+            )
+
         self.log_event(f"_replacement({attr}, {topname})", original_node, result)
         return result
 
@@ -828,7 +843,9 @@ def expression_for_numba(
     digital_encodings=None,
     prefer_name=None,
     extra_vars=None,
+    blenders=None,
 ):
+    logger.debug(f"expression_for_numba: {expr=} {spacename=}")
     return unparse_(
         RewriteForNumba(
             spacename,
@@ -839,6 +856,7 @@ def expression_for_numba(
             digital_encodings,
             prefer_name,
             extra_vars,
+            blenders,
         ).visit(ast.parse(expr))
     )
 

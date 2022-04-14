@@ -790,9 +790,10 @@ class Flow:
                         spacearrays_vars = spacearrays._variables
                     except AttributeError:
                         spacearrays_vars = spacearrays
-                    toks = self.tree._arg_tokenizer(
+                    toks, blends = self.tree._arg_tokenizer(
                         spacename,
                         spacearray=spacearrays_vars[k1],
+                        spacearrayname=k1,
                         exclude_dims=self.dim_exclude,
                     )
                     dim_slots[k1] = toks
@@ -800,7 +801,8 @@ class Flow:
                     digital_encodings = spacearrays.digital_encoding.info()
                 except AttributeError:
                     digital_encodings = {}
-                meta_data[spacename] = (dim_slots, digital_encodings)
+                blenders = None
+                meta_data[spacename] = (dim_slots, digital_encodings, blenders)
         else:
             for spacename, spacearrays in self.tree.subspaces.items():
                 dim_slots = {}
@@ -814,14 +816,15 @@ class Flow:
                     digital_encodings = spacearrays.digital_encoding.info()
                 except AttributeError:
                     digital_encodings = {}
-                meta_data[spacename] = (dim_slots, digital_encodings)
+                blenders = None
+                meta_data[spacename] = (dim_slots, digital_encodings, blenders)
 
         # write individual function files for each expression
         for n, (k, expr) in enumerate(defs.items()):
             expr = str(expr).lstrip()
             init_expr = expr
             for spacename, spacearrays in self.tree.subspaces.items():
-                dim_slots, digital_encodings = meta_data[spacename]
+                dim_slots, digital_encodings, blenders = meta_data[spacename]
                 try:
                     expr = expression_for_numba(
                         expr,
@@ -830,6 +833,7 @@ class Flow:
                         dim_slots,
                         digital_encodings=digital_encodings,
                         extra_vars=self.tree.extra_vars,
+                        blenders=blenders,
                     )
                 except KeyError as key_err:
                     if ".." in key_err.args[0]:
@@ -839,7 +843,9 @@ class Flow:
                     # check if we can resolve this name on any other subspace
                     other_way = False
                     for other_spacename in self.tree.subspace_fallbacks.get(topkey, []):
-                        dim_slots, digital_encodings = meta_data[other_spacename]
+                        dim_slots, digital_encodings, blenders = meta_data[
+                            other_spacename
+                        ]
                         try:
                             expr = expression_for_numba(
                                 expr,
@@ -849,6 +855,7 @@ class Flow:
                                 digital_encodings=digital_encodings,
                                 prefer_name=other_spacename,
                                 extra_vars=self.tree.extra_vars,
+                                blenders=blenders,
                             )
                         except KeyError:
                             pass

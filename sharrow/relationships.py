@@ -1044,7 +1044,11 @@ class DataTree:
                 c_dataset = obj._graph.nodes[r.child_data].get("dataset", None)
 
                 upstream = p_dataset[r.parent_name]
-                downstream = c_dataset[r.child_name]
+                redirect_child_name = c_dataset.redirection.target(r.child_name)
+                if redirect_child_name:
+                    downstream = c_dataset[redirect_child_name]
+                else:
+                    downstream = c_dataset[r.child_name]
 
                 # vectorize version
                 mapper = {i: j for (j, i) in enumerate(downstream.to_numpy())}
@@ -1094,7 +1098,12 @@ class DataTree:
                 return False
         return True
 
-    def _arg_tokenizer(self, spacename, spacearray, exclude_dims=None):
+    def _arg_tokenizer(
+        self, spacename, spacearray, spacearrayname, exclude_dims=None, blends=None
+    ):
+
+        if blends is None:
+            blends = {}
 
         if spacename == self.root_node_name:
             root_dataset = self.root_dataset
@@ -1105,9 +1114,12 @@ class DataTree:
                 from_dims = root_dataset[spacearray].dims
             else:
                 from_dims = spacearray.dims
-            return tuple(
-                ast.parse(f"_arg{root_dims.index(dim):02}", mode="eval").body
-                for dim in from_dims
+            return (
+                tuple(
+                    ast.parse(f"_arg{root_dims.index(dim):02}", mode="eval").body
+                    for dim in from_dims
+                ),
+                blends,
             )
 
         if isinstance(spacearray, str):
@@ -1121,6 +1133,9 @@ class DataTree:
         )
         if offset_source is not None:
             from_dims = self._graph.nodes[spacename]["dataset"][offset_source].dims
+        #
+        # is_blended = self._graph.nodes[spacename]["dataset"].redirection.is_blended(spacearrayname)
+        # is_redirect = self._graph.nodes[spacename]["dataset"].redirection.target(spacearrayname)
 
         tokens = []
 
@@ -1134,8 +1149,12 @@ class DataTree:
                 parent_name = self._graph.edges[e]["parent_name"]
                 parent_data = e[0]
 
-                upside_ast = self._arg_tokenizer(
-                    parent_data, parent_name, exclude_dims=exclude_dims
+                upside_ast, blends_ = self._arg_tokenizer(
+                    parent_data,
+                    parent_name,
+                    spacearrayname=spacearrayname,
+                    exclude_dims=exclude_dims,
+                    blends=blends,
                 )
                 try:
                     upside = ", ".join(unparse(t) for t in upside_ast)
@@ -1143,24 +1162,39 @@ class DataTree:
                     for t in upside_ast:
                         print(f"t:{t}")
                     raise
-                tokens.append(f"__{parent_data}__{parent_name}[{upside}]")
+
+                # check for redirection target
+                target = self._graph.nodes[spacename]["dataset"].redirection.target(
+                    dimname
+                )
+                if target:
+                    tokens.append(
+                        f"__{spacename}___digitized_{target}[__{parent_data}__{parent_name}[{upside}]]"
+                    )
+                else:
+                    tokens.append(f"__{parent_data}__{parent_name}[{upside}]")
                 found_token = True
                 break
             if not found_token:
-                ix = self.subspaces[spacename].indexes[dimname]
-                ix = {i: n for n, i in enumerate(ix)}
-                tokens.append(ix)
-                n_missing_tokens += 1
+                if dimname in self.subspaces[spacename].indexes:
+                    ix = self.subspaces[spacename].indexes[dimname]
+                    ix = {i: n for n, i in enumerate(ix)}
+                    tokens.append(ix)
+                    n_missing_tokens += 1
+                elif dimname.endswith("_indices") or dimname.endswith("_indptr"):
+                    tokens.append(None)
+                    # this dimension corresponds to a blender
 
         if n_missing_tokens > 1:
             raise ValueError("at most one missing dimension is allowed")
         result = []
         for t in tokens:
             if isinstance(t, str):
+                # print(f"TOKENIZE: {spacename=} {spacearray=} {t}")
                 result.append(ast.parse(t, mode="eval").body)
             else:
                 result.append(t)
-        return tuple(result)
+        return tuple(result), blends
 
     @property
     def coords(self):
