@@ -92,14 +92,14 @@ class RedirectionAccessor:
         m2t : pandas.Series
             Mapping maz's to tazs
         """
-        # self.min_maz = m2t.index.min()
-        # self.max_maz = m2t.index.max()
 
         if name is None:
             name = f"redirect_{map_to}"
         dim_redirection = self._obj.attrs.get("dim_redirection", {})
 
         mapper = {i: j for (j, i) in enumerate(self._obj[map_to].to_numpy())}
+        if isinstance(m2t, pd.DataFrame) and m2t.shape[1] == 1:
+            m2t = m2t.iloc[:, 0]
         if isinstance(m2t, pd.Series):
             m2t = xr.DataArray(m2t, dims=name)
         offsets = xr.apply_ufunc(np.vectorize(mapper.get), m2t)
@@ -112,12 +112,17 @@ class RedirectionAccessor:
                 self._obj[f"_digitized_{j}"] = offsets.rename({name: j})
                 dim_redirection[i] = j
                 self._obj.attrs[f"dim_redirection_{i}"] = j
-        # self._obj.attrs['dim_redirection'] = dim_redirection
 
-    # def __getitem__(self, item):
-    #     return self.m2t[item]
-
-    def sparse_blender(self, name, i, j, data, shape=None):
+    def sparse_blender(
+        self,
+        name,
+        i,
+        j,
+        data,
+        shape=None,
+        max_blend_distance=None,
+        blend_distance_name=None,
+    ):
         sparse_data = scipy.sparse.coo_matrix((data, (i, j)), shape=shape).tocsr()
         sparse_data.sort_indices()
         self._obj[f"_{name}_indices"] = xr.DataArray(
@@ -129,7 +134,12 @@ class RedirectionAccessor:
         self._obj[f"_{name}_data"] = xr.DataArray(
             sparse_data.data, dims=f"{name}_indices"
         )
-        self.blenders[name] = True
+        if not max_blend_distance:
+            max_blend_distance = np.inf
+        self.blenders[name] = dict(
+            max_blend_distance=max_blend_distance,
+            blend_distance_name=blend_distance_name,
+        )
 
     def is_blended(self, name):
         return (
@@ -144,10 +154,11 @@ class RedirectionAccessor:
 
 @nb.njit
 def get_blended_2(backstop_value, indices, indptr, data, i, j, blend_limit=np.inf):
-    micro_v = _get_idx(indices, indptr, data, i, j)
+    dtype = type(backstop_value)
+    micro_v = dtype(_get_idx(indices, indptr, data, i, j))
     if np.isnan(micro_v) or micro_v > blend_limit:
         return backstop_value
     if blend_limit == np.inf:
         return micro_v
-    macro_ratio = micro_v / blend_limit
+    macro_ratio = dtype(micro_v / blend_limit)
     return macro_ratio * backstop_value + (1 - macro_ratio) * micro_v

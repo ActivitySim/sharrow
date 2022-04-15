@@ -46,12 +46,26 @@ def get_land_use():
     return pd.read_csv(filename, index_col="TAZ")
 
 
+def get_maz_to_taz():
+    filename = os.path.join(os.path.dirname(__file__), "example_data", "maz_to_taz.csv")
+    return pd.read_csv(filename, index_col="MAZ")
+
+
+def get_maz_to_maz_walk():
+    filename = os.path.join(
+        os.path.dirname(__file__), "example_data", "maz_to_maz_walk.csv"
+    )
+    return pd.read_csv(filename)
+
+
 def get_data():
     result = {
         "hhs": get_households(),
         "persons": get_persons(),
         "land_use": get_land_use(),
         "skims": get_skims(),
+        "maz_taz": get_maz_to_taz(),
+        "maz_maz_walk": get_maz_to_maz_walk(),
     }
     try:
         from addicty import Dict

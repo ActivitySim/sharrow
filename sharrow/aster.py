@@ -555,7 +555,7 @@ class RewriteForNumba(ast.NodeTransformer):
                         ast.Name(id=f"__{pref_topname}___{attr}_data", ctx=ast.Load()),
                         result_arg_[0],
                         result_arg_[1],
-                        # blend_limit = TODO
+                        ast_Constant(blender.get("max_blend_distance")),  # blend_limit
                     ],
                     keywords=[],
                 )
@@ -869,7 +869,6 @@ def expression_for_numba(
     extra_vars=None,
     blenders=None,
 ):
-    logger.debug(f"expression_for_numba: {expr=} {spacename=}")
     return unparse_(
         RewriteForNumba(
             spacename,
