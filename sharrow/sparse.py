@@ -148,6 +148,17 @@ class RedirectionAccessor:
             and (f"_{name}_data" in self._obj)
         )
 
+    def get_blended(self, name, backstop_values, i, j):
+        return get_blended_2_arr(
+            backstop_values,
+            np.asarray(self._obj[f"_{name}_indices"]),
+            np.asarray(self._obj[f"_{name}_indptr"]),
+            np.asarray(self._obj[f"_{name}_data"]),
+            i,
+            j,
+            blend_limit=self.blenders[name]["max_blend_distance"],
+        )
+
     def target(self, name):
         return self._obj.attrs.get(f"dim_redirection_{name}", None)
 
@@ -170,3 +181,21 @@ def get_blended_2(backstop_value, indices, indptr, data, i, j, blend_limit=np.in
         return micro_v
     macro_ratio = dtype(micro_v / blend_limit)
     return macro_ratio * backstop_value + (1 - macro_ratio) * micro_v
+
+
+@nb.njit
+def get_blended_2_arr(
+    backstop_values_, indices, indptr, data, i_, j_, blend_limit=np.inf
+):
+    out = np.zeros_like(backstop_values_)
+    for z in range(backstop_values_.size):
+        out[z] = get_blended_2(
+            backstop_values_[z],
+            indices,
+            indptr,
+            data,
+            i_[z],
+            j_[z],
+            blend_limit=blend_limit,
+        )
+    return out

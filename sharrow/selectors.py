@@ -107,6 +107,7 @@ class _Df_Accessor:
         _load=False,
         _index_name=None,
         _func=None,
+        _raw_idxs=None,
         **idxs,
     ):
         loaders = {}
@@ -132,10 +133,37 @@ class _Df_Accessor:
                 .digital_encoding.strip(_names)
                 .drop_vars(_baggage)
             )
+            for n in _names:
+                if self._obj.redirection.is_blended(n):
+                    dims = self._obj[n].dims
+                    result[n] = xr.DataArray(
+                        self._obj.redirection.get_blended(
+                            n,
+                            result[n].to_numpy(),
+                            _raw_idxs[dims[0]],
+                            _raw_idxs[dims[1]],
+                        ),
+                        dims=result[n].dims,
+                    )
             if _name is not None:
                 result = result[_name]
             return result
-        return getattr(ds, _func)(**loaders)
+        else:
+            result = getattr(ds, _func)(**loaders)
+            names = list(result.keys())
+            for n in names:
+                if self._obj.redirection.is_blended(n):
+                    dims = self._obj[n].dims
+                    result[n] = xr.DataArray(
+                        self._obj.redirection.get_blended(
+                            n,
+                            result[n].to_numpy(),
+                            _raw_idxs[dims[0]],
+                            _raw_idxs[dims[1]],
+                        ),
+                        dims=result[n].dims,
+                    )
+            return result
 
 
 @xr.register_dataset_accessor("iat")
@@ -173,20 +201,23 @@ class _Iat_Accessor(_Df_Accessor):
         self, *, _name=None, _names=None, _load=False, _index_name=None, **idxs
     ):
         modified_idxs = {}
+        raw_idxs = {}
         for k, v in idxs.items():
             target = self._obj.redirection.target(k)
             if target is None:
-                modified_idxs[k] = v
+                raw_idxs[k] = modified_idxs[k] = v
             else:
                 modified_idxs[k] = self._obj[f"_digitized_{target}"][
                     np.asarray(v)
-                ].values
+                ].to_numpy()
+                raw_idxs[k] = self._obj[target][np.asarray(v)].to_numpy()
         return self._filter(
             _name=_name,
             _names=_names,
             _load=_load,
             _index_name=_index_name,
             _func="isel",
+            _raw_idxs=raw_idxs,
             **modified_idxs,
         )
 
@@ -226,9 +257,11 @@ class _At_Accessor(_Df_Accessor):
         self, *, _name=None, _names=None, _load=False, _index_name=None, **idxs
     ):
         modified_idxs = {}
+        raw_idxs = {}
         any_redirection = False
         for k, v in idxs.items():
             target = self._obj.redirection.target(k)
+            raw_idxs[k] = np.asarray(v)
             if target is None:
                 if any_redirection:
                     raise NotImplementedError(
@@ -241,7 +274,7 @@ class _At_Accessor(_Df_Accessor):
                 downstream = self._obj[target]
                 mapper = {i: j for (j, i) in enumerate(downstream.to_numpy())}
                 offsets = xr.apply_ufunc(np.vectorize(mapper.get), upstream)
-                modified_idxs[k] = self._obj[f"_digitized_{target}"][offsets].values
+                modified_idxs[k] = self._obj[f"_digitized_{target}"][offsets].to_numpy()
                 any_redirection = True
         return self._filter(
             _name=_name,
@@ -249,6 +282,7 @@ class _At_Accessor(_Df_Accessor):
             _load=_load,
             _index_name=_index_name,
             _func="isel" if any_redirection else "sel",
+            _raw_idxs=raw_idxs,
             **modified_idxs,
         )
 
