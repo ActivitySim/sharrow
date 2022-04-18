@@ -153,10 +153,18 @@ class RedirectionAccessor:
 
 
 @nb.njit
+def isnan_fast_safe(x):
+    if int(x) == -9223372036854775808:
+        return True
+    else:
+        return False
+
+
+@nb.njit
 def get_blended_2(backstop_value, indices, indptr, data, i, j, blend_limit=np.inf):
     dtype = type(backstop_value)
     micro_v = dtype(_get_idx(indices, indptr, data, i, j))
-    if np.isnan(micro_v) or micro_v > blend_limit:
+    if isnan_fast_safe(micro_v) or micro_v > blend_limit:
         return backstop_value
     if blend_limit == np.inf:
         return micro_v
