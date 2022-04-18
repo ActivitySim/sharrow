@@ -329,7 +329,9 @@ class SharedMemDatasetAccessor:
         if key.startswith("memmap:"):
             mem.flush()
 
-        create_shared_list([pickle.dumps(i) for i in wrappers], key)
+        create_shared_list(
+            [pickle.dumps(self._obj.attrs)] + [pickle.dumps(i) for i in wrappers], key
+        )
         return type(self).from_shared_memory(key, own_data=True, mode=mode)
 
     @property
@@ -378,7 +380,9 @@ class SharedMemDatasetAccessor:
 
         content = {}
 
-        for w in shr_list:
+        for _n, w in enumerate(shr_list):
+            if _n == 0:
+                continue
             t = pickle.loads(w)
             shape = t.pop("shape")
             dtype = t.pop("dtype")
@@ -392,6 +396,7 @@ class SharedMemDatasetAccessor:
             content[name] = DataArray(mem_arr, **t)
 
         obj = cls._parent_class(content)
+        obj.attrs = pickle.loads(shr_list[0])
         obj.shm._shared_memory_key_ = key
         obj.shm._shared_memory_owned_ = own_data
         obj.shm._shared_memory_objs_ = _shared_memory_objs_

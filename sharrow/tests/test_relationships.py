@@ -1,3 +1,4 @@
+import secrets
 import sys
 
 import numpy as np
@@ -362,13 +363,14 @@ def _get_target(q):
 def test_shared_memory():
 
     skims = example_data.get_skims()
+    token = "skims" + secrets.token_hex(5)
 
-    skims_2 = skims.shm.to_shared_memory("skims")
+    skims_2 = skims.shm.to_shared_memory(token)
     target = skims.SOV_TIME.sum()
     assert skims_2.SOV_TIME.sum() == target
 
     # reconstruct in same process
-    skims_3 = Dataset.shm.from_shared_memory("skims")
+    skims_3 = Dataset.shm.from_shared_memory(token)
     assert skims_3.SOV_TIME.sum() == target
 
     # reconstruct in different process
