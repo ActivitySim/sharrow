@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 import xarray as xr
 
@@ -171,13 +172,22 @@ class _Iat_Accessor(_Df_Accessor):
     def __call__(
         self, *, _name=None, _names=None, _load=False, _index_name=None, **idxs
     ):
+        modified_idxs = {}
+        for k, v in idxs.items():
+            target = self._obj.redirection.target(k)
+            if target is None:
+                modified_idxs[k] = v
+            else:
+                modified_idxs[k] = self._obj[f"_digitized_{target}"][
+                    np.asarray(v)
+                ].values
         return self._filter(
             _name=_name,
             _names=_names,
             _load=_load,
             _index_name=_index_name,
             _func="isel",
-            **idxs,
+            **modified_idxs,
         )
 
 
@@ -215,13 +225,31 @@ class _At_Accessor(_Df_Accessor):
     def __call__(
         self, *, _name=None, _names=None, _load=False, _index_name=None, **idxs
     ):
+        modified_idxs = {}
+        any_redirection = False
+        for k, v in idxs.items():
+            target = self._obj.redirection.target(k)
+            if target is None:
+                if any_redirection:
+                    raise NotImplementedError(
+                        "redirection with `at` must be applied to all "
+                        "dimensions or none"
+                    )
+                modified_idxs[k] = v
+            else:
+                upstream = xr.DataArray(np.asarray(v), dims=["index"])
+                downstream = self._obj[target]
+                mapper = {i: j for (j, i) in enumerate(downstream.to_numpy())}
+                offsets = xr.apply_ufunc(np.vectorize(mapper.get), upstream)
+                modified_idxs[k] = self._obj[f"_digitized_{target}"][offsets].values
+                any_redirection = True
         return self._filter(
             _name=_name,
             _names=_names,
             _load=_load,
             _index_name=_index_name,
-            _func="sel",
-            **idxs,
+            _func="isel" if any_redirection else "sel",
+            **modified_idxs,
         )
 
 
