@@ -84,7 +84,6 @@ class SparseArray2D:
 class RedirectionAccessor:
     def __init__(self, xarray_obj):
         self._obj = xarray_obj
-        self.blenders = {}
 
     def set(self, m2t, map_to, map_also=None, name=None):
         """
@@ -147,10 +146,8 @@ class RedirectionAccessor:
         )
         if not max_blend_distance:
             max_blend_distance = np.inf
-        self.blenders[name] = dict(
-            max_blend_distance=max_blend_distance,
-            blend_distance_name=blend_distance_name,
-        )
+        self._obj.attrs[f"blend_{name}_max"] = max_blend_distance
+        self._obj.attrs[f"blend_{name}_dist"] = blend_distance_name
 
     def is_blended(self, name):
         return f"_s_{name}" in self._obj
@@ -168,11 +165,27 @@ class RedirectionAccessor:
             np.asarray(self._obj[f"_s_{name}"].data.data),
             i,
             j,
-            blend_limit=self.blenders[name]["max_blend_distance"],
+            blend_limit=self._obj.attrs[f"blend_{name}_max"],
         )
 
     def target(self, name):
         return self._obj.attrs.get(f"dim_redirection_{name}", None)
+
+    @property
+    def blenders(self):
+        b = {}
+        for k, v in self._obj.attrs.items():
+            if k.startswith("blend_") and k.endswith("_max"):
+                name = k[6:-4]
+                d = b.get(name, {})
+                d["max_blend_distance"] = v
+                b[name] = d
+            if k.startswith("blend_") and k.endswith("_dist"):
+                name = k[6:-5]
+                d = b.get(name, {})
+                d["blend_distance_name"] = v
+                b[name] = d
+        return b
 
 
 @nb.njit
