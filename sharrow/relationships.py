@@ -713,7 +713,12 @@ class DataTree:
             for k, arr in spacearrays.coords.items():
                 namespace.add(f"__{spacename or 'base'}__{k}")
             for k, arr in spacearrays.items():
-                namespace.add(f"__{spacename or 'base'}__{k}")
+                if k.startswith("_s_"):
+                    namespace.add(f"__{spacename or 'base'}__{k}__indptr")
+                    namespace.add(f"__{spacename or 'base'}__{k}__indices")
+                    namespace.add(f"__{spacename or 'base'}__{k}__data")
+                else:
+                    namespace.add(f"__{spacename or 'base'}__{k}")
         return namespace
 
     @property
@@ -1006,6 +1011,13 @@ class DataTree:
             raise KeyError(mangled_name)
         name1, name2 = mangled_name[2:].split("__", 1)
         dataset = self._graph.nodes[name1].get("dataset")
+        if name2.startswith("_s_"):
+            if name2.endswith("__data"):
+                return dataset[name2[:-6]].data.data
+            elif name2.endswith("__indptr"):
+                return dataset[name2[:-8]].data.indptr
+            elif name2.endswith("__indices"):
+                return dataset[name2[:-9]].data.indices
         return dataset[name2].to_numpy()
 
     _BY_OFFSET = "digitizedOffset"

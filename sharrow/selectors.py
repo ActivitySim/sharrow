@@ -211,7 +211,7 @@ class _Iat_Accessor(_Df_Accessor):
                 modified_idxs[target] = self._obj[f"_digitized_{target}_of_{k}"][
                     v_
                 ].to_numpy()
-                raw_idxs[target] = self._obj[k][v_].to_numpy()
+                raw_idxs[target] = v_  # self._obj[k][v_].to_numpy()
         return self._filter(
             _name=_name,
             _names=_names,
@@ -275,7 +275,7 @@ class _At_Accessor(_Df_Accessor):
                 downstream = self._obj[k]
                 mapper = {i: j for (j, i) in enumerate(downstream.to_numpy())}
                 offsets = xr.apply_ufunc(np.vectorize(mapper.get), upstream)
-                raw_idxs[target] = np.asarray(v)
+                raw_idxs[target] = np.asarray(offsets)
                 modified_idxs[target] = self._obj[f"_digitized_{target}_of_{k}"][
                     offsets
                 ].to_numpy()

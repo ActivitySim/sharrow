@@ -7,6 +7,7 @@ import pickle
 import dask
 import dask.array as da
 import numpy as np
+import sparse
 import xarray as xr
 
 try:
@@ -280,18 +281,39 @@ class SharedMemDatasetAccessor:
 
         def emit(k, a, is_coord):
             nonlocal names, wrappers, sizes, position
-            wrappers.append(
-                {
-                    "dims": a.dims,
-                    "name": a.name,
-                    "attrs": a.attrs,
-                    "dtype": a.dtype,
-                    "shape": a.shape,
-                    "coord": is_coord,
-                    "nbytes": a.nbytes,
-                    "position": position,
-                }
-            )
+            if isinstance(a.data, sparse.GCXS):
+                wrappers.append(
+                    {
+                        "sparse": True,
+                        "dims": a.dims,
+                        "name": a.name,
+                        "attrs": a.attrs,
+                        "dtype": a.dtype,
+                        "shape": a.shape,
+                        "coord": is_coord,
+                        "nbytes": a.nbytes,
+                        "position": position,
+                        "data.nbytes": a.data.data.nbytes,
+                        "indices.nbytes": a.data.indices.nbytes,
+                        "indptr.nbytes": a.data.indptr.nbytes,
+                        "data.dtype": a.data.data.dtype,
+                        "indices.dtype": a.data.indices.dtype,
+                        "indptr.dtype": a.data.indptr.dtype,
+                    }
+                )
+            else:
+                wrappers.append(
+                    {
+                        "dims": a.dims,
+                        "name": a.name,
+                        "attrs": a.attrs,
+                        "dtype": a.dtype,
+                        "shape": a.shape,
+                        "coord": is_coord,
+                        "nbytes": a.nbytes,
+                        "position": position,
+                    }
+                )
             sizes.append(a.nbytes)
             names.append(k)
             position += a.nbytes
@@ -312,17 +334,44 @@ class SharedMemDatasetAccessor:
 
         tasks = []
         for w in wrappers:
+            _is_sparse = w.get("sparse", False)
             _size = w["nbytes"]
             _name = w["name"]
             _pos = w["position"]
             a = self._obj[_name]
-            mem_arr = np.ndarray(
-                shape=a.shape, dtype=a.dtype, buffer=buffer[_pos : _pos + _size]
-            )
-            if isinstance(a, xr.DataArray) and isinstance(a.data, da.Array):
-                tasks.append(da.store(a.data, mem_arr, lock=False, compute=False))
+            if _is_sparse:
+                ad = a.data
+                _size_d = w["data.nbytes"]
+                _size_i = w["indices.nbytes"]
+                _size_p = w["indptr.nbytes"]
+                mem_arr_d = np.ndarray(
+                    shape=(_size_d // ad.data.dtype.itemsize,),
+                    dtype=ad.data.dtype,
+                    buffer=buffer[_pos : _pos + _size_d],
+                )
+                mem_arr_i = np.ndarray(
+                    shape=(_size_i // ad.indices.dtype.itemsize,),
+                    dtype=ad.indices.dtype,
+                    buffer=buffer[_pos + _size_d : _pos + _size_d + _size_i],
+                )
+                mem_arr_p = np.ndarray(
+                    shape=(_size_p // ad.indptr.dtype.itemsize,),
+                    dtype=ad.indptr.dtype,
+                    buffer=buffer[
+                        _pos + _size_d + _size_i : _pos + _size_d + _size_i + _size_p
+                    ],
+                )
+                mem_arr_d[:] = ad.data[:]
+                mem_arr_i[:] = ad.indices[:]
+                mem_arr_p[:] = ad.indptr[:]
             else:
-                mem_arr[:] = a[:]
+                mem_arr = np.ndarray(
+                    shape=a.shape, dtype=a.dtype, buffer=buffer[_pos : _pos + _size]
+                )
+                if isinstance(a, xr.DataArray) and isinstance(a.data, da.Array):
+                    tasks.append(da.store(a.data, mem_arr, lock=False, compute=False))
+                else:
+                    mem_arr[:] = a[:]
         if tasks:
             dask.compute(tasks, scheduler="threads")
 
@@ -390,9 +439,50 @@ class SharedMemDatasetAccessor:
             coord = t.pop("coord", False)  # noqa: F841
             position = t.pop("position")
             nbytes = t.pop("nbytes")
-            mem_arr = np.ndarray(
-                shape, dtype=dtype, buffer=buffer[position : position + nbytes]
-            )
+            is_sparse = t.pop("sparse", False)
+            if is_sparse:
+                _size_d = t.pop("data.nbytes")
+                _size_i = t.pop("indices.nbytes")
+                _size_p = t.pop("indptr.nbytes")
+                _dtype_d = t.pop("data.dtype")
+                _dtype_i = t.pop("indices.dtype")
+                _dtype_p = t.pop("indptr.dtype")
+
+                mem_arr_d = np.ndarray(
+                    _size_d // _dtype_d.itemsize,
+                    dtype=_dtype_d,
+                    buffer=buffer[position : position + _size_d],
+                )
+                mem_arr_i = np.ndarray(
+                    _size_i // _dtype_i.itemsize,
+                    dtype=_dtype_i,
+                    buffer=buffer[position + _size_d : position + _size_d + _size_i],
+                )
+                mem_arr_p = np.ndarray(
+                    _size_p // _dtype_p.itemsize,
+                    dtype=_dtype_p,
+                    buffer=buffer[
+                        position
+                        + _size_d
+                        + _size_i : position
+                        + _size_d
+                        + _size_i
+                        + _size_p
+                    ],
+                )
+                mem_arr = sparse.GCXS(
+                    (
+                        mem_arr_d,
+                        mem_arr_i,
+                        mem_arr_p,
+                    ),
+                    shape=shape,
+                    compressed_axes=(0,),
+                )
+            else:
+                mem_arr = np.ndarray(
+                    shape, dtype=dtype, buffer=buffer[position : position + nbytes]
+                )
             content[name] = DataArray(mem_arr, **t)
 
         obj = cls._parent_class(content)

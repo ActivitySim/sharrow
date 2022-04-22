@@ -119,7 +119,23 @@ class RedirectionAccessor:
         shape=None,
         max_blend_distance=None,
         blend_distance_name=None,
+        index=None,
+        i_dim="omaz",
+        j_dim="dmaz",
     ):
+        i = np.asarray(i)
+        j = np.asarray(j)
+        if index is not None and shape is None:
+            shape = (len(index), len(index))
+        if index is not None:
+            mapper = {i: j for (j, i) in enumerate(index)}
+
+            @np.vectorize
+            def apply_mapper(x):
+                return mapper.get(x, -1)
+
+            i = apply_mapper(i)
+            j = apply_mapper(j)
         sparse_data = scipy.sparse.coo_matrix((data, (i, j)), shape=shape).tocsr()
         sparse_data.sort_indices()
         self._obj[f"_{name}_indices"] = xr.DataArray(
@@ -131,6 +147,12 @@ class RedirectionAccessor:
         self._obj[f"_{name}_data"] = xr.DataArray(
             sparse_data.data, dims=f"{name}_indices"
         )
+        import sparse
+
+        self._obj[f"_s_{name}"] = xr.DataArray(
+            sparse.GCXS.from_scipy_sparse(sparse_data),
+            dims=(i_dim, j_dim),
+        )
         if not max_blend_distance:
             max_blend_distance = np.inf
         self.blenders[name] = dict(
@@ -139,18 +161,19 @@ class RedirectionAccessor:
         )
 
     def is_blended(self, name):
-        return (
-            (f"_{name}_indices" in self._obj)
-            and (f"_{name}_indptr" in self._obj)
-            and (f"_{name}_data" in self._obj)
-        )
+        return f"_s_{name}" in self._obj
+        # return (
+        #     (f"_{name}_indices" in self._obj)
+        #     and (f"_{name}_indptr" in self._obj)
+        #     and (f"_{name}_data" in self._obj)
+        # )
 
     def get_blended(self, name, backstop_values, i, j):
         return get_blended_2_arr(
             backstop_values,
-            np.asarray(self._obj[f"_{name}_indices"]),
-            np.asarray(self._obj[f"_{name}_indptr"]),
-            np.asarray(self._obj[f"_{name}_data"]),
+            np.asarray(self._obj[f"_s_{name}"].data.indices),
+            np.asarray(self._obj[f"_s_{name}"].data.indptr),
+            np.asarray(self._obj[f"_s_{name}"].data.data),
             i,
             j,
             blend_limit=self.blenders[name]["max_blend_distance"],

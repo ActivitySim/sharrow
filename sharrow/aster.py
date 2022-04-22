@@ -1,7 +1,6 @@
 import ast
 import io
 import logging
-import re
 import sys
 import tokenize
 
@@ -534,27 +533,22 @@ class RewriteForNumba(ast.NodeTransformer):
         if blender is not None:
             # get_blended_2(backstop, indices, indptr, data, i, j, blend_limit=np.inf)
             result_args = result.slice.elts
-            # inside the blender, the args will be maz-taz mapped, but we need the plain maz too now
-            scrubber = re.compile(r"(\w+_)(_digitized_\w+_of_)(\w+)")
-            result_arg_ = [
-                ast.Subscript(
-                    value=ast.Name(id=scrubber.sub(r"\g<1>\g<3>", j.value.id)),
-                    slice=j.slice,
-                )
-                for j in result_args
-            ]
+            # inside the blender, the args will be maz-taz mapped, but we need the plain (i)maz too now
+            result_arg_ = [j.slice for j in result_args]
             if len(result_args) == 2:
                 result = ast.Call(
                     func=ast.Name("get_blended_2", cts=ast.Load()),
                     args=[
                         result,
                         ast.Name(
-                            id=f"__{pref_topname}___{attr}_indices", ctx=ast.Load()
+                            id=f"__{pref_topname}___s_{attr}__indices", ctx=ast.Load()
                         ),
                         ast.Name(
-                            id=f"__{pref_topname}___{attr}_indptr", ctx=ast.Load()
+                            id=f"__{pref_topname}___s_{attr}__indptr", ctx=ast.Load()
                         ),
-                        ast.Name(id=f"__{pref_topname}___{attr}_data", ctx=ast.Load()),
+                        ast.Name(
+                            id=f"__{pref_topname}___s_{attr}__data", ctx=ast.Load()
+                        ),
                         result_arg_[0],
                         result_arg_[1],
                         ast_Constant(blender.get("max_blend_distance")),  # blend_limit
