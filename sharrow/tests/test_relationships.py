@@ -352,8 +352,8 @@ def test_isin(dataframe_regression):
     dataframe_regression.check(result)
 
 
-def _get_target(q):
-    skims_ = Dataset.shm.from_shared_memory("skims")
+def _get_target(q, token):
+    skims_ = Dataset.shm.from_shared_memory(token)
     q.put(skims_.SOV_TIME.sum())
 
 
@@ -377,7 +377,7 @@ def test_shared_memory():
     from multiprocessing import Process, Queue
 
     q = Queue()
-    p = Process(target=_get_target, args=(q,))
+    p = Process(target=_get_target, args=(q, token))
     p.start()
     p.join()
     assert q.get() == target
