@@ -2,6 +2,7 @@ import numba as nb
 import numpy as np
 import pandas as pd
 import scipy.sparse
+import sparse
 import xarray as xr
 
 
@@ -136,21 +137,12 @@ class RedirectionAccessor:
 
             i = apply_mapper(i)
             j = apply_mapper(j)
-        sparse_data = scipy.sparse.coo_matrix((data, (i, j)), shape=shape).tocsr()
-        sparse_data.sort_indices()
-        self._obj[f"_{name}_indices"] = xr.DataArray(
-            sparse_data.indices, dims=f"{name}_indices"
-        )
-        self._obj[f"_{name}_indptr"] = xr.DataArray(
-            sparse_data.indptr, dims=f"{name}_indptr"
-        )
-        self._obj[f"_{name}_data"] = xr.DataArray(
-            sparse_data.data, dims=f"{name}_indices"
-        )
-        import sparse
 
+        sparse_data = sparse.GCXS(
+            sparse.COO((i, j), data, shape=shape), compressed_axes=(0,)
+        )
         self._obj[f"_s_{name}"] = xr.DataArray(
-            sparse.GCXS.from_scipy_sparse(sparse_data),
+            sparse_data,
             dims=(i_dim, j_dim),
         )
         if not max_blend_distance:
