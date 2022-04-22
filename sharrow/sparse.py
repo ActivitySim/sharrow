@@ -95,7 +95,6 @@ class RedirectionAccessor:
 
         if name is None:
             name = f"redirect_{map_to}"
-        dim_redirection = self._obj.attrs.get("dim_redirection", {})
 
         mapper = {i: j for (j, i) in enumerate(self._obj[map_to].to_numpy())}
         if isinstance(m2t, pd.DataFrame) and m2t.shape[1] == 1:
@@ -103,15 +102,13 @@ class RedirectionAccessor:
         if isinstance(m2t, pd.Series):
             m2t = xr.DataArray(m2t, dims=name)
         offsets = xr.apply_ufunc(np.vectorize(mapper.get), m2t)
-        self._obj[f"_digitized_{name}"] = offsets
-        dim_redirection[map_to] = name
-        self._obj.attrs[f"dim_redirection_{map_to}"] = name
+        self._obj[f"_digitized_{map_to}_of_{name}"] = offsets
+        self._obj.attrs[f"dim_redirection_{name}"] = map_to
 
         if map_also is not None:
             for i, j in map_also.items():
-                self._obj[f"_digitized_{j}"] = offsets.rename({name: j})
-                dim_redirection[i] = j
-                self._obj.attrs[f"dim_redirection_{i}"] = j
+                self._obj[f"_digitized_{i}_of_{j}"] = offsets.rename({name: j})
+                self._obj.attrs[f"dim_redirection_{j}"] = i
 
     def sparse_blender(
         self,

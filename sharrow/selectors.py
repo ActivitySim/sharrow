@@ -207,10 +207,11 @@ class _Iat_Accessor(_Df_Accessor):
             if target is None:
                 raw_idxs[k] = modified_idxs[k] = v
             else:
-                modified_idxs[k] = self._obj[f"_digitized_{target}"][
-                    np.asarray(v)
+                v_ = np.asarray(v)
+                modified_idxs[target] = self._obj[f"_digitized_{target}_of_{k}"][
+                    v_
                 ].to_numpy()
-                raw_idxs[k] = self._obj[target][np.asarray(v)].to_numpy()
+                raw_idxs[target] = self._obj[k][v_].to_numpy()
         return self._filter(
             _name=_name,
             _names=_names,
@@ -261,20 +262,23 @@ class _At_Accessor(_Df_Accessor):
         any_redirection = False
         for k, v in idxs.items():
             target = self._obj.redirection.target(k)
-            raw_idxs[k] = np.asarray(v)
             if target is None:
                 if any_redirection:
                     raise NotImplementedError(
                         "redirection with `at` must be applied to all "
                         "dimensions or none"
                     )
+                raw_idxs[k] = np.asarray(v)
                 modified_idxs[k] = v
             else:
                 upstream = xr.DataArray(np.asarray(v), dims=["index"])
-                downstream = self._obj[target]
+                downstream = self._obj[k]
                 mapper = {i: j for (j, i) in enumerate(downstream.to_numpy())}
                 offsets = xr.apply_ufunc(np.vectorize(mapper.get), upstream)
-                modified_idxs[k] = self._obj[f"_digitized_{target}"][offsets].to_numpy()
+                raw_idxs[target] = np.asarray(v)
+                modified_idxs[target] = self._obj[f"_digitized_{target}_of_{k}"][
+                    offsets
+                ].to_numpy()
                 any_redirection = True
         return self._filter(
             _name=_name,

@@ -1,5 +1,6 @@
 import ast
 import logging
+import warnings
 
 import networkx as nx
 import numpy as np
@@ -1044,15 +1045,15 @@ class DataTree:
                 c_dataset = obj._graph.nodes[r.child_data].get("dataset", None)
 
                 upstream = p_dataset[r.parent_name]
-                redirect_child_name = c_dataset.redirection.target(r.child_name)
-                if redirect_child_name:
-                    downstream = c_dataset[redirect_child_name]
-                else:
-                    downstream = c_dataset[r.child_name]
+                downstream = c_dataset[r.child_name]
 
                 # vectorize version
                 mapper = {i: j for (j, i) in enumerate(downstream.to_numpy())}
                 offsets = xr.apply_ufunc(np.vectorize(mapper.get), upstream)
+                if offsets.dtype.kind != "i":
+                    warnings.warn(
+                        f"detected missing values in digitizing {r.parent_data}.{r.parent_name}",
+                    )
 
                 # candidate name for write back
                 r_parent_name_new = (
@@ -1133,9 +1134,6 @@ class DataTree:
         )
         if offset_source is not None:
             from_dims = self._graph.nodes[spacename]["dataset"][offset_source].dims
-        #
-        # is_blended = self._graph.nodes[spacename]["dataset"].redirection.is_blended(spacearrayname)
-        # is_redirect = self._graph.nodes[spacename]["dataset"].redirection.target(spacearrayname)
 
         tokens = []
 
@@ -1144,8 +1142,13 @@ class DataTree:
             found_token = False
             for e in self._graph.in_edges(spacename, keys=True):
                 this_dim_name = self._graph.edges[e]["child_name"]
+                retarget = None
                 if dimname != this_dim_name:
-                    continue
+                    retarget = self._graph.nodes[spacename][
+                        "dataset"
+                    ].redirection.target(this_dim_name)
+                    if dimname != retarget:
+                        continue
                 parent_name = self._graph.edges[e]["parent_name"]
                 parent_data = e[0]
 
@@ -1164,12 +1167,9 @@ class DataTree:
                     raise
 
                 # check for redirection target
-                target = self._graph.nodes[spacename]["dataset"].redirection.target(
-                    dimname
-                )
-                if target:
+                if retarget is not None:
                     tokens.append(
-                        f"__{spacename}___digitized_{target}[__{parent_data}__{parent_name}[{upside}]]"
+                        f"__{spacename}___digitized_{retarget}_of_{this_dim_name}[__{parent_data}__{parent_name}[{upside}]]"
                     )
                 else:
                     tokens.append(f"__{parent_data}__{parent_name}[{upside}]")

@@ -1,6 +1,7 @@
 import ast
 import io
 import logging
+import re
 import sys
 import tokenize
 
@@ -534,9 +535,10 @@ class RewriteForNumba(ast.NodeTransformer):
             # get_blended_2(backstop, indices, indptr, data, i, j, blend_limit=np.inf)
             result_args = result.slice.elts
             # inside the blender, the args will be maz-taz mapped, but we need the plain maz too now
+            scrubber = re.compile(r"(\w+_)(_digitized_\w+_of_)(\w+)")
             result_arg_ = [
                 ast.Subscript(
-                    value=ast.Name(id=j.value.id.replace("___digitized_", "__")),
+                    value=ast.Name(id=scrubber.sub(r"\g<1>\g<3>", j.value.id)),
                     slice=j.slice,
                 )
                 for j in result_args
