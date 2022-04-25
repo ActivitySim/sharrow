@@ -717,7 +717,7 @@ class Flow:
         for k in self.arg_names:
             _flow_hash_push(f"arg:{k}")
         for k in self.tree._hash_features():
-            if self._hashing_level > 0 or not k.startswith("relationship:"):
+            if self._hashing_level > 0 or True:  # or not k.startswith("relationship:"):
                 _flow_hash_push(k)
         if self.dim_order:
             _flow_hash_push("---dim-order---")
