@@ -134,11 +134,14 @@ class RedirectionAccessor:
             def apply_mapper(x):
                 return mapper.get(x, -1)
 
-            i = apply_mapper(i)
-            j = apply_mapper(j)
+            i_ = apply_mapper(i)
+            j_ = apply_mapper(j)
+        else:
+            i_ = i
+            j_ = j
 
         sparse_data = sparse.GCXS(
-            sparse.COO((i, j), data, shape=shape), compressed_axes=(0,)
+            sparse.COO((i_, j_), data, shape=shape), compressed_axes=(0,)
         )
         self._obj[f"_s_{name}"] = xr.DataArray(
             sparse_data,
