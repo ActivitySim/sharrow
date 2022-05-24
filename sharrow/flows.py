@@ -785,7 +785,8 @@ class Flow:
         if self.tree.relationships_are_digitized:
             for spacename, spacearrays in self.tree.subspaces.items():
                 dim_slots = {}
-                for k1 in spacearrays.keys():
+                spacekeys = list(spacearrays.keys()) + list(spacearrays.coords.keys())
+                for k1 in spacekeys:
                     try:
                         spacearrays_vars = spacearrays._variables
                     except AttributeError:
@@ -806,7 +807,8 @@ class Flow:
         else:
             for spacename, spacearrays in self.tree.subspaces.items():
                 dim_slots = {}
-                for k1 in spacearrays.keys():
+                spacekeys = list(spacearrays.keys()) + list(spacearrays.coords.keys())
+                for k1 in spacekeys:
                     try:
                         _dims = spacearrays._variables[k1].dims
                     except AttributeError:
