@@ -198,7 +198,7 @@ def from_omx(
     """
 
     # handle both larch.OMX and openmatrix.open_file versions
-    if "larch" in type(omx).__module__:
+    if "lar" in type(omx).__module__:
         omx_data = omx.data
         omx_shape = omx.shape
     else:
