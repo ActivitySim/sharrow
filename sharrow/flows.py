@@ -791,13 +791,17 @@ class Flow:
                         spacearrays_vars = spacearrays._variables
                     except AttributeError:
                         spacearrays_vars = spacearrays
-                    toks, blends = self.tree._arg_tokenizer(
-                        spacename,
-                        spacearray=spacearrays_vars[k1],
-                        spacearrayname=k1,
-                        exclude_dims=self.dim_exclude,
-                    )
-                    dim_slots[k1] = toks
+                    try:
+                        toks, blends = self.tree._arg_tokenizer(
+                            spacename,
+                            spacearray=spacearrays_vars[k1],
+                            spacearrayname=k1,
+                            exclude_dims=self.dim_exclude,
+                        )
+                    except ValueError:
+                        pass
+                    else:
+                        dim_slots[k1] = toks
                 try:
                     digital_encodings = spacearrays.digital_encoding.info()
                 except AttributeError:

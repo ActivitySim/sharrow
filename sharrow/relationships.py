@@ -662,20 +662,29 @@ class DataTree:
 
         raise KeyError(item)
 
-    def get_expr(self, expression, engine="sharrow"):
+    def get_expr(self, expression, engine="sharrow", allow_native=True):
         """
         Access or evaluate an expression.
 
         Parameters
         ----------
         expression : str
+        engine : {'sharrow', 'numexpr'}
+            The engine used to resolve expressions.
+        allow_native : bool, default True
+            If the expression is an array in a dataset of this tree, return
+            that array directly.  Set to false to force evaluation, which
+            will also ensure proper broadcasting consistent with this data tree.
 
         Returns
         -------
         DataArray
         """
         try:
-            result = self[expression]
+            if allow_native:
+                result = self[expression]
+            else:
+                raise KeyError
         except (KeyError, IndexError):
             if engine == "sharrow":
                 result = (
@@ -779,6 +788,27 @@ class DataTree:
             obj = self
         else:
             obj = self.copy()
+
+        # remove subspaces that rely on dropped dim
+        boot_queue = set()
+        booted = set()
+        for (up, dn, n), e in obj._graph.edges.items():
+            if up == obj.root_node_name:
+                if e.get("analog", "<missing>") in dims:
+                    boot_queue.add(dn)
+                if e.get("parent_name", "<missing>") in dims:
+                    boot_queue.add(dn)
+        while boot_queue:
+            b = boot_queue.pop()
+            booted.add(b)
+            for (up, dn, n), e in obj._graph.edges.items():
+                if up == b:
+                    boot_queue.add(dn)
+
+        edges_to_remove = [e for e in obj._graph.edges if e[1] in booted]
+        obj._graph.remove_edges_from(edges_to_remove)
+        obj._graph.remove_nodes_from(booted)
+
         if not ignore_missing_dims:
             obj.root_dataset = obj.root_dataset.drop_dims(dims)
         else:
