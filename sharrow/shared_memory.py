@@ -59,11 +59,17 @@ def release_shared_memory(key=None):
         while __GLOBAL_MEMORY_ARRAYS:
             k, v = __GLOBAL_MEMORY_ARRAYS.popitem()
             v.close()
-            v.unlink()
+            try:
+                v.unlink()
+            except FileNotFoundError:
+                pass
         while __GLOBAL_MEMORY_LISTS:
             k, v = __GLOBAL_MEMORY_LISTS.popitem()
             v.shm.close()
-            v.shm.unlink()
+            try:
+                v.shm.unlink()
+            except FileNotFoundError:
+                pass
 
 
 atexit.register(release_shared_memory)
