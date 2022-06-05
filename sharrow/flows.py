@@ -723,6 +723,9 @@ class Flow:
             _flow_hash_push("---dim-order---")
             for k in self.dim_order:
                 _flow_hash_push(k)
+        for sname, sdata in self.tree.subspaces_iter():
+            for iname, idata in sdata.digital_encoding.info().items():
+                _flow_hash_push(f"digital_encoding:{sname}:{iname}:{idata}")
         if self._hashing_level > 1:
             for k in sorted(self._namespace_names):
                 if k.startswith("__base__"):
