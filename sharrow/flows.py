@@ -1561,7 +1561,15 @@ class Flow:
             for i in os.walk(os.path.join(self.cache_dir, self.name)):
                 for f in i[2]:
                     fi = os.path.join(i[0], f)
-                    t = os.path.getmtime(fi)
+                    try:
+                        t = os.path.getmtime(fi)
+                    except FileNotFoundError:
+                        # something is actively happening in this directory
+                        self.compiled_recently = True
+                        logger.warning(
+                            f"unidentified activity (file deletion) detected for {self.name}"
+                        )
+                        break
                     if t > compile_watch:
                         self.compiled_recently = True
                         logger.warning(f"compilation activity detected for {self.name}")
