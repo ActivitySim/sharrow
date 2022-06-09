@@ -789,6 +789,14 @@ class DataTree:
         else:
             obj = self.copy()
 
+        if not ignore_missing_dims:
+            new_root_dataset = obj.root_dataset.drop_dims(dims)
+        else:
+            new_root_dataset = obj.root_dataset
+            for d in dims:
+                if d in obj.root_dataset.dims:
+                    new_root_dataset = new_root_dataset.drop_dims(d)
+
         # remove subspaces that rely on dropped dim
         boot_queue = set()
         booted = set()
@@ -796,8 +804,13 @@ class DataTree:
             if up == obj.root_node_name:
                 if e.get("analog", "<missing>") in dims:
                     boot_queue.add(dn)
+                if e.get("analog", "<missing>") not in new_root_dataset:
+                    boot_queue.add(dn)
                 if e.get("parent_name", "<missing>") in dims:
                     boot_queue.add(dn)
+                if e.get("parent_name", "<missing>") not in new_root_dataset:
+                    boot_queue.add(dn)
+
         while boot_queue:
             b = boot_queue.pop()
             booted.add(b)
@@ -809,12 +822,7 @@ class DataTree:
         obj._graph.remove_edges_from(edges_to_remove)
         obj._graph.remove_nodes_from(booted)
 
-        if not ignore_missing_dims:
-            obj.root_dataset = obj.root_dataset.drop_dims(dims)
-        else:
-            for d in dims:
-                if d in obj.root_dataset.dims:
-                    obj.root_dataset = obj.root_dataset.drop_dims(d)
+        obj.root_dataset = new_root_dataset
         obj.dim_order = tuple(x for x in self.dim_order if x not in dims)
         return obj
 
