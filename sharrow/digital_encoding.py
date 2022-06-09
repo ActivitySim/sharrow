@@ -1,6 +1,14 @@
+import logging
+
 import dask.array as da
 import numpy as np
 import xarray as xr
+
+from .shared_memory import si_units
+
+
+class ValueDecodeError(ValueError):
+    pass
 
 
 def array_encode(
@@ -45,6 +53,10 @@ def array_encode(
     -------
     encoded_values : DataArray
     """
+    # if array is already dict encoded in the desired fashion, do nothing
+    existing_de = x.attrs.get("digital_encoding", {})
+    if by_dict and "dictionary" in existing_de:
+        return x
     x = array_decode(x)
     if by_dict:
         if by_dict is True:
@@ -74,7 +86,7 @@ def array_encode(
     return encoded_values
 
 
-def array_decode(x, digital_encoding=None):
+def array_decode(x, digital_encoding=None, aux_data=None):
     if digital_encoding is None:
         if "digital_encoding" not in x.attrs:
             return x
@@ -83,6 +95,17 @@ def array_decode(x, digital_encoding=None):
     if dictionary is not None:
         result = x.copy()
         result.data = dictionary[x.to_numpy()]
+        result.attrs.pop("digital_encoding", None)
+        return result
+    offset_source = digital_encoding.get("offset_source", None)
+    if offset_source:
+        if aux_data is None:
+            raise ValueDecodeError(
+                "cannot independently decode multivalue DataArray, "
+                "provide aux_data or decode from dataset"
+            )
+        result = aux_data[offset_source].copy()
+        result.data = x.to_numpy()[result.data]
         result.attrs.pop("digital_encoding", None)
         return result
     scale = digital_encoding.get("scale", 1)
@@ -217,6 +240,13 @@ class _DigitalEncodings:
         Dataset
             A copy of the dataset, with the named variable digitally encoded.
         """
+        joint_dict = kwargs.pop("joint_dict", False)
+        if joint_dict:
+            return multivalue_digitize_by_dictionary(
+                self._obj,
+                encode_vars=name,
+                encoding_name=joint_dict,
+            )
         updates = {}
         if isinstance(name, str):
             updates[name] = array_encode(self._obj[name], *args, **kwargs)
@@ -236,8 +266,102 @@ class _DigitalEncodings:
         """
         updates = {}
         if isinstance(name, str):
-            updates[name] = array_decode(self._obj[name])
+            updates[name] = array_decode(self._obj[name], aux_data=self._obj)
         else:
             for n in name:
-                updates[n] = array_decode(self._obj[n])
+                updates[n] = array_decode(self._obj[n], aux_data=self._obj)
         return self._obj.assign(updates)
+
+    def baggage(self, names):
+        if isinstance(names, str):
+            names = [names]
+        if names is None:
+            names = list(self._obj)
+        bag = set()
+        for name in names:
+            k_attrs = self._obj._variables[name].attrs
+            de = k_attrs.get("digital_encoding", {})
+            if "offset_source" in de:
+                bag.add(de["offset_source"])
+        return bag
+
+
+def multivalue_digitize_by_dictionary(ds, encode_vars=None, encoding_name=None):
+    logger = logging.getLogger("sharrow")
+    if not isinstance(encoding_name, str):
+        i = 0
+        while f"joined_{i}" in ds.dims:
+            i += 1
+        encoding_name = f"joined_{i}"
+    if encode_vars is None:
+        encode_vars = list(ds)
+    if isinstance(encode_vars, str):
+        encode_vars = [encode_vars]
+
+    # check each name in encode_vars to make sure it's not already encoded
+    # if you want to re-encode first decode
+    encode_vars = [
+        v
+        for v in encode_vars
+        if "offset_source" not in ds[v].attrs.get("digital_encoding", {})
+    ]
+    if len(encode_vars) == 0:
+        return ds
+
+    encode_var_dims = ds[encode_vars[0]].dims
+    for v in encode_vars[1:]:
+        assert (
+            encode_var_dims == ds[v].dims
+        ), f"dims must match, {encode_var_dims} != {ds[v].dims}"
+    logger.info("assembling data stack")
+    conjoined = np.stack(
+        [array_decode(ds[v].compute(), aux_data=ds) for v in encode_vars], axis=-1
+    )
+    logger.info("constructing stack view")
+    baseshape = conjoined.shape[:-1]
+    conjoined = conjoined.reshape([-1, conjoined.shape[-1]])
+    voidview = np.ascontiguousarray(conjoined).view(
+        np.dtype((np.void, conjoined.dtype.itemsize * conjoined.shape[1]))
+    )
+    logger.info("finding unique value combinations")
+    unique_values, pointers = np.unique(voidview, return_inverse=True)
+    pointers = pointers.reshape(baseshape)
+    unique_values = unique_values.view(np.dtype(conjoined.dtype)).reshape(
+        [-1, len(encode_vars)]
+    )
+    logger.info("downsampling offsets")
+    if unique_values.shape[0] < 1 << 8:
+        pointers = pointers.astype(np.uint8)
+    elif unique_values.shape[0] < 1 << 16:
+        pointers = pointers.astype(np.uint16)
+    elif unique_values.shape[0] < 1 << 32:
+        pointers = pointers.astype(np.uint32)
+    logger.info("formatting output")
+    out = ds.drop_vars(encode_vars)
+
+    original_footprint = 0
+    encoded_footprint = 0
+
+    out[f"{encoding_name}_offsets"] = xr.DataArray(pointers, dims=encode_var_dims)
+    encoded_footprint += pointers.dtype.itemsize * pointers.size
+
+    for n, k in enumerate(encode_vars):
+        temp = out[k] = xr.DataArray(
+            unique_values[:, n],
+            dims=(encoding_name),
+            attrs={
+                "digital_encoding": {
+                    "offset_source": f"{encoding_name}_offsets",
+                }
+            },
+        )
+        original_footprint += temp.dtype.itemsize * pointers.size
+        encoded_footprint += temp.dtype.itemsize * temp.size
+
+    bytes_saved = original_footprint - encoded_footprint
+    savings_ratio = bytes_saved / original_footprint
+    logger.info(
+        f"multivalue_digitize_by_dictionary {encoding_name} "
+        f"saved {si_units(bytes_saved)} {savings_ratio:.1%}"
+    )
+    return out

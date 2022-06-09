@@ -1,3 +1,4 @@
+import secrets
 import sys
 
 import numpy as np
@@ -351,8 +352,8 @@ def test_isin(dataframe_regression):
     dataframe_regression.check(result)
 
 
-def _get_target(q):
-    skims_ = Dataset.shm.from_shared_memory("skims")
+def _get_target(q, token):
+    skims_ = Dataset.shm.from_shared_memory(token)
     q.put(skims_.SOV_TIME.sum())
 
 
@@ -362,20 +363,21 @@ def _get_target(q):
 def test_shared_memory():
 
     skims = example_data.get_skims()
+    token = "skims" + secrets.token_hex(5)
 
-    skims_2 = skims.shm.to_shared_memory("skims")
+    skims_2 = skims.shm.to_shared_memory(token)
     target = skims.SOV_TIME.sum()
     assert skims_2.SOV_TIME.sum() == target
 
     # reconstruct in same process
-    skims_3 = Dataset.shm.from_shared_memory("skims")
+    skims_3 = Dataset.shm.from_shared_memory(token)
     assert skims_3.SOV_TIME.sum() == target
 
     # reconstruct in different process
     from multiprocessing import Process, Queue
 
     q = Queue()
-    p = Process(target=_get_target, args=(q,))
+    p = Process(target=_get_target, args=(q, token))
     p.start()
     p.join()
     assert q.get() == target
@@ -562,3 +564,121 @@ def test_shared_data_encoded(dataframe_regression):
     )
     result = ss._load(tree, as_dataframe=True)
     dataframe_regression.check(result, basename="test_shared_data")
+
+
+def test_dict_encoded(dataframe_regression):
+    data = example_data.get_data()
+    skims = data["skims"]
+    pairs = pd.DataFrame({"orig": [0, 0, 0, 1, 1, 1], "dest": [0, 1, 2, 0, 1, 2]})
+    skims1 = skims.digital_encoding.set("WLK_LOC_WLK_FAR", bitwidth=8, by_dict=True)
+    tree1 = DataTree(
+        base=pairs,
+        skims=skims1,
+        relationships=(
+            "base.orig -> skims.otaz",
+            "base.dest -> skims.dtaz",
+        ),
+    )
+    flow1 = tree1.setup_flow(
+        {
+            "d1": 'skims["WLK_LOC_WLK_FAR", "AM"]',
+            "d2": 'skims["WLK_LOC_WLK_FAR", "AM"]**2',
+        }
+    )
+    arr1 = flow1.load_dataframe()
+    dataframe_regression.check(arr1)
+
+
+def test_joint_dict_encoded(dataframe_regression):
+    data = example_data.get_data()
+    skims = data["skims"]
+    pairs = pd.DataFrame({"orig": [0, 0, 0, 1, 1, 1], "dest": [0, 1, 2, 0, 1, 2]})
+    skims1 = skims.digital_encoding.set(
+        "WLK_LOC_WLK_FAR",
+        "WLK_LOC_WLK_BOARDS",
+        "WLK_LOC_WLK_IWAIT",
+        "WLK_LOC_WLK_WAIT",
+        joint_dict=True,
+    )
+    skims1 = skims1.digital_encoding.set(
+        ["DISTBIKE", "DISTWALK"],
+        joint_dict="jointWB",
+    )
+    tree1 = DataTree(
+        base=pairs,
+        skims=skims1,
+        rskims=skims1,
+        relationships=(
+            "base.orig -> skims.otaz",
+            "base.dest -> skims.dtaz",
+            "base.orig -> rskims.dtaz",
+            "base.dest -> rskims.otaz",
+        ),
+    )
+    flow1 = tree1.setup_flow(
+        {
+            "f1": 'skims["WLK_LOC_WLK_FAR", "AM"]',
+            "f2": 'skims["WLK_LOC_WLK_FAR", "AM"]**2',
+            "w1": "skims.DISTWALK",
+            "w2": 'skims.reverse("DISTWALK")',
+            "w3": "rskims.DISTWALK",
+            "x1": "skims.DIST",
+            "x2": 'skims.reverse("DIST")',
+        },
+        extra_hash_data=("joint",),
+    )
+    arr1 = flow1.load_dataframe()
+    dataframe_regression.check(arr1)
+
+
+def test_isin_and_between(dataframe_regression):
+
+    data = example_data.get_data()
+    persons = data["persons"]
+
+    tree = DataTree(
+        base=persons,
+        extra_vars={
+            "pt1": 1,
+            "pt5": 5,
+            "pt34": [3, 4],
+        },
+    )
+
+    ss = tree.setup_flow(
+        {
+            "pt": "base.ptype",
+            "pt_in_15": "base.ptype.isin([pt1,pt5])",
+            "pt_in_34": "base.ptype.isin(pt34)",
+            "pt_tween_15": "base.ptype.between(pt1,pt5)",
+            "pt_tween_25": "base.ptype.between(2,pt5)",
+            "pt_tween_35": "base.ptype.between(3,5)",
+        }
+    )
+    result = ss.load_dataframe(tree)
+    pd.testing.assert_series_equal(
+        result["pt"].isin([1, 5]).astype(np.float32),
+        result["pt_in_15"],
+        check_names=False,
+    )
+    pd.testing.assert_series_equal(
+        result["pt"].isin([3, 4]).astype(np.float32),
+        result["pt_in_34"],
+        check_names=False,
+    )
+    pd.testing.assert_series_equal(
+        result["pt"].between(1, 5).astype(np.float32),
+        result["pt_tween_15"],
+        check_names=False,
+    )
+    pd.testing.assert_series_equal(
+        result["pt"].between(2, 5).astype(np.float32),
+        result["pt_tween_25"],
+        check_names=False,
+    )
+    pd.testing.assert_series_equal(
+        result["pt"].between(3, 5).astype(np.float32),
+        result["pt_tween_35"],
+        check_names=False,
+    )
+    dataframe_regression.check(result)

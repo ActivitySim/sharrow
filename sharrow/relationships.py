@@ -1,5 +1,6 @@
 import ast
 import logging
+import warnings
 
 import networkx as nx
 import numpy as np
@@ -661,20 +662,29 @@ class DataTree:
 
         raise KeyError(item)
 
-    def get_expr(self, expression, engine="sharrow"):
+    def get_expr(self, expression, engine="sharrow", allow_native=True):
         """
         Access or evaluate an expression.
 
         Parameters
         ----------
         expression : str
+        engine : {'sharrow', 'numexpr'}
+            The engine used to resolve expressions.
+        allow_native : bool, default True
+            If the expression is an array in a dataset of this tree, return
+            that array directly.  Set to false to force evaluation, which
+            will also ensure proper broadcasting consistent with this data tree.
 
         Returns
         -------
         DataArray
         """
         try:
-            result = self[expression]
+            if allow_native:
+                result = self[expression]
+            else:
+                raise KeyError
         except (KeyError, IndexError):
             if engine == "sharrow":
                 result = (
@@ -712,7 +722,12 @@ class DataTree:
             for k, arr in spacearrays.coords.items():
                 namespace.add(f"__{spacename or 'base'}__{k}")
             for k, arr in spacearrays.items():
-                namespace.add(f"__{spacename or 'base'}__{k}")
+                if k.startswith("_s_"):
+                    namespace.add(f"__{spacename or 'base'}__{k}__indptr")
+                    namespace.add(f"__{spacename or 'base'}__{k}__indices")
+                    namespace.add(f"__{spacename or 'base'}__{k}__data")
+                else:
+                    namespace.add(f"__{spacename or 'base'}__{k}")
         return namespace
 
     @property
@@ -773,12 +788,41 @@ class DataTree:
             obj = self
         else:
             obj = self.copy()
+
         if not ignore_missing_dims:
-            obj.root_dataset = obj.root_dataset.drop_dims(dims)
+            new_root_dataset = obj.root_dataset.drop_dims(dims)
         else:
+            new_root_dataset = obj.root_dataset
             for d in dims:
                 if d in obj.root_dataset.dims:
-                    obj.root_dataset = obj.root_dataset.drop_dims(d)
+                    new_root_dataset = new_root_dataset.drop_dims(d)
+
+        # remove subspaces that rely on dropped dim
+        boot_queue = set()
+        booted = set()
+        for (up, dn, n), e in obj._graph.edges.items():
+            if up == obj.root_node_name:
+                if e.get("analog", "<missing>") in dims:
+                    boot_queue.add(dn)
+                if e.get("analog", "<missing>") not in new_root_dataset:
+                    boot_queue.add(dn)
+                if e.get("parent_name", "<missing>") in dims:
+                    boot_queue.add(dn)
+                if e.get("parent_name", "<missing>") not in new_root_dataset:
+                    boot_queue.add(dn)
+
+        while boot_queue:
+            b = boot_queue.pop()
+            booted.add(b)
+            for (up, dn, n), e in obj._graph.edges.items():
+                if up == b:
+                    boot_queue.add(dn)
+
+        edges_to_remove = [e for e in obj._graph.edges if e[1] in booted]
+        obj._graph.remove_edges_from(edges_to_remove)
+        obj._graph.remove_nodes_from(booted)
+
+        obj.root_dataset = new_root_dataset
         obj.dim_order = tuple(x for x in self.dim_order if x not in dims)
         return obj
 
@@ -1005,6 +1049,13 @@ class DataTree:
             raise KeyError(mangled_name)
         name1, name2 = mangled_name[2:].split("__", 1)
         dataset = self._graph.nodes[name1].get("dataset")
+        if name2.startswith("_s_"):
+            if name2.endswith("__data"):
+                return dataset[name2[:-6]].data.data
+            elif name2.endswith("__indptr"):
+                return dataset[name2[:-8]].data.indptr
+            elif name2.endswith("__indices"):
+                return dataset[name2[:-9]].data.indices
         return dataset[name2].to_numpy()
 
     _BY_OFFSET = "digitizedOffset"
@@ -1049,6 +1100,10 @@ class DataTree:
                 # vectorize version
                 mapper = {i: j for (j, i) in enumerate(downstream.to_numpy())}
                 offsets = xr.apply_ufunc(np.vectorize(mapper.get), upstream)
+                if offsets.dtype.kind != "i":
+                    warnings.warn(
+                        f"detected missing values in digitizing {r.parent_data}.{r.parent_name}",
+                    )
 
                 # candidate name for write back
                 r_parent_name_new = (
@@ -1094,7 +1149,12 @@ class DataTree:
                 return False
         return True
 
-    def _arg_tokenizer(self, spacename, spacearray, exclude_dims=None):
+    def _arg_tokenizer(
+        self, spacename, spacearray, spacearrayname, exclude_dims=None, blends=None
+    ):
+
+        if blends is None:
+            blends = {}
 
         if spacename == self.root_node_name:
             root_dataset = self.root_dataset
@@ -1105,15 +1165,25 @@ class DataTree:
                 from_dims = root_dataset[spacearray].dims
             else:
                 from_dims = spacearray.dims
-            return tuple(
-                ast.parse(f"_arg{root_dims.index(dim):02}", mode="eval").body
-                for dim in from_dims
+            return (
+                tuple(
+                    ast.parse(f"_arg{root_dims.index(dim):02}", mode="eval").body
+                    for dim in from_dims
+                ),
+                blends,
             )
 
         if isinstance(spacearray, str):
-            from_dims = self._graph.nodes[spacename]["dataset"][spacearray].dims
+            spacearray_ = self._graph.nodes[spacename]["dataset"][spacearray]
         else:
-            from_dims = spacearray.dims
+            spacearray_ = spacearray
+
+        from_dims = spacearray_.dims
+        offset_source = spacearray_.attrs.get("digital_encoding", {}).get(
+            "offset_source", None
+        )
+        if offset_source is not None:
+            from_dims = self._graph.nodes[spacename]["dataset"][offset_source].dims
 
         tokens = []
 
@@ -1122,13 +1192,22 @@ class DataTree:
             found_token = False
             for e in self._graph.in_edges(spacename, keys=True):
                 this_dim_name = self._graph.edges[e]["child_name"]
+                retarget = None
                 if dimname != this_dim_name:
-                    continue
+                    retarget = self._graph.nodes[spacename][
+                        "dataset"
+                    ].redirection.target(this_dim_name)
+                    if dimname != retarget:
+                        continue
                 parent_name = self._graph.edges[e]["parent_name"]
                 parent_data = e[0]
 
-                upside_ast = self._arg_tokenizer(
-                    parent_data, parent_name, exclude_dims=exclude_dims
+                upside_ast, blends_ = self._arg_tokenizer(
+                    parent_data,
+                    parent_name,
+                    spacearrayname=spacearrayname,
+                    exclude_dims=exclude_dims,
+                    blends=blends,
                 )
                 try:
                     upside = ", ".join(unparse(t) for t in upside_ast)
@@ -1136,24 +1215,36 @@ class DataTree:
                     for t in upside_ast:
                         print(f"t:{t}")
                     raise
-                tokens.append(f"__{parent_data}__{parent_name}[{upside}]")
+
+                # check for redirection target
+                if retarget is not None:
+                    tokens.append(
+                        f"__{spacename}___digitized_{retarget}_of_{this_dim_name}[__{parent_data}__{parent_name}[{upside}]]"
+                    )
+                else:
+                    tokens.append(f"__{parent_data}__{parent_name}[{upside}]")
                 found_token = True
                 break
             if not found_token:
-                ix = self.subspaces[spacename].indexes[dimname]
-                ix = {i: n for n, i in enumerate(ix)}
-                tokens.append(ix)
-                n_missing_tokens += 1
+                if dimname in self.subspaces[spacename].indexes:
+                    ix = self.subspaces[spacename].indexes[dimname]
+                    ix = {i: n for n, i in enumerate(ix)}
+                    tokens.append(ix)
+                    n_missing_tokens += 1
+                elif dimname.endswith("_indices") or dimname.endswith("_indptr"):
+                    tokens.append(None)
+                    # this dimension corresponds to a blender
 
         if n_missing_tokens > 1:
             raise ValueError("at most one missing dimension is allowed")
         result = []
         for t in tokens:
             if isinstance(t, str):
+                # print(f"TOKENIZE: {spacename=} {spacearray=} {t}")
                 result.append(ast.parse(t, mode="eval").body)
             else:
                 result.append(t)
-        return tuple(result)
+        return tuple(result), blends
 
     @property
     def coords(self):

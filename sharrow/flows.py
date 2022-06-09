@@ -388,6 +388,7 @@ def mnl_transform(
     dotarray=None,
     random_draws=None,
     pick_counted=False,
+    logsums=False,
 ):
     if dotarray is None:
         raise ValueError("dotarray cannot be None")
@@ -398,7 +399,10 @@ def mnl_transform(
         pick_count = np.zeros((argshape[0], random_draws.shape[1]), dtype=np.int32)
     else:
         pick_count = np.zeros((argshape[0], 0), dtype=np.int32)
-    ###result = np.empty((argshape[0], dotarray.shape[1]), dtype=dtype)
+    if logsums:
+        _logsums = np.zeros((argshape[0], ), dtype=dtype)
+    else:
+        _logsums = np.zeros((0, ), dtype=dtype)
     if argshape[0] > 1000:
         for j0 in nb.prange(argshape[0]):
             intermediate = np.zeros({len_self_raw_functions}, dtype=dtype)
@@ -406,6 +410,8 @@ def mnl_transform(
             partial = np.exp(np.dot(intermediate, dotarray))
             local_sum = np.sum(partial)
             partial /= local_sum
+            if logsums:
+                _logsums[j0] = np.log(local_sum)
             if pick_counted:
                 _sample_choices_maker_counted(partial, random_draws[j0], result[j0], result_p[j0], pick_count[j0])
             else:
@@ -417,11 +423,13 @@ def mnl_transform(
             partial = np.exp(np.dot(intermediate, dotarray))
             local_sum = np.sum(partial)
             partial /= local_sum
+            if logsums:
+                _logsums[j0] = np.log(local_sum)
             if pick_counted:
                 _sample_choices_maker_counted(partial, random_draws[j0], result[j0], result_p[j0], pick_count[j0])
             else:
                 _sample_choices_maker(partial, random_draws[j0], result[j0], result_p[j0])
-    return result, result_p, pick_count
+    return result, result_p, pick_count, _logsums
 
 """
 )
@@ -439,6 +447,7 @@ def mnl_transform(
     dotarray=None,
     random_draws=None,
     pick_counted=False,
+    logsums=False,
 ):
     if dotarray is None:
         raise ValueError("dotarray cannot be None")
@@ -455,6 +464,10 @@ def mnl_transform(
         pick_count = np.zeros((argshape[0], random_draws.shape[1]), dtype=np.int32)
     else:
         pick_count = np.zeros((argshape[0], 0), dtype=np.int32)
+    if logsums:
+        _logsums = np.zeros((argshape[0], ), dtype=dtype)
+    else:
+        _logsums = np.zeros((0, ), dtype=dtype)
     if argshape[0] > 1000:
         for j0 in nb.prange(argshape[0]):
           partial = np.zeros(argshape[1], dtype=dtype)
@@ -463,6 +476,8 @@ def mnl_transform(
             {meta_code_stack_dot}
             partial[j1] = np.exp(np.dot(intermediate, dotarray))[0]
           local_sum = np.sum(partial)
+          if logsums:
+            _logsums[j0] = np.log(local_sum)
           partial /= local_sum
           if pick_counted:
             _sample_choices_maker_counted(partial, random_draws[j0], result[j0], result_p[j0], pick_count[j0])
@@ -476,12 +491,14 @@ def mnl_transform(
             {meta_code_stack_dot}
             partial[j1] = np.exp(np.dot(intermediate, dotarray))[0]
           local_sum = np.sum(partial)
+          if logsums:
+            _logsums[j0] = np.log(local_sum)
           partial /= local_sum
           if pick_counted:
             _sample_choices_maker_counted(partial, random_draws[j0], result[j0], result_p[j0], pick_count[j0])
           else:
             _sample_choices_maker(partial, random_draws[j0], result[j0], result_p[j0])
-    return result, result_p, pick_count
+    return result, result_p, pick_count, _logsums
 """
 )
 
@@ -700,12 +717,19 @@ class Flow:
         for k in self.arg_names:
             _flow_hash_push(f"arg:{k}")
         for k in self.tree._hash_features():
-            if self._hashing_level > 0 or not k.startswith("relationship:"):
+            if self._hashing_level > 0 or True:  # or not k.startswith("relationship:"):
                 _flow_hash_push(k)
         if self.dim_order:
             _flow_hash_push("---dim-order---")
             for k in self.dim_order:
                 _flow_hash_push(k)
+        for sname, sdata in self.tree.subspaces_iter():
+            digital_encoding_hashes = set()
+            for iname, idata in sdata.digital_encoding.info().items():
+                digital_encoding_hashes.add(f"digital_encoding:{sname}:{iname}:{idata}")
+            # ensure these are hashed in a stable ordering
+            for ihash in sorted(digital_encoding_hashes):
+                _flow_hash_push(ihash)
         if self._hashing_level > 1:
             for k in sorted(self._namespace_names):
                 if k.startswith("__base__"):
@@ -768,26 +792,34 @@ class Flow:
         if self.tree.relationships_are_digitized:
             for spacename, spacearrays in self.tree.subspaces.items():
                 dim_slots = {}
-                for k1 in spacearrays.keys():
+                spacekeys = list(spacearrays.keys()) + list(spacearrays.coords.keys())
+                for k1 in spacekeys:
                     try:
                         spacearrays_vars = spacearrays._variables
                     except AttributeError:
                         spacearrays_vars = spacearrays
-                    toks = self.tree._arg_tokenizer(
-                        spacename,
-                        spacearray=spacearrays_vars[k1],
-                        exclude_dims=self.dim_exclude,
-                    )
-                    dim_slots[k1] = toks
+                    try:
+                        toks, blends = self.tree._arg_tokenizer(
+                            spacename,
+                            spacearray=spacearrays_vars[k1],
+                            spacearrayname=k1,
+                            exclude_dims=self.dim_exclude,
+                        )
+                    except ValueError:
+                        pass
+                    else:
+                        dim_slots[k1] = toks
                 try:
                     digital_encodings = spacearrays.digital_encoding.info()
                 except AttributeError:
                     digital_encodings = {}
-                meta_data[spacename] = (dim_slots, digital_encodings)
+                blenders = spacearrays.redirection.blenders
+                meta_data[spacename] = (dim_slots, digital_encodings, blenders)
         else:
             for spacename, spacearrays in self.tree.subspaces.items():
                 dim_slots = {}
-                for k1 in spacearrays.keys():
+                spacekeys = list(spacearrays.keys()) + list(spacearrays.coords.keys())
+                for k1 in spacekeys:
                     try:
                         _dims = spacearrays._variables[k1].dims
                     except AttributeError:
@@ -797,14 +829,15 @@ class Flow:
                     digital_encodings = spacearrays.digital_encoding.info()
                 except AttributeError:
                     digital_encodings = {}
-                meta_data[spacename] = (dim_slots, digital_encodings)
+                blenders = spacearrays.redirection.blenders
+                meta_data[spacename] = (dim_slots, digital_encodings, blenders)
 
         # write individual function files for each expression
         for n, (k, expr) in enumerate(defs.items()):
             expr = str(expr).lstrip()
             init_expr = expr
             for spacename, spacearrays in self.tree.subspaces.items():
-                dim_slots, digital_encodings = meta_data[spacename]
+                dim_slots, digital_encodings, blenders = meta_data[spacename]
                 try:
                     expr = expression_for_numba(
                         expr,
@@ -812,6 +845,8 @@ class Flow:
                         dim_slots,
                         dim_slots,
                         digital_encodings=digital_encodings,
+                        extra_vars=self.tree.extra_vars,
+                        blenders=blenders,
                     )
                 except KeyError as key_err:
                     if ".." in key_err.args[0]:
@@ -821,7 +856,9 @@ class Flow:
                     # check if we can resolve this name on any other subspace
                     other_way = False
                     for other_spacename in self.tree.subspace_fallbacks.get(topkey, []):
-                        dim_slots, digital_encodings = meta_data[other_spacename]
+                        dim_slots, digital_encodings, blenders = meta_data[
+                            other_spacename
+                        ]
                         try:
                             expr = expression_for_numba(
                                 expr,
@@ -830,6 +867,8 @@ class Flow:
                                 dim_slots,
                                 digital_encodings=digital_encodings,
                                 prefer_name=other_spacename,
+                                extra_vars=self.tree.extra_vars,
+                                blenders=blenders,
                             )
                         except KeyError:
                             pass
@@ -846,6 +885,7 @@ class Flow:
                 (),
                 self.output_name_positions,
                 "_outputs",
+                extra_vars=self.tree.extra_vars,
             )
             if (k == init_expr) and (init_expr == expr) and k.isidentifier():
                 logger.error(f"unable to rewrite '{k}' to itself")
@@ -879,7 +919,7 @@ class Flow:
             self._raw_functions[k] = (init_expr, expr, f_name_tokens, argtokens)
             self.output_name_positions[k] = n
 
-        return blacken(func_code), all_name_tokens
+        return func_code, all_name_tokens
 
     def __initialize_2(
         self,
@@ -982,6 +1022,7 @@ class Flow:
                 "from contextlib import suppress",
                 "from numpy import log, exp, log1p, expm1",
                 "from sharrow.maths import piece, hard_sigmoid, transpose_leading, clip, digital_decode",
+                "from sharrow.sparse import get_blended_2",
             }
 
             func_code = self._func_code
@@ -1091,7 +1132,7 @@ class Flow:
                         f_code.write(f"# - {str(k)}\n")
 
                 f_code.write("\n\n# function code\n")
-                f_code.write(f"\n\n{func_code}")
+                f_code.write(f"\n\n{blacken(func_code)}")
 
                 f_code.write("\n\n# machinery code\n\n")
 
@@ -1275,7 +1316,14 @@ class Flow:
                     raise err
 
     def iload_raw(
-        self, rg, runner=None, dtype=None, dot=None, mnl=None, pick_counted=False
+        self,
+        rg,
+        runner=None,
+        dtype=None,
+        dot=None,
+        mnl=None,
+        pick_counted=False,
+        logsums=False,
     ):
         assert isinstance(rg, DataTree)
         with warnings.catch_warnings():
@@ -1301,6 +1349,7 @@ class Flow:
                         "argshape",
                         "random_draws",
                         "pick_counted",
+                        "logsums",
                     }:
                         continue
                     argument = np.asarray(rg.get_named_array(arg))
@@ -1315,6 +1364,7 @@ class Flow:
                 if mnl is not None:
                     kwargs["random_draws"] = mnl
                     kwargs["pick_counted"] = pick_counted
+                    kwargs["logsums"] = logsums
                 tree_root_dims = rg.root_dataset.dims
                 argshape = [
                     tree_root_dims[i]
@@ -1355,6 +1405,8 @@ class Flow:
         dot=None,
         mnl_draws=None,
         pick_counted=False,
+        compile_watch=False,
+        logsums=False,
     ):
         """
         Compute the flow outputs.
@@ -1387,8 +1439,13 @@ class Flow:
             also be provided. The dot-product is treated as the utility function
             for a multinomial logit model, and these draws are used to simulate
             choices from the implied probabilities.
-
+        compile_watch : bool, default False
+            Watch for compiled code.
+        logsums : bool, default False
+            Also return logsums when making draws from MNL models.
         """
+        if compile_watch:
+            compile_watch = time.time()
         if (as_dataframe or as_table) and dot is not None:
             raise ValueError("cannot format output other than as array if using dot")
         if source is None:
@@ -1398,6 +1455,7 @@ class Flow:
         dot_collapse = False
         result_p = None
         pick_count = None
+        out_logsum = None
         if dot is not None and dot.ndim == 1:
             dot = np.expand_dims(dot, -1)
             dot_collapse = True
@@ -1411,13 +1469,14 @@ class Flow:
             if mnl_draws is None:
                 result = self.iload_raw(source, runner=runner, dtype=dtype, dot=dot)
             else:
-                result, result_p, pick_count = self.iload_raw(
+                result, result_p, pick_count, out_logsum = self.iload_raw(
                     source,
                     runner=runner,
                     dtype=dtype,
                     dot=dot,
                     mnl=mnl_draws,
                     pick_counted=pick_counted,
+                    logsums=logsums,
                 )
         else:
             raise RuntimeError("please digitize")
@@ -1501,14 +1560,41 @@ class Flow:
         elif mnl_collapse:
             result = np.squeeze(result, -1)
             result_p = np.squeeze(result_p, -1)
+        if compile_watch:
+            self.compiled_recently = False
+            for i in os.walk(os.path.join(self.cache_dir, self.name)):
+                for f in i[2]:
+                    fi = os.path.join(i[0], f)
+                    try:
+                        t = os.path.getmtime(fi)
+                    except FileNotFoundError:
+                        # something is actively happening in this directory
+                        self.compiled_recently = True
+                        logger.warning(
+                            f"unidentified activity (file deletion) detected for {self.name}"
+                        )
+                        break
+                    if t > compile_watch:
+                        self.compiled_recently = True
+                        logger.warning(f"compilation activity detected for {self.name}")
+                        break
+                if self.compiled_recently:
+                    break
+        else:
+            try:
+                del self.compiled_recently
+            except AttributeError:
+                pass
         if result_p is not None:
+            if logsums:
+                return result, result_p, pick_count, out_logsum
             if pick_counted:
                 return result, result_p, pick_count
             else:
                 return result, result_p
         return result
 
-    def load(self, source=None, dtype=None):
+    def load(self, source=None, dtype=None, compile_watch=False):
         """
         Compute the flow outputs as a numpy array.
 
@@ -1520,14 +1606,17 @@ class Flow:
         dtype : str or dtype
             Override the default dtype for the result. May trigger re-compilation
             of the underlying code.
+        compile_watch : bool, default False
+            Set the `compiled_recently` flag on this flow to True if any file
+            modification activity is observed in the cache directory.
 
         Returns
         -------
         numpy.array
         """
-        return self._load(source=source, dtype=dtype)
+        return self._load(source=source, dtype=dtype, compile_watch=compile_watch)
 
-    def load_dataframe(self, source=None, dtype=None):
+    def load_dataframe(self, source=None, dtype=None, compile_watch=False):
         """
         Compute the flow outputs as a pandas.DataFrame.
 
@@ -1539,14 +1628,19 @@ class Flow:
         dtype : str or dtype
             Override the default dtype for the result. May trigger re-compilation
             of the underlying code.
+        compile_watch : bool, default False
+            Set the `compiled_recently` flag on this flow to True if any file
+            modification activity is observed in the cache directory.
 
         Returns
         -------
         pandas.DataFrame
         """
-        return self._load(source=source, dtype=dtype, as_dataframe=True)
+        return self._load(
+            source=source, dtype=dtype, as_dataframe=True, compile_watch=compile_watch
+        )
 
-    def load_dataarray(self, source=None, dtype=None):
+    def load_dataarray(self, source=None, dtype=None, compile_watch=False):
         """
         Compute the flow outputs as a xarray.DataArray.
 
@@ -1558,14 +1652,19 @@ class Flow:
         dtype : str or dtype
             Override the default dtype for the result. May trigger re-compilation
             of the underlying code.
+        compile_watch : bool, default False
+            Set the `compiled_recently` flag on this flow to True if any file
+            modification activity is observed in the cache directory.
 
         Returns
         -------
         xarray.DataArray
         """
-        return self._load(source=source, dtype=dtype, as_dataarray=True)
+        return self._load(
+            source=source, dtype=dtype, as_dataarray=True, compile_watch=compile_watch
+        )
 
-    def dot(self, coefficients, source=None, dtype=None):
+    def dot(self, coefficients, source=None, dtype=None, compile_watch=False):
         """
         Compute the dot-product of expression results and coefficients.
 
@@ -1582,6 +1681,9 @@ class Flow:
         dtype : str or dtype
             Override the default dtype for the result. May trigger re-compilation
             of the underlying code.
+        compile_watch : bool, default False
+            Set the `compiled_recently` flag on this flow to True if any file
+            modification activity is observed in the cache directory.
 
         Returns
         -------
@@ -1591,9 +1693,10 @@ class Flow:
             source,
             dot=coefficients,
             dtype=dtype,
+            compile_watch=compile_watch,
         )
 
-    def dot_dataarray(self, coefficients, source=None, dtype=None):
+    def dot_dataarray(self, coefficients, source=None, dtype=None, compile_watch=False):
         """
         Compute the dot-product of expression results and coefficients.
 
@@ -1610,6 +1713,9 @@ class Flow:
         dtype : str or dtype
             Override the default dtype for the result. May trigger re-compilation
             of the underlying code.
+        compile_watch : bool, default False
+            Set the `compiled_recently` flag on this flow to True if any file
+            modification activity is observed in the cache directory.
 
         Returns
         -------
@@ -1620,10 +1726,18 @@ class Flow:
             dot=coefficients,
             dtype=dtype,
             as_dataarray=True,
+            compile_watch=compile_watch,
         )
 
     def mnl_draws(
-        self, coefficients, draws, source=None, pick_counted=False, dtype=None
+        self,
+        coefficients,
+        draws,
+        source=None,
+        pick_counted=False,
+        logsums=False,
+        dtype=None,
+        compile_watch=False,
     ):
         """
         Make random simulated choices for a multinomial logit model.
@@ -1646,10 +1760,15 @@ class Flow:
             tree used to initialize this flow is used.
         pick_counted : bool, default False
             Whether to tally multiple repeated choices with a pick count.
+        logsums : bool, default False
+            Whether to also return logsums.
         dtype : str or dtype
             Override the default dtype for the probability. May trigger re-compilation
             of the underlying code.  The choices and pick counts (if included)
             are always integers.
+        compile_watch : bool, default False
+            Set the `compiled_recently` flag on this flow to True if any file
+            modification activity is observed in the cache directory.
 
         Returns
         -------
@@ -1667,6 +1786,8 @@ class Flow:
             mnl_draws=draws,
             dtype=dtype,
             pick_counted=pick_counted,
+            compile_watch=compile_watch,
+            logsums=logsums,
         )
 
     @property

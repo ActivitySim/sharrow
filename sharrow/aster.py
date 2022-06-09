@@ -28,8 +28,9 @@ if sys.version_info >= (3, 8):
     ast_String_value = lambda x: x.value if isinstance(x, ast.Str) else x
     ast_TupleIndex_Type = ast.Tuple
     ast_Index_Value = lambda x: x
+    ast_Constant = ast.Constant
 else:
-    ast_Constant_Type = (ast.Index, ast.Constant, ast.Str)
+    ast_Constant_Type = (ast.Index, ast.Constant, ast.Str, ast.Num)
     ast_String_value = (
         lambda x: x.s
         if isinstance(x, ast.Str)
@@ -37,6 +38,7 @@ else:
     )
     ast_TupleIndex_Type = (ast.Index, ast.Tuple)
     ast_Index_Value = lambda x: x.value if isinstance(x, ast.Index) else x
+    ast_Constant = lambda x: ast.Constant(x, kind=None)
 
 
 def _isNone(c):
@@ -333,6 +335,8 @@ class RewriteForNumba(ast.NodeTransformer):
         rawalias="____",
         digital_encodings=None,
         preferred_spacename=None,
+        extra_vars=None,
+        blenders=None,
     ):
         self.spacename = spacename
         self.dim_slots = dim_slots
@@ -341,20 +345,19 @@ class RewriteForNumba(ast.NodeTransformer):
         self.rawalias = rawalias
         self.digital_encodings = digital_encodings or {}
         self.preferred_spacename = preferred_spacename
+        self.extra_vars = extra_vars or {}
+        self.blenders = blenders or {}
 
     def log_event(self, tag, node1=None, node2=None):
-        if logger.getEffectiveLevel() <= -1:
+        if logger.getEffectiveLevel() <= 0:
             if node1 is None:
-                logger.log(
-                    5, f"RewriteForNumba({self.spacename}|{self.rawalias}).{tag}"
-                )
+                logger.debug(f"RewriteForNumba({self.spacename}|{self.rawalias}).{tag}")
             elif node2 is None:
                 try:
                     unparsed = unparse_(node1)
                 except:  # noqa: E722
                     unparsed = f"{type(node1)} not unparseable"
-                logger.log(
-                    5,
+                logger.debug(
                     f"RewriteForNumba({self.spacename}|{self.rawalias}).{tag} [{type(node1).__name__}]= {unparsed}",
                 )
             else:
@@ -366,8 +369,7 @@ class RewriteForNumba(ast.NodeTransformer):
                     unparsed2 = unparse_(node2)
                 except:  # noqa: E722
                     unparsed2 = f"{type(node2).__name__} not unparseable"
-                logger.log(
-                    5,
+                logger.debug(
                     f"RewriteForNumba({self.spacename}|{self.rawalias}).{tag} [{type(node1).__name__},{type(node2).__name__}]= {unparsed1} => {unparsed2}",
                 )
 
@@ -397,14 +399,30 @@ class RewriteForNumba(ast.NodeTransformer):
         if isinstance(self.spacevars, dict):
             dim_slots = self.spacevars[attr]
 
-        if transpose_lead:
-            decorated_name = ast.Call(
-                func=ast.Name("transpose_leading", ctx=ast.Load()),
-                args=[ast.Name(id=f"__{pref_topname}__{attr}", ctx=ast.Load())],
-                keywords=[],
-            )
-        else:
-            decorated_name = ast.Name(id=f"__{pref_topname}__{attr}", ctx=ast.Load())
+        def maybe_transpose(thing):
+            if transpose_lead:
+                return ast.Call(
+                    func=ast.Name("transpose_leading", ctx=ast.Load()),
+                    args=[thing],
+                    keywords=[],
+                )
+            else:
+                return thing
+
+        def _maybe_transpose_first_two_args(_slice):
+            if transpose_lead:
+                elts = _slice.elts
+                if len(elts) >= 2:
+                    elts = [elts[1], elts[0], *elts[2:]]
+                return type(_slice)(elts=elts)
+            else:
+                return _slice
+
+        raw_decorated_name = f"__{pref_topname}__{attr}"
+        decorated_name = maybe_transpose(
+            ast.Name(id=raw_decorated_name, ctx=ast.Load())
+        )
+        logger.debug(f"    decorated_name= {unparse_(decorated_name)}")
 
         if isinstance(dim_slots, (tuple, list)):
             if len(dim_slots):
@@ -425,6 +443,7 @@ class RewriteForNumba(ast.NodeTransformer):
                             )
                     else:
                         elts.append(n)
+                    logger.debug(f"ELT {unparse_(elts[-1])}")
                 s = ast.Tuple(
                     elts=elts,
                     ctx=ast.Load(),
@@ -434,9 +453,11 @@ class RewriteForNumba(ast.NodeTransformer):
                     slice=s,
                     ctx=ctx,
                 )
+                logger.debug(f"two+ dim_slots on decorated_name {unparse_(result)}")
             else:
                 # no indexing, just name replacement
                 result = decorated_name
+                logger.debug(f"just decorated_name {unparse_(result)}")
         else:
             if isinstance(dim_slots, int):
                 s = ast.Name(id=f"_arg{dim_slots:02}", ctx=ast.Load())
@@ -447,15 +468,33 @@ class RewriteForNumba(ast.NodeTransformer):
                 slice=s,
                 ctx=ctx,
             )
+            logger.debug(f"one dim_slots on decorated_name {unparse_(result)}")
+
         digital_encoding = self.digital_encodings.get(attr, None)
         if digital_encoding is not None:
 
             dictionary = digital_encoding.get("dictionary", None)
+            offset_source = digital_encoding.get("offset_source", None)
             if dictionary is not None:
                 result = ast.Subscript(
                     value=ast.Name(
                         id=f"__encoding_dict__{pref_topname}__{attr}", ctx=ast.Load()
                     ),
+                    slice=result,
+                    ctx=ctx,
+                )
+            elif offset_source is not None:
+                result = ast.Subscript(
+                    value=maybe_transpose(
+                        ast.Name(
+                            id=f"__{pref_topname}__{offset_source}", ctx=ast.Load()
+                        )
+                    ),
+                    slice=result.slice,
+                    ctx=ctx,
+                )
+                result = ast.Subscript(
+                    value=ast.Name(id=f"__{pref_topname}__{attr}", ctx=ast.Load()),
                     slice=result,
                     ctx=ctx,
                 )
@@ -489,6 +528,36 @@ class RewriteForNumba(ast.NodeTransformer):
                             op=ast.Add(),
                             right=ast.Num(offset),
                         )
+
+        blender = self.blenders.get(attr, None)
+        if blender is not None:
+            # get_blended_2(backstop, indices, indptr, data, i, j, blend_limit=np.inf)
+            result_args = result.slice.elts
+            # inside the blender, the args will be maz-taz mapped, but we need the plain (i)maz too now
+            result_arg_ = [j.slice for j in result_args]
+            if len(result_args) == 2:
+                result = ast.Call(
+                    func=ast.Name("get_blended_2", cts=ast.Load()),
+                    args=[
+                        result,
+                        ast.Name(
+                            id=f"__{pref_topname}___s_{attr}__indices", ctx=ast.Load()
+                        ),
+                        ast.Name(
+                            id=f"__{pref_topname}___s_{attr}__indptr", ctx=ast.Load()
+                        ),
+                        ast.Name(
+                            id=f"__{pref_topname}___s_{attr}__data", ctx=ast.Load()
+                        ),
+                        result_arg_[0],
+                        result_arg_[1],
+                        ast_Constant(blender.get("max_blend_distance")),  # blend_limit
+                    ],
+                    keywords=[],
+                )
+            else:
+                raise NotImplementedError()
+
         self.log_event(f"_replacement({attr}, {topname})", original_node, result)
         return result
 
@@ -741,8 +810,14 @@ class RewriteForNumba(ast.NodeTransformer):
         if isinstance(node.func, ast.Attribute) and node.func.attr == "isin":
             ante = self.visit(node.func.value)
             targets = node.args
+            elts = None
             if len(targets) == 1 and isinstance(targets[0], (ast.List, ast.Tuple)):
                 elts = targets[0].elts
+            elif len(targets) == 1 and isinstance(targets[0], ast.Name):
+                extra_val = self.extra_vars.get(targets[0].id, None)
+                if isinstance(extra_val, (list, tuple)):
+                    elts = [ast_Constant(i) for i in extra_val]
+            if elts is not None:
                 ors = []
                 for elt in elts:
                     ors.append(
@@ -751,6 +826,19 @@ class RewriteForNumba(ast.NodeTransformer):
                         )
                     )
                 result = ast.BoolOp(op=ast.Or(), values=ors)
+        # change `x.between(a,b)` to `(a <= x) & (x <= b)`
+        if isinstance(node.func, ast.Attribute) and node.func.attr == "between":
+            ante = self.visit(node.func.value)
+            targets = node.args
+            if len(targets) == 2:
+                lb, ub = targets
+                left = ast.Compare(
+                    left=ante, ops=[ast.GtE()], comparators=[self.visit(lb)]
+                )
+                right = ast.Compare(
+                    left=ante, ops=[ast.LtE()], comparators=[self.visit(ub)]
+                )
+                result = ast.BinOp(left=left, op=ast.BitAnd(), right=right)
 
         # if no other changes
         if result is None:
@@ -774,6 +862,8 @@ def expression_for_numba(
     rawalias="____",
     digital_encodings=None,
     prefer_name=None,
+    extra_vars=None,
+    blenders=None,
 ):
     return unparse_(
         RewriteForNumba(
@@ -784,6 +874,8 @@ def expression_for_numba(
             rawalias,
             digital_encodings,
             prefer_name,
+            extra_vars,
+            blenders,
         ).visit(ast.parse(expr))
     )
 
