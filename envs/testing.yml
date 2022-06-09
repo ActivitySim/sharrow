@@ -12,6 +12,7 @@ dependencies:
   - networkx
   - numba>=0.53
   - numexpr
+  - sparse
   - filelock
   - flake8
   # required for testing
