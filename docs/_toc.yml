@@ -10,4 +10,5 @@ chapters:
       - file: walkthrough/one-dim
       - file: walkthrough/two-dim
       - file: walkthrough/encoding
+      - file: walkthrough/sparse
   - file: api
