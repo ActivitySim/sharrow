@@ -802,9 +802,10 @@ class DataTree:
         booted = set()
         for (up, dn, n), e in obj._graph.edges.items():
             if up == obj.root_node_name:
-                if e.get("analog", "<missing>") in dims:
+                _analog = e.get("analog", "<missing>")
+                if _analog in dims:
                     boot_queue.add(dn)
-                if e.get("analog", "<missing>") not in new_root_dataset:
+                if _analog != "<missing>" and _analog not in new_root_dataset:
                     boot_queue.add(dn)
                 if e.get("parent_name", "<missing>") in dims:
                     boot_queue.add(dn)
