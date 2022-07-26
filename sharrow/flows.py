@@ -1340,7 +1340,10 @@ class Flow:
                         runner_ = self._idotter
                 else:
                     runner_ = runner
-                named_args = inspect.getfullargspec(runner_.py_func).args
+                try:
+                    named_args = inspect.getfullargspec(runner_.py_func).args
+                except AttributeError:
+                    named_args = inspect.getfullargspec(runner_).args
                 arguments = []
                 for arg in named_args:
                     if arg in {
