@@ -297,7 +297,7 @@ class SharedMemDatasetAccessor:
                         "dtype": a.dtype,
                         "shape": a.shape,
                         "coord": is_coord,
-                        "nbytes": a.nbytes,
+                        "nbytes": a.data.nbytes,
                         "position": position,
                         "data.nbytes": a.data.data.nbytes,
                         "indices.nbytes": a.data.indices.nbytes,
@@ -307,6 +307,7 @@ class SharedMemDatasetAccessor:
                         "indptr.dtype": a.data.indptr.dtype,
                     }
                 )
+                a_nbytes = a.data.nbytes
             else:
                 wrappers.append(
                     {
@@ -320,9 +321,11 @@ class SharedMemDatasetAccessor:
                         "position": position,
                     }
                 )
-            sizes.append(a.nbytes)
+                a_nbytes = a.nbytes
+
+            sizes.append(a_nbytes)
             names.append(k)
-            position += a.nbytes
+            position += a_nbytes
 
         for k, a in self._obj.coords.items():
             emit(k, a, True)
