@@ -549,8 +549,8 @@ class RewriteForNumba(ast.NodeTransformer):
                         ast.Name(
                             id=f"__{pref_topname}___s_{attr}__data", ctx=ast.Load()
                         ),
-                        result_arg_[0],
-                        result_arg_[1],
+                        result_arg_[0 if not transpose_lead else 1],
+                        result_arg_[1 if not transpose_lead else 0],
                         ast_Constant(blender.get("max_blend_distance")),  # blend_limit
                     ],
                     keywords=[],
@@ -694,12 +694,14 @@ class RewriteForNumba(ast.NodeTransformer):
 
         result = None
         # implement ActivitySim's "reverse" skims
-        if isinstance(node.func, ast.Attribute) and node.func.attr == "reverse":
-            if isinstance(node.func.value, ast.Name):
-                if node.func.value.id == self.spacename:
+        if (
+            isinstance(node.func, ast.Attribute) and node.func.attr == "reverse"
+        ):  # *.reverse(...)
+            if isinstance(node.func.value, ast.Name):  # somename.reverse(...)
+                if node.func.value.id == self.spacename:  # spacename.reverse(...)
                     if len(node.args) == 1 and isinstance(
                         node.args[0], ast_Constant_Type
-                    ):
+                    ):  # spacename.reverse('constant')
                         result = self._replacement(
                             ast_String_value(node.args[0]),
                             node.func.ctx,
