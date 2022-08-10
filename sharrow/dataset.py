@@ -527,8 +527,22 @@ def from_zarr_with_attr(*args, **kwargs):
                 and avalue.endswith("} ")
             ):
                 avalue = ast.literal_eval(avalue[1:-1])
+            if isinstance(avalue, str) and avalue == " < None > ":
+                avalue = None
             attrs[aname] = avalue
         obj[k] = obj[k].assign_attrs(attrs)
+    attrs = {}
+    for aname, avalue in obj.attrs.items():
+        if (
+            isinstance(avalue, str)
+            and avalue.startswith(" {")
+            and avalue.endswith("} ")
+        ):
+            avalue = ast.literal_eval(avalue[1:-1])
+        if isinstance(avalue, str) and avalue == " < None > ":
+            avalue = None
+        attrs[aname] = avalue
+    obj = obj.assign_attrs(attrs)
     return obj
 
 
@@ -759,8 +773,18 @@ def to_zarr_with_attr(self, *args, **kwargs):
         for aname, avalue in self[k].attrs.items():
             if isinstance(avalue, dict):
                 avalue = f" {avalue!r} "
+            if avalue is None:
+                avalue = " < None > "
             attrs[aname] = avalue
         obj[k] = self[k].assign_attrs(attrs)
+    attrs = {}
+    for aname, avalue in self.attrs.items():
+        if isinstance(avalue, dict):
+            avalue = f" {avalue!r} "
+        if avalue is None:
+            avalue = " < None > "
+        attrs[aname] = avalue
+    obj = obj.assign_attrs(attrs)
     return obj.to_zarr(*args, **kwargs)
 
 
