@@ -392,8 +392,13 @@ class RewriteForNumba(ast.NodeTransformer):
 
         if self.spacevars is not None:
             if attr not in self.spacevars:
-                raise KeyError(f"{topname}..{attr}")
-                # return original_node
+                if topname == pref_topname:
+                    raise KeyError(f"{topname}..{attr}")
+                # we originally raised a KeyError here regardless, but what if we just
+                # give back the original node, and see if other spaces,
+                # possibly fallback spaces, might work?  If nothing works then
+                # it will still eventually error out when compiling?
+                return original_node
 
         dim_slots = self.dim_slots
         if isinstance(self.spacevars, dict):
@@ -710,7 +715,17 @@ class RewriteForNumba(ast.NodeTransformer):
                         )
         # handle clip as a method
         if isinstance(node.func, ast.Attribute) and node.func.attr == "clip":
-            if len(node.args) == 1 and len(node.keywords) == 0:
+            if isinstance(node.func.value, ast.Name) and node.func.value.id == "np":
+                # call to np.clip(...), change to local clip implementation
+                clip_args = []
+                for a in node.args:
+                    clip_args.append(self.visit(a))
+                result = ast.Call(
+                    func=ast.Name("clip", cts=ast.Load()),
+                    args=clip_args,
+                    keywords=[self.visit(i) for i in node.keywords],
+                )
+            elif len(node.args) == 1 and len(node.keywords) == 0:
                 # single positional arg becomes max
                 result = ast.Call(
                     func=ast.Name("max", cts=ast.Load()),

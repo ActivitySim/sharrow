@@ -835,48 +835,62 @@ class Flow:
         # write individual function files for each expression
         for n, (k, expr) in enumerate(defs.items()):
             expr = str(expr).lstrip()
-            init_expr = expr
-            for spacename, spacearrays in self.tree.subspaces.items():
-                dim_slots, digital_encodings, blenders = meta_data[spacename]
-                try:
-                    expr = expression_for_numba(
-                        expr,
-                        spacename,
-                        dim_slots,
-                        dim_slots,
-                        digital_encodings=digital_encodings,
-                        extra_vars=self.tree.extra_vars,
-                        blenders=blenders,
-                    )
-                except KeyError as key_err:
-                    if ".." in key_err.args[0]:
-                        topkey, attrkey = key_err.args[0].split("..")
-                    else:
-                        raise
-                    # check if we can resolve this name on any other subspace
-                    other_way = False
-                    for other_spacename in self.tree.subspace_fallbacks.get(topkey, []):
-                        dim_slots, digital_encodings, blenders = meta_data[
-                            other_spacename
-                        ]
-                        try:
-                            expr = expression_for_numba(
-                                expr,
-                                spacename,
-                                dim_slots,
-                                dim_slots,
-                                digital_encodings=digital_encodings,
-                                prefer_name=other_spacename,
-                                extra_vars=self.tree.extra_vars,
-                                blenders=blenders,
-                            )
-                        except KeyError:
-                            pass
+            prior_expr = init_expr = expr
+            other_way = True
+            while other_way:
+                other_way = False
+                # if other_way is triggered, there may be residual other terms
+                # that were not addressed, so this loop should be applied again.
+                for spacename, spacearrays in self.tree.subspaces.items():
+                    dim_slots, digital_encodings, blenders = meta_data[spacename]
+                    try:
+                        expr = expression_for_numba(
+                            expr,
+                            spacename,
+                            dim_slots,
+                            dim_slots,
+                            digital_encodings=digital_encodings,
+                            extra_vars=self.tree.extra_vars,
+                            blenders=blenders,
+                        )
+                    except KeyError as key_err:
+                        if ".." in key_err.args[0]:
+                            topkey, attrkey = key_err.args[0].split("..")
                         else:
-                            other_way = True
-                            break
-                    if not other_way:
-                        raise
+                            raise
+                        # check if we can resolve this name on any other subspace
+                        for other_spacename in self.tree.subspace_fallbacks.get(
+                            topkey, []
+                        ):
+                            dim_slots, digital_encodings, blenders = meta_data[
+                                other_spacename
+                            ]
+                            try:
+                                expr = expression_for_numba(
+                                    expr,
+                                    spacename,
+                                    dim_slots,
+                                    dim_slots,
+                                    digital_encodings=digital_encodings,
+                                    prefer_name=other_spacename,
+                                    extra_vars=self.tree.extra_vars,
+                                    blenders=blenders,
+                                )
+                            except KeyError as err:  # noqa: F841
+                                pass
+                            else:
+                                other_way = True
+                                # at least one variable was found in a fallback
+                                break
+                        if not other_way:
+                            raise
+                if prior_expr == expr:
+                    # nothing was changed, break out of loop
+                    break
+                else:
+                    # something was changed, run the loop again to confirm
+                    # nothing else needs to change
+                    prior_expr = expr
 
             # now find instances where an identifier is previously created in this flow.
             expr = expression_for_numba(
