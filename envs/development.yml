@@ -1,0 +1,31 @@
+name: sh-dev
+channels:
+  - conda-forge
+  - nodefaults
+dependencies:
+  - python=3.9
+  - pip
+  # required for testing
+  - dask
+  - filelock
+  - flake8
+  - jupyter
+  - nbmake
+  - networkx
+  - notebook
+  - numba>=0.53
+  - numexpr
+  - numpy>=1.19
+  - openmatrix
+  - pandas>=1.2
+  - pyarrow
+  - pytest
+  - pytest-cov
+  - pytest-regressions
+  - pytest-xdist
+  - sparse
+  - xarray
+  - zarr
+
+  - pip:
+    - -e ..

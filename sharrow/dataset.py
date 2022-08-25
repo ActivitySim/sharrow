@@ -82,7 +82,7 @@ def construct(source):
     source : pandas.DataFrame, pyarrow.Table, xarray.Dataset, or Sequence[str]
         The source from which to create a Dataset.  DataFrames and Tables
         are converted to Datasets that have one dimension (the rows) and
-        seperate variables for each of the columns.  A list of strings
+        separate variables for each of the columns.  A list of strings
         creates a dataset with those named empty variables.
 
     Returns
@@ -90,8 +90,7 @@ def construct(source):
     Dataset
     """
     if isinstance(source, pd.DataFrame):
-        source = xr.Dataset.from_dataframe(source)
-        # source = cls.from_dataframe_fast(source) # older xarray was slow
+        source = dataset_from_dataframe_fast(source)  # xarray default can be slow
     elif isinstance(source, (Table, pa.Table)):
         source = xr.Dataset.from_table(source)
     elif isinstance(source, (pa.Table)):
@@ -103,6 +102,63 @@ def construct(source):
     else:
         source = xr.Dataset(source)
     return source
+
+
+def dataset_from_dataframe_fast(
+    dataframe: pd.DataFrame, sparse: bool = False
+) -> "Dataset":
+    """Convert a pandas.DataFrame into an xarray.Dataset
+
+    Each column will be converted into an independent variable in the
+    Dataset. If the dataframe's index is a MultiIndex, it will be expanded
+    into a tensor product of one-dimensional indices (filling in missing
+    values with NaN). This method will produce a Dataset very similar to
+    that on which the 'to_dataframe' method was called, except with
+    possibly redundant dimensions (since all dataset variables will have
+    the same dimensionality)
+
+    Parameters
+    ----------
+    dataframe : DataFrame
+        DataFrame from which to copy data and indices.
+    sparse : bool, default: False
+        If true, create a sparse arrays instead of dense numpy arrays. This
+        can potentially save a large amount of memory if the DataFrame has
+        a MultiIndex. Requires the sparse package (sparse.pydata.org).
+
+    Returns
+    -------
+    New Dataset.
+
+    See Also
+    --------
+    xarray.DataArray.from_series
+    pandas.DataFrame.to_xarray
+    """
+
+    # this is much faster than the default xarray version when not
+    # using a MultiIndex.
+
+    if isinstance(dataframe.index, pd.MultiIndex) or sparse:
+        return Dataset.from_dataframe(dataframe, sparse)
+
+    if not dataframe.columns.is_unique:
+        raise ValueError("cannot convert DataFrame with non-unique columns")
+
+    if isinstance(dataframe.index, pd.CategoricalIndex):
+        idx = dataframe.index.remove_unused_categories()
+    else:
+        idx = dataframe.index
+
+    index_name = idx.name if idx.name is not None else "index"
+    # Cast to a NumPy array first, in case the Series is a pandas Extension
+    # array (which doesn't have a valid NumPy dtype)
+    arrays = {
+        name: ([index_name], np.asarray(dataframe[name].values))
+        for name in dataframe.columns
+        if name != index_name
+    }
+    return Dataset(arrays, coords={index_name: (index_name, dataframe.index.values)})
 
 
 def from_table(
@@ -527,8 +583,22 @@ def from_zarr_with_attr(*args, **kwargs):
                 and avalue.endswith("} ")
             ):
                 avalue = ast.literal_eval(avalue[1:-1])
+            if isinstance(avalue, str) and avalue == " < None > ":
+                avalue = None
             attrs[aname] = avalue
         obj[k] = obj[k].assign_attrs(attrs)
+    attrs = {}
+    for aname, avalue in obj.attrs.items():
+        if (
+            isinstance(avalue, str)
+            and avalue.startswith(" {")
+            and avalue.endswith("} ")
+        ):
+            avalue = ast.literal_eval(avalue[1:-1])
+        if isinstance(avalue, str) and avalue == " < None > ":
+            avalue = None
+        attrs[aname] = avalue
+    obj = obj.assign_attrs(attrs)
     return obj
 
 
@@ -759,8 +829,18 @@ def to_zarr_with_attr(self, *args, **kwargs):
         for aname, avalue in self[k].attrs.items():
             if isinstance(avalue, dict):
                 avalue = f" {avalue!r} "
+            if avalue is None:
+                avalue = " < None > "
             attrs[aname] = avalue
         obj[k] = self[k].assign_attrs(attrs)
+    attrs = {}
+    for aname, avalue in self.attrs.items():
+        if isinstance(avalue, dict):
+            avalue = f" {avalue!r} "
+        if avalue is None:
+            avalue = " < None > "
+        attrs[aname] = avalue
+    obj = obj.assign_attrs(attrs)
     return obj.to_zarr(*args, **kwargs)
 
 

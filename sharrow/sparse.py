@@ -10,22 +10,28 @@ import xarray as xr
 def _get_idx(indices, indptr, data, i, j):
     pool_lb = indptr[i]
     pool_ub = indptr[i + 1] - 1
+    if pool_ub < pool_lb:
+        # This indicates there are no values at all for row i
+        return np.nan
     idx_lo = indices[pool_lb]
     idx_hi = indices[pool_ub]
     # check top and bottom
     if j == idx_lo:
-        # printd(f"{pool_lb=}  {pool_ub=}  {indices[pool_lb]=}  {indices[pool_ub]=}  !!!lo  {i=}  {j=}")
+        # The lower bound on possible j values is the j value, return it
         return data[pool_lb]
     elif j == idx_hi:
-        # printd(f"{pool_lb=}  {pool_ub=}  {indices[pool_lb]=}  {indices[pool_ub]=}  !!!hi  {i=}  {j=}")
+        # The upper bound on possible j values is the j value, return it
         return data[pool_ub]
     # check if out of original range
     elif j < idx_lo or j > idx_hi:
-        # printd(f"{pool_lb=}  {pool_ub=}  {indices[pool_lb]=}  {indices[pool_ub]=}  :(  {i=}  {j=}")
+        # the j value is outside the possible range, there is no value to return
         return np.nan
 
+    # The j value is somewhere inside the bounds, so conduct an efficient search to
+    # see if we can find it.
     span = pool_ub - pool_lb - 1
-    # printd(f"{pool_lb=}  {pool_ub=}  {indices[pool_lb]=}  {indices[pool_ub]=}  {span=}  {i=}  {j=}")
+    # assume the j values are uniformly distributed between bounds, guess at the
+    # approximate location of the target j
     peek = (j - idx_lo) / (idx_hi - idx_lo)
     while span > 3:
         candidate = int(peek * span) + pool_lb
