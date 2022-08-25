@@ -16,7 +16,7 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
-from . import __version__
+from ._infer_version import __version__
 from .aster import expression_for_numba, extract_all_name_tokens, extract_names_2
 from .filewrite import blacken, rewrite
 from .relationships import DataTree
