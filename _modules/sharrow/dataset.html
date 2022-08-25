@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>sharrow.dataset &#8212; v2.2.2</title>
+    <title>sharrow.dataset &#8212; v2.2.3</title>
     
   <!-- Loaded before other Sphinx assets -->
   <link href="../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -20,7 +20,7 @@
     href="../../_static/vendor/fontawesome/5.13.0/webfonts/fa-brands-400.woff2">
 
     <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
-    <link rel="stylesheet" href="../../_static/styles/sphinx-book-theme.css?digest=62ba249389abaaa9ffc34bf36a076bdc1d65ee18" type="text/css" />
+    <link rel="stylesheet" href="../../_static/styles/sphinx-book-theme.css?digest=5115cc725059bd94278eecd172e13a965bf8f5a9" type="text/css" />
     <link rel="stylesheet" type="text/css" href="../../_static/togglebutton.css" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css" />
     <link rel="stylesheet" type="text/css" href="../../_static/mystnb.css" />
@@ -37,7 +37,7 @@
     <script src="../../_static/doctools.js"></script>
     <script src="../../_static/clipboard.min.js"></script>
     <script src="../../_static/copybutton.js"></script>
-    <script src="../../_static/scripts/sphinx-book-theme.js?digest=f31d14ad54b65d19161ba51d4ffff3a77ae00456"></script>
+    <script src="../../_static/scripts/sphinx-book-theme.js?digest=9c920249402e914e316237a7dbc6769907cce411"></script>
     <script>let toggleHintShow = 'Click to show';</script>
     <script>let toggleHintHide = 'Click to hide';</script>
     <script>let toggleOpenOnPrint = 'true';</script>
@@ -99,7 +99,7 @@ const thebe_selector_output = ".output, .cell_output"
       <img src="../../_static/logo.png" class="logo" alt="logo">
       
       
-      <h1 class="site-logo" id="site-title">v2.2.2</h1>
+      <h1 class="site-logo" id="site-title">v2.2.3</h1>
       
     </a>
 </div><form class="bd-search d-flex align-items-center" action="../../search.html" method="get">
@@ -364,7 +364,7 @@ title="Open an issue"
 <span class="sd">    source : pandas.DataFrame, pyarrow.Table, xarray.Dataset, or Sequence[str]</span>
 <span class="sd">        The source from which to create a Dataset.  DataFrames and Tables</span>
 <span class="sd">        are converted to Datasets that have one dimension (the rows) and</span>
-<span class="sd">        seperate variables for each of the columns.  A list of strings</span>
+<span class="sd">        separate variables for each of the columns.  A list of strings</span>
 <span class="sd">        creates a dataset with those named empty variables.</span>
 
 <span class="sd">    Returns</span>
@@ -372,8 +372,7 @@ title="Open an issue"
 <span class="sd">    Dataset</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">):</span>
-        <span class="n">source</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="o">.</span><span class="n">from_dataframe</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
-        <span class="c1"># source = cls.from_dataframe_fast(source) # older xarray was slow</span>
+        <span class="n">source</span> <span class="o">=</span> <span class="n">dataset_from_dataframe_fast</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>  <span class="c1"># xarray default can be slow</span>
     <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="p">(</span><span class="n">Table</span><span class="p">,</span> <span class="n">pa</span><span class="o">.</span><span class="n">Table</span><span class="p">)):</span>
         <span class="n">source</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="o">.</span><span class="n">from_table</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
     <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="p">(</span><span class="n">pa</span><span class="o">.</span><span class="n">Table</span><span class="p">)):</span>
@@ -385,6 +384,63 @@ title="Open an issue"
     <span class="k">else</span><span class="p">:</span>
         <span class="n">source</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">source</span></div>
+
+
+<span class="k">def</span> <span class="nf">dataset_from_dataframe_fast</span><span class="p">(</span>
+    <span class="n">dataframe</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">sparse</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;Dataset&quot;</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Convert a pandas.DataFrame into an xarray.Dataset</span>
+
+<span class="sd">    Each column will be converted into an independent variable in the</span>
+<span class="sd">    Dataset. If the dataframe&#39;s index is a MultiIndex, it will be expanded</span>
+<span class="sd">    into a tensor product of one-dimensional indices (filling in missing</span>
+<span class="sd">    values with NaN). This method will produce a Dataset very similar to</span>
+<span class="sd">    that on which the &#39;to_dataframe&#39; method was called, except with</span>
+<span class="sd">    possibly redundant dimensions (since all dataset variables will have</span>
+<span class="sd">    the same dimensionality)</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    dataframe : DataFrame</span>
+<span class="sd">        DataFrame from which to copy data and indices.</span>
+<span class="sd">    sparse : bool, default: False</span>
+<span class="sd">        If true, create a sparse arrays instead of dense numpy arrays. This</span>
+<span class="sd">        can potentially save a large amount of memory if the DataFrame has</span>
+<span class="sd">        a MultiIndex. Requires the sparse package (sparse.pydata.org).</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    New Dataset.</span>
+
+<span class="sd">    See Also</span>
+<span class="sd">    --------</span>
+<span class="sd">    xarray.DataArray.from_series</span>
+<span class="sd">    pandas.DataFrame.to_xarray</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># this is much faster than the default xarray version when not</span>
+    <span class="c1"># using a MultiIndex.</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">dataframe</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">MultiIndex</span><span class="p">)</span> <span class="ow">or</span> <span class="n">sparse</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">Dataset</span><span class="o">.</span><span class="n">from_dataframe</span><span class="p">(</span><span class="n">dataframe</span><span class="p">,</span> <span class="n">sparse</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">dataframe</span><span class="o">.</span><span class="n">columns</span><span class="o">.</span><span class="n">is_unique</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;cannot convert DataFrame with non-unique columns&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">dataframe</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">CategoricalIndex</span><span class="p">):</span>
+        <span class="n">idx</span> <span class="o">=</span> <span class="n">dataframe</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">remove_unused_categories</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">idx</span> <span class="o">=</span> <span class="n">dataframe</span><span class="o">.</span><span class="n">index</span>
+
+    <span class="n">index_name</span> <span class="o">=</span> <span class="n">idx</span><span class="o">.</span><span class="n">name</span> <span class="k">if</span> <span class="n">idx</span><span class="o">.</span><span class="n">name</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="s2">&quot;index&quot;</span>
+    <span class="c1"># Cast to a NumPy array first, in case the Series is a pandas Extension</span>
+    <span class="c1"># array (which doesn&#39;t have a valid NumPy dtype)</span>
+    <span class="n">arrays</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="n">name</span><span class="p">:</span> <span class="p">([</span><span class="n">index_name</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">dataframe</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">dataframe</span><span class="o">.</span><span class="n">columns</span>
+        <span class="k">if</span> <span class="n">name</span> <span class="o">!=</span> <span class="n">index_name</span>
+    <span class="p">}</span>
+    <span class="k">return</span> <span class="n">Dataset</span><span class="p">(</span><span class="n">arrays</span><span class="p">,</span> <span class="n">coords</span><span class="o">=</span><span class="p">{</span><span class="n">index_name</span><span class="p">:</span> <span class="p">(</span><span class="n">index_name</span><span class="p">,</span> <span class="n">dataframe</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">values</span><span class="p">)})</span>
 
 
 <div class="viewcode-block" id="from_table"><a class="viewcode-back" href="../../api.html#sharrow.dataset.from_table">[docs]</a><span class="k">def</span> <span class="nf">from_table</span><span class="p">(</span>
@@ -809,8 +865,22 @@ title="Open an issue"
                 <span class="ow">and</span> <span class="n">avalue</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;} &quot;</span><span class="p">)</span>
             <span class="p">):</span>
                 <span class="n">avalue</span> <span class="o">=</span> <span class="n">ast</span><span class="o">.</span><span class="n">literal_eval</span><span class="p">(</span><span class="n">avalue</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">avalue</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="n">avalue</span> <span class="o">==</span> <span class="s2">&quot; &lt; None &gt; &quot;</span><span class="p">:</span>
+                <span class="n">avalue</span> <span class="o">=</span> <span class="kc">None</span>
             <span class="n">attrs</span><span class="p">[</span><span class="n">aname</span><span class="p">]</span> <span class="o">=</span> <span class="n">avalue</span>
         <span class="n">obj</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">obj</span><span class="p">[</span><span class="n">k</span><span class="p">]</span><span class="o">.</span><span class="n">assign_attrs</span><span class="p">(</span><span class="n">attrs</span><span class="p">)</span>
+    <span class="n">attrs</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">aname</span><span class="p">,</span> <span class="n">avalue</span> <span class="ow">in</span> <span class="n">obj</span><span class="o">.</span><span class="n">attrs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="p">(</span>
+            <span class="nb">isinstance</span><span class="p">(</span><span class="n">avalue</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span>
+            <span class="ow">and</span> <span class="n">avalue</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot; {&quot;</span><span class="p">)</span>
+            <span class="ow">and</span> <span class="n">avalue</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;} &quot;</span><span class="p">)</span>
+        <span class="p">):</span>
+            <span class="n">avalue</span> <span class="o">=</span> <span class="n">ast</span><span class="o">.</span><span class="n">literal_eval</span><span class="p">(</span><span class="n">avalue</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">avalue</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="n">avalue</span> <span class="o">==</span> <span class="s2">&quot; &lt; None &gt; &quot;</span><span class="p">:</span>
+            <span class="n">avalue</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">attrs</span><span class="p">[</span><span class="n">aname</span><span class="p">]</span> <span class="o">=</span> <span class="n">avalue</span>
+    <span class="n">obj</span> <span class="o">=</span> <span class="n">obj</span><span class="o">.</span><span class="n">assign_attrs</span><span class="p">(</span><span class="n">attrs</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">obj</span>
 
 
@@ -1041,8 +1111,18 @@ title="Open an issue"
         <span class="k">for</span> <span class="n">aname</span><span class="p">,</span> <span class="n">avalue</span> <span class="ow">in</span> <span class="bp">self</span><span class="p">[</span><span class="n">k</span><span class="p">]</span><span class="o">.</span><span class="n">attrs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
             <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">avalue</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
                 <span class="n">avalue</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot; </span><span class="si">{</span><span class="n">avalue</span><span class="si">!r}</span><span class="s2"> &quot;</span>
+            <span class="k">if</span> <span class="n">avalue</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">avalue</span> <span class="o">=</span> <span class="s2">&quot; &lt; None &gt; &quot;</span>
             <span class="n">attrs</span><span class="p">[</span><span class="n">aname</span><span class="p">]</span> <span class="o">=</span> <span class="n">avalue</span>
         <span class="n">obj</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="p">[</span><span class="n">k</span><span class="p">]</span><span class="o">.</span><span class="n">assign_attrs</span><span class="p">(</span><span class="n">attrs</span><span class="p">)</span>
+    <span class="n">attrs</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">aname</span><span class="p">,</span> <span class="n">avalue</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">attrs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">avalue</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+            <span class="n">avalue</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot; </span><span class="si">{</span><span class="n">avalue</span><span class="si">!r}</span><span class="s2"> &quot;</span>
+        <span class="k">if</span> <span class="n">avalue</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">avalue</span> <span class="o">=</span> <span class="s2">&quot; &lt; None &gt; &quot;</span>
+        <span class="n">attrs</span><span class="p">[</span><span class="n">aname</span><span class="p">]</span> <span class="o">=</span> <span class="n">avalue</span>
+    <span class="n">obj</span> <span class="o">=</span> <span class="n">obj</span><span class="o">.</span><span class="n">assign_attrs</span><span class="p">(</span><span class="n">attrs</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">obj</span><span class="o">.</span><span class="n">to_zarr</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
 

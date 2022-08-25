@@ -30,6 +30,14 @@ the root directory run
 pip install -e .
 ```
 
+Alternatively, you can install sharrow plus all the dependencies (including
+additional optional dependencies for development and testing) in a conda environment,
+using the `envs/development.yml` environment to create a `sh-dev` environment:
+
+```shell
+conda env create -f envs/development.yml
+```
+
 ## Testing
 
 Sharrow includes unit tests both in the `sharrow/tests` directory and embedded

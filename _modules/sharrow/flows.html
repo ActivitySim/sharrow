@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>sharrow.flows &#8212; v2.2.2</title>
+    <title>sharrow.flows &#8212; v2.2.3</title>
     
   <!-- Loaded before other Sphinx assets -->
   <link href="../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -20,7 +20,7 @@
     href="../../_static/vendor/fontawesome/5.13.0/webfonts/fa-brands-400.woff2">
 
     <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
-    <link rel="stylesheet" href="../../_static/styles/sphinx-book-theme.css?digest=62ba249389abaaa9ffc34bf36a076bdc1d65ee18" type="text/css" />
+    <link rel="stylesheet" href="../../_static/styles/sphinx-book-theme.css?digest=5115cc725059bd94278eecd172e13a965bf8f5a9" type="text/css" />
     <link rel="stylesheet" type="text/css" href="../../_static/togglebutton.css" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css" />
     <link rel="stylesheet" type="text/css" href="../../_static/mystnb.css" />
@@ -37,7 +37,7 @@
     <script src="../../_static/doctools.js"></script>
     <script src="../../_static/clipboard.min.js"></script>
     <script src="../../_static/copybutton.js"></script>
-    <script src="../../_static/scripts/sphinx-book-theme.js?digest=f31d14ad54b65d19161ba51d4ffff3a77ae00456"></script>
+    <script src="../../_static/scripts/sphinx-book-theme.js?digest=9c920249402e914e316237a7dbc6769907cce411"></script>
     <script>let toggleHintShow = 'Click to show';</script>
     <script>let toggleHintHide = 'Click to hide';</script>
     <script>let toggleOpenOnPrint = 'true';</script>
@@ -99,7 +99,7 @@ const thebe_selector_output = ".output, .cell_output"
       <img src="../../_static/logo.png" class="logo" alt="logo">
       
       
-      <h1 class="site-logo" id="site-title">v2.2.2</h1>
+      <h1 class="site-logo" id="site-title">v2.2.3</h1>
       
     </a>
 </div><form class="bd-search d-flex align-items-center" action="../../search.html" method="get">
@@ -1117,48 +1117,62 @@ title="Open an issue"
         <span class="c1"># write individual function files for each expression</span>
         <span class="k">for</span> <span class="n">n</span><span class="p">,</span> <span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">expr</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">defs</span><span class="o">.</span><span class="n">items</span><span class="p">()):</span>
             <span class="n">expr</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">expr</span><span class="p">)</span><span class="o">.</span><span class="n">lstrip</span><span class="p">()</span>
-            <span class="n">init_expr</span> <span class="o">=</span> <span class="n">expr</span>
-            <span class="k">for</span> <span class="n">spacename</span><span class="p">,</span> <span class="n">spacearrays</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">tree</span><span class="o">.</span><span class="n">subspaces</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-                <span class="n">dim_slots</span><span class="p">,</span> <span class="n">digital_encodings</span><span class="p">,</span> <span class="n">blenders</span> <span class="o">=</span> <span class="n">meta_data</span><span class="p">[</span><span class="n">spacename</span><span class="p">]</span>
-                <span class="k">try</span><span class="p">:</span>
-                    <span class="n">expr</span> <span class="o">=</span> <span class="n">expression_for_numba</span><span class="p">(</span>
-                        <span class="n">expr</span><span class="p">,</span>
-                        <span class="n">spacename</span><span class="p">,</span>
-                        <span class="n">dim_slots</span><span class="p">,</span>
-                        <span class="n">dim_slots</span><span class="p">,</span>
-                        <span class="n">digital_encodings</span><span class="o">=</span><span class="n">digital_encodings</span><span class="p">,</span>
-                        <span class="n">extra_vars</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">tree</span><span class="o">.</span><span class="n">extra_vars</span><span class="p">,</span>
-                        <span class="n">blenders</span><span class="o">=</span><span class="n">blenders</span><span class="p">,</span>
-                    <span class="p">)</span>
-                <span class="k">except</span> <span class="ne">KeyError</span> <span class="k">as</span> <span class="n">key_err</span><span class="p">:</span>
-                    <span class="k">if</span> <span class="s2">&quot;..&quot;</span> <span class="ow">in</span> <span class="n">key_err</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
-                        <span class="n">topkey</span><span class="p">,</span> <span class="n">attrkey</span> <span class="o">=</span> <span class="n">key_err</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;..&quot;</span><span class="p">)</span>
-                    <span class="k">else</span><span class="p">:</span>
-                        <span class="k">raise</span>
-                    <span class="c1"># check if we can resolve this name on any other subspace</span>
-                    <span class="n">other_way</span> <span class="o">=</span> <span class="kc">False</span>
-                    <span class="k">for</span> <span class="n">other_spacename</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">tree</span><span class="o">.</span><span class="n">subspace_fallbacks</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">topkey</span><span class="p">,</span> <span class="p">[]):</span>
-                        <span class="n">dim_slots</span><span class="p">,</span> <span class="n">digital_encodings</span><span class="p">,</span> <span class="n">blenders</span> <span class="o">=</span> <span class="n">meta_data</span><span class="p">[</span>
-                            <span class="n">other_spacename</span>
-                        <span class="p">]</span>
-                        <span class="k">try</span><span class="p">:</span>
-                            <span class="n">expr</span> <span class="o">=</span> <span class="n">expression_for_numba</span><span class="p">(</span>
-                                <span class="n">expr</span><span class="p">,</span>
-                                <span class="n">spacename</span><span class="p">,</span>
-                                <span class="n">dim_slots</span><span class="p">,</span>
-                                <span class="n">dim_slots</span><span class="p">,</span>
-                                <span class="n">digital_encodings</span><span class="o">=</span><span class="n">digital_encodings</span><span class="p">,</span>
-                                <span class="n">prefer_name</span><span class="o">=</span><span class="n">other_spacename</span><span class="p">,</span>
-                                <span class="n">extra_vars</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">tree</span><span class="o">.</span><span class="n">extra_vars</span><span class="p">,</span>
-                                <span class="n">blenders</span><span class="o">=</span><span class="n">blenders</span><span class="p">,</span>
-                            <span class="p">)</span>
-                        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
-                            <span class="k">pass</span>
+            <span class="n">prior_expr</span> <span class="o">=</span> <span class="n">init_expr</span> <span class="o">=</span> <span class="n">expr</span>
+            <span class="n">other_way</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="k">while</span> <span class="n">other_way</span><span class="p">:</span>
+                <span class="n">other_way</span> <span class="o">=</span> <span class="kc">False</span>
+                <span class="c1"># if other_way is triggered, there may be residual other terms</span>
+                <span class="c1"># that were not addressed, so this loop should be applied again.</span>
+                <span class="k">for</span> <span class="n">spacename</span><span class="p">,</span> <span class="n">spacearrays</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">tree</span><span class="o">.</span><span class="n">subspaces</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                    <span class="n">dim_slots</span><span class="p">,</span> <span class="n">digital_encodings</span><span class="p">,</span> <span class="n">blenders</span> <span class="o">=</span> <span class="n">meta_data</span><span class="p">[</span><span class="n">spacename</span><span class="p">]</span>
+                    <span class="k">try</span><span class="p">:</span>
+                        <span class="n">expr</span> <span class="o">=</span> <span class="n">expression_for_numba</span><span class="p">(</span>
+                            <span class="n">expr</span><span class="p">,</span>
+                            <span class="n">spacename</span><span class="p">,</span>
+                            <span class="n">dim_slots</span><span class="p">,</span>
+                            <span class="n">dim_slots</span><span class="p">,</span>
+                            <span class="n">digital_encodings</span><span class="o">=</span><span class="n">digital_encodings</span><span class="p">,</span>
+                            <span class="n">extra_vars</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">tree</span><span class="o">.</span><span class="n">extra_vars</span><span class="p">,</span>
+                            <span class="n">blenders</span><span class="o">=</span><span class="n">blenders</span><span class="p">,</span>
+                        <span class="p">)</span>
+                    <span class="k">except</span> <span class="ne">KeyError</span> <span class="k">as</span> <span class="n">key_err</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="s2">&quot;..&quot;</span> <span class="ow">in</span> <span class="n">key_err</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+                            <span class="n">topkey</span><span class="p">,</span> <span class="n">attrkey</span> <span class="o">=</span> <span class="n">key_err</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;..&quot;</span><span class="p">)</span>
                         <span class="k">else</span><span class="p">:</span>
-                            <span class="n">other_way</span> <span class="o">=</span> <span class="kc">True</span>
-                            <span class="k">break</span>
-                    <span class="k">if</span> <span class="ow">not</span> <span class="n">other_way</span><span class="p">:</span>
-                        <span class="k">raise</span>
+                            <span class="k">raise</span>
+                        <span class="c1"># check if we can resolve this name on any other subspace</span>
+                        <span class="k">for</span> <span class="n">other_spacename</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">tree</span><span class="o">.</span><span class="n">subspace_fallbacks</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+                            <span class="n">topkey</span><span class="p">,</span> <span class="p">[]</span>
+                        <span class="p">):</span>
+                            <span class="n">dim_slots</span><span class="p">,</span> <span class="n">digital_encodings</span><span class="p">,</span> <span class="n">blenders</span> <span class="o">=</span> <span class="n">meta_data</span><span class="p">[</span>
+                                <span class="n">other_spacename</span>
+                            <span class="p">]</span>
+                            <span class="k">try</span><span class="p">:</span>
+                                <span class="n">expr</span> <span class="o">=</span> <span class="n">expression_for_numba</span><span class="p">(</span>
+                                    <span class="n">expr</span><span class="p">,</span>
+                                    <span class="n">spacename</span><span class="p">,</span>
+                                    <span class="n">dim_slots</span><span class="p">,</span>
+                                    <span class="n">dim_slots</span><span class="p">,</span>
+                                    <span class="n">digital_encodings</span><span class="o">=</span><span class="n">digital_encodings</span><span class="p">,</span>
+                                    <span class="n">prefer_name</span><span class="o">=</span><span class="n">other_spacename</span><span class="p">,</span>
+                                    <span class="n">extra_vars</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">tree</span><span class="o">.</span><span class="n">extra_vars</span><span class="p">,</span>
+                                    <span class="n">blenders</span><span class="o">=</span><span class="n">blenders</span><span class="p">,</span>
+                                <span class="p">)</span>
+                            <span class="k">except</span> <span class="ne">KeyError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>  <span class="c1"># noqa: F841</span>
+                                <span class="k">pass</span>
+                            <span class="k">else</span><span class="p">:</span>
+                                <span class="n">other_way</span> <span class="o">=</span> <span class="kc">True</span>
+                                <span class="c1"># at least one variable was found in a fallback</span>
+                                <span class="k">break</span>
+                        <span class="k">if</span> <span class="ow">not</span> <span class="n">other_way</span><span class="p">:</span>
+                            <span class="k">raise</span>
+                <span class="k">if</span> <span class="n">prior_expr</span> <span class="o">==</span> <span class="n">expr</span><span class="p">:</span>
+                    <span class="c1"># nothing was changed, break out of loop</span>
+                    <span class="k">break</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="c1"># something was changed, run the loop again to confirm</span>
+                    <span class="c1"># nothing else needs to change</span>
+                    <span class="n">prior_expr</span> <span class="o">=</span> <span class="n">expr</span>
 
             <span class="c1"># now find instances where an identifier is previously created in this flow.</span>
             <span class="n">expr</span> <span class="o">=</span> <span class="n">expression_for_numba</span><span class="p">(</span>
@@ -1622,7 +1636,10 @@ title="Open an issue"
                         <span class="n">runner_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_idotter</span>
                 <span class="k">else</span><span class="p">:</span>
                     <span class="n">runner_</span> <span class="o">=</span> <span class="n">runner</span>
-                <span class="n">named_args</span> <span class="o">=</span> <span class="n">inspect</span><span class="o">.</span><span class="n">getfullargspec</span><span class="p">(</span><span class="n">runner_</span><span class="o">.</span><span class="n">py_func</span><span class="p">)</span><span class="o">.</span><span class="n">args</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">named_args</span> <span class="o">=</span> <span class="n">inspect</span><span class="o">.</span><span class="n">getfullargspec</span><span class="p">(</span><span class="n">runner_</span><span class="o">.</span><span class="n">py_func</span><span class="p">)</span><span class="o">.</span><span class="n">args</span>
+                <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+                    <span class="n">named_args</span> <span class="o">=</span> <span class="n">inspect</span><span class="o">.</span><span class="n">getfullargspec</span><span class="p">(</span><span class="n">runner_</span><span class="p">)</span><span class="o">.</span><span class="n">args</span>
                 <span class="n">arguments</span> <span class="o">=</span> <span class="p">[]</span>
                 <span class="k">for</span> <span class="n">arg</span> <span class="ow">in</span> <span class="n">named_args</span><span class="p">:</span>
                     <span class="k">if</span> <span class="n">arg</span> <span class="ow">in</span> <span class="p">{</span>
