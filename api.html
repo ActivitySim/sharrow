@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
-    <title>API Reference &#8212; v2.2.3</title>
+    <title>API Reference &#8212; v2.2.4</title>
     
   <!-- Loaded before other Sphinx assets -->
   <link href="_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -101,7 +101,7 @@ const thebe_selector_output = ".output, .cell_output"
       <img src="_static/logo.png" class="logo" alt="logo">
       
       
-      <h1 class="site-logo" id="site-title">v2.2.3</h1>
+      <h1 class="site-logo" id="site-title">v2.2.4</h1>
       
     </a>
 </div><form class="bd-search d-flex align-items-center" action="search.html" method="get">
@@ -1148,14 +1148,16 @@ none is given.  Ignored if <cite>index</cite> is given explicitly.</p></li>
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>omx</strong> (<em>openmatrix.File</em><em> or </em><em>larch.OMX</em>) – An OMX-format file, opened for reading.</p></li>
-<li><p><strong>index_names</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.10)"><em>tuple</em></a><em>, </em><em>default</em><em> (</em><em>&quot;otaz&quot;</em><em>, </em><em>&quot;dtaz&quot;</em><em>, </em><em>&quot;time_period&quot;</em><em>)</em>) – Should be a tuple of length 3, giving the names of the three
+<li><p><strong>index_names</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.10)"><em>tuple</em></a><em>, </em><em>default</em><em> (</em><em>&quot;otaz&quot;</em><em>, </em><em>&quot;dtaz&quot;</em><em>)</em>) – Should be a tuple of length 3, giving the names of the three
 dimensions.  The first two names are the native dimensions from
 the open matrix file, the last is the name of the implicit
 dimension that is created by parsing array names.</p></li>
-<li><p><strong>indexes</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a><em>, </em><em>optional</em>) – The name of a ‘lookup’ in the OMX file, which will be used to
+<li><p><strong>indexes</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a><em> or </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.10)"><em>tuple</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a><em>]</em><em>, </em><em>optional</em>) – The name of a ‘lookup’ in the OMX file, which will be used to
 populate the coordinates for the two native dimensions.  Or,
 specify “one-based” or “zero-based” to assume sequential and
-consecutive numbering starting with 1 or 0 respectively.</p></li>
+consecutive numbering starting with 1 or 0 respectively. For
+non-square OMX data, this must be given as a tuple, relating
+indexes as above for each dimension of <cite>index_names</cite>.</p></li>
 <li><p><strong>renames</strong> (<em>Mapping</em><em> or </em><em>Collection</em><em>, </em><em>optional</em>) – Limit the import only to these data elements.  If given as a
 mapping, the keys will be the names of variables in the resulting
 dataset, and the values give the names of data matrix tables in the

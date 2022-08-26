@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>sharrow.dataset &#8212; v2.2.3</title>
+    <title>sharrow.dataset &#8212; v2.2.4</title>
     
   <!-- Loaded before other Sphinx assets -->
   <link href="../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -99,7 +99,7 @@ const thebe_selector_output = ".output, .cell_output"
       <img src="../../_static/logo.png" class="logo" alt="logo">
       
       
-      <h1 class="site-logo" id="site-title">v2.2.3</h1>
+      <h1 class="site-logo" id="site-title">v2.2.4</h1>
       
     </a>
 </div><form class="bd-search d-flex align-items-center" action="../../search.html" method="get">
@@ -512,16 +512,18 @@ title="Open an issue"
 <span class="sd">    ----------</span>
 <span class="sd">    omx : openmatrix.File or larch.OMX</span>
 <span class="sd">        An OMX-format file, opened for reading.</span>
-<span class="sd">    index_names : tuple, default (&quot;otaz&quot;, &quot;dtaz&quot;, &quot;time_period&quot;)</span>
+<span class="sd">    index_names : tuple, default (&quot;otaz&quot;, &quot;dtaz&quot;)</span>
 <span class="sd">        Should be a tuple of length 3, giving the names of the three</span>
 <span class="sd">        dimensions.  The first two names are the native dimensions from</span>
 <span class="sd">        the open matrix file, the last is the name of the implicit</span>
 <span class="sd">        dimension that is created by parsing array names.</span>
-<span class="sd">    indexes : str, optional</span>
+<span class="sd">    indexes : str or tuple[str], optional</span>
 <span class="sd">        The name of a &#39;lookup&#39; in the OMX file, which will be used to</span>
 <span class="sd">        populate the coordinates for the two native dimensions.  Or,</span>
 <span class="sd">        specify &quot;one-based&quot; or &quot;zero-based&quot; to assume sequential and</span>
-<span class="sd">        consecutive numbering starting with 1 or 0 respectively.</span>
+<span class="sd">        consecutive numbering starting with 1 or 0 respectively. For</span>
+<span class="sd">        non-square OMX data, this must be given as a tuple, relating</span>
+<span class="sd">        indexes as above for each dimension of `index_names`.</span>
 <span class="sd">    renames : Mapping or Collection, optional</span>
 <span class="sd">        Limit the import only to these data elements.  If given as a</span>
 <span class="sd">        mapping, the keys will be the names of variables in the resulting</span>
@@ -538,9 +540,11 @@ title="Open an issue"
     <span class="c1"># handle both larch.OMX and openmatrix.open_file versions</span>
     <span class="k">if</span> <span class="s2">&quot;lar&quot;</span> <span class="ow">in</span> <span class="nb">type</span><span class="p">(</span><span class="n">omx</span><span class="p">)</span><span class="o">.</span><span class="vm">__module__</span><span class="p">:</span>
         <span class="n">omx_data</span> <span class="o">=</span> <span class="n">omx</span><span class="o">.</span><span class="n">data</span>
+        <span class="n">omx_lookup</span> <span class="o">=</span> <span class="n">omx</span><span class="o">.</span><span class="n">lookup</span>
         <span class="n">omx_shape</span> <span class="o">=</span> <span class="n">omx</span><span class="o">.</span><span class="n">shape</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="n">omx_data</span> <span class="o">=</span> <span class="n">omx</span><span class="o">.</span><span class="n">root</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">]</span>
+        <span class="n">omx_lookup</span> <span class="o">=</span> <span class="n">omx</span><span class="o">.</span><span class="n">root</span><span class="p">[</span><span class="s2">&quot;lookup&quot;</span><span class="p">]</span>
         <span class="n">omx_shape</span> <span class="o">=</span> <span class="n">omx</span><span class="o">.</span><span class="n">shape</span><span class="p">()</span>
 
     <span class="n">arrays</span> <span class="o">=</span> <span class="p">{}</span>
@@ -567,6 +571,30 @@ title="Open an issue"
             <span class="n">index_names</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span> <span class="n">zero_based</span><span class="p">(</span><span class="n">omx_shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span>
             <span class="n">index_names</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span> <span class="n">zero_based</span><span class="p">(</span><span class="n">omx_shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
         <span class="p">}</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">indexes</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">indexes</span> <span class="ow">in</span> <span class="n">omx_lookup</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">omx_shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="n">omx_shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;singleton arbitrary coordinates on non-square arrays&quot;</span><span class="p">)</span>
+            <span class="n">ixs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">omx_lookup</span><span class="p">[</span><span class="n">indexes</span><span class="p">])</span>
+            <span class="n">indexes</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="n">index_names</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span> <span class="n">ixs</span><span class="p">,</span>
+                <span class="n">index_names</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span> <span class="n">ixs</span><span class="p">,</span>
+            <span class="p">}</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">indexes</span><span class="si">}</span><span class="s2"> not found in OMX lookups&quot;</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">indexes</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
+        <span class="n">indexes_</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">n</span><span class="p">,</span> <span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">index_names</span><span class="p">,</span> <span class="n">indexes</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="s2">&quot;one-based&quot;</span><span class="p">:</span>
+                <span class="n">indexes_</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">one_based</span><span class="p">(</span><span class="n">omx_shape</span><span class="p">[</span><span class="n">n</span><span class="p">])</span>
+            <span class="k">elif</span> <span class="n">i</span> <span class="o">==</span> <span class="s2">&quot;zero-based&quot;</span><span class="p">:</span>
+                <span class="n">indexes_</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">zero_based</span><span class="p">(</span><span class="n">omx_shape</span><span class="p">[</span><span class="n">n</span><span class="p">])</span>
+            <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">omx_lookup</span><span class="p">:</span>
+                    <span class="n">indexes_</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">omx_lookup</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2"> not found in OMX lookups&quot;</span><span class="p">)</span>
+        <span class="n">indexes</span> <span class="o">=</span> <span class="n">indexes_</span>
     <span class="k">if</span> <span class="n">indexes</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">d</span><span class="p">[</span><span class="s2">&quot;coords&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
             <span class="n">index_name</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;dims&quot;</span><span class="p">:</span> <span class="n">index_name</span><span class="p">,</span> <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="n">index</span><span class="p">}</span>
