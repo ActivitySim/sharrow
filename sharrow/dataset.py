@@ -230,16 +230,18 @@ def from_omx(
     ----------
     omx : openmatrix.File or larch.OMX
         An OMX-format file, opened for reading.
-    index_names : tuple, default ("otaz", "dtaz", "time_period")
+    index_names : tuple, default ("otaz", "dtaz")
         Should be a tuple of length 3, giving the names of the three
         dimensions.  The first two names are the native dimensions from
         the open matrix file, the last is the name of the implicit
         dimension that is created by parsing array names.
-    indexes : str, optional
+    indexes : str or tuple[str], optional
         The name of a 'lookup' in the OMX file, which will be used to
         populate the coordinates for the two native dimensions.  Or,
         specify "one-based" or "zero-based" to assume sequential and
-        consecutive numbering starting with 1 or 0 respectively.
+        consecutive numbering starting with 1 or 0 respectively. For
+        non-square OMX data, this must be given as a tuple, relating
+        indexes as above for each dimension of `index_names`.
     renames : Mapping or Collection, optional
         Limit the import only to these data elements.  If given as a
         mapping, the keys will be the names of variables in the resulting
@@ -256,9 +258,11 @@ def from_omx(
     # handle both larch.OMX and openmatrix.open_file versions
     if "lar" in type(omx).__module__:
         omx_data = omx.data
+        omx_lookup = omx.lookup
         omx_shape = omx.shape
     else:
         omx_data = omx.root["data"]
+        omx_lookup = omx.root["lookup"]
         omx_shape = omx.shape()
 
     arrays = {}
@@ -285,6 +289,30 @@ def from_omx(
             index_names[0]: zero_based(omx_shape[0]),
             index_names[1]: zero_based(omx_shape[1]),
         }
+    elif isinstance(indexes, str):
+        if indexes in omx_lookup:
+            if omx_shape[0] != omx_shape[1]:
+                raise ValueError("singleton arbitrary coordinates on non-square arrays")
+            ixs = np.asarray(omx_lookup[indexes])
+            indexes = {
+                index_names[0]: ixs,
+                index_names[1]: ixs,
+            }
+        else:
+            raise KeyError(f"{indexes} not found in OMX lookups")
+    elif isinstance(indexes, tuple):
+        indexes_ = {}
+        for n, (name, i) in enumerate(zip(index_names, indexes)):
+            if i == "one-based":
+                indexes_[name] = one_based(omx_shape[n])
+            elif i == "zero-based":
+                indexes_[name] = zero_based(omx_shape[n])
+            elif isinstance(i, str):
+                if i in omx_lookup:
+                    indexes_[name] = np.asarray(omx_lookup[i])
+                else:
+                    raise KeyError(f"{i} not found in OMX lookups")
+        indexes = indexes_
     if indexes is not None:
         d["coords"] = {
             index_name: {"dims": index_name, "data": index}

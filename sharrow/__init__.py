@@ -1,7 +1,7 @@
 from xarray import DataArray
 
 from . import dataset, example_data, selectors, shared_memory, sparse
-from ._version import version as __version__
+from ._infer_version import __version__, __version_tuple__
 from .dataset import Dataset
 from .digital_encoding import array_decode, array_encode
 from .flows import Flow
