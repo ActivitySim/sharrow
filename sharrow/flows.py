@@ -1,3 +1,4 @@
+import ast
 import base64
 import hashlib
 import importlib
@@ -677,6 +678,11 @@ class Flow:
                 if k in all_raw_names:
                     self._used_extra_vars[k] = v
 
+        self._used_aux_vars = []
+        for aux_var in self.tree.aux_vars:
+            if aux_var in all_raw_names:
+                self._used_aux_vars.append(aux_var)
+
         self._hashing_level = hashing_level
         if self._hashing_level > 1:
             func_code, all_name_tokens = self.init_sub_funcs(
@@ -713,6 +719,8 @@ class Flow:
             v = self._used_extra_vars[k]
             _flow_hash_push(k)
             _flow_hash_push(v)
+        for k in sorted(self._used_aux_vars):
+            _flow_hash_push(k)
         _flow_hash_push("---DataTree---")
         for k in self.arg_names:
             _flow_hash_push(f"arg:{k}")
@@ -786,6 +794,7 @@ class Flow:
         }
         self.arg_name_positions = index_slots
         candidate_names = self.tree.namespace_names()
+        candidate_names |= set(f"__aux_var__{i}" for i in self.tree.aux_vars.keys())
 
         meta_data = {}
 
@@ -901,6 +910,22 @@ class Flow:
                 "_outputs",
                 extra_vars=self.tree.extra_vars,
             )
+
+            aux_tokens = {
+                k: ast.parse(f"__aux_var__{k}", mode="eval").body
+                for k in self.tree.aux_vars.keys()
+            }
+
+            # now handle aux vars
+            expr = expression_for_numba(
+                expr,
+                "",
+                (),
+                spacevars=aux_tokens,
+                prefer_name="aux_var",
+                extra_vars=self.tree.extra_vars,
+            )
+
             if (k == init_expr) and (init_expr == expr) and k.isidentifier():
                 logger.error(f"unable to rewrite '{k}' to itself")
                 raise ValueError(f"unable to rewrite '{k}' to itself")

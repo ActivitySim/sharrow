@@ -253,6 +253,9 @@ class DataTree:
     dim_order : Tuple[str], optional
         The order of dimensions to use in Flow outputs.  Generally only needed
         if there are multiple dimensions in the root dataset.
+    aux_vars : Mapping[str,Any], optional
+        Additional named arrays or numba-typable variables that can be
+        referenced by expressions in Flow objects created using this DataTree.
     """
 
     DatasetType = Dataset
@@ -267,6 +270,7 @@ class DataTree:
         relationships=(),
         force_digitization=False,
         dim_order=None,
+        aux_vars=None,
         **kwargs,
     ):
         if isinstance(graph, Dataset):
@@ -287,6 +291,7 @@ class DataTree:
         self.root_node_name = root_node_name
         self.extra_funcs = extra_funcs
         self.extra_vars = extra_vars or {}
+        self.aux_vars = aux_vars or {}
         self.cache_dir = cache_dir
         self._cached_indexes = {}
         for k, v in kwargs.items():
@@ -1049,6 +1054,8 @@ class DataTree:
         if mangled_name[:2] != "__":
             raise KeyError(mangled_name)
         name1, name2 = mangled_name[2:].split("__", 1)
+        if name1 == "aux_var":
+            return self.aux_vars[name2]
         dataset = self._graph.nodes[name1].get("dataset")
         if name2.startswith("_s_"):
             if name2.endswith("__data"):
