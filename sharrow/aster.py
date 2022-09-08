@@ -617,6 +617,23 @@ class RewriteForNumba(ast.NodeTransformer):
                     node,
                     missing_dim_value=_b,
                 )
+            # for XXX[...], there is no space name and XXX is the name of an aux_var
+            if (
+                node.value.id in self.spacevars
+                and isinstance(self.spacevars[node.value.id], ast.Name)
+                and self.spacename == ""
+            ):
+                result = ast.Subscript(
+                    value=self.spacevars[node.value.id],
+                    slice=self.visit(node.slice),
+                    ctx=node.ctx,
+                )
+                self.log_event(
+                    f"visit_Subscript(AuxVar {node.value.id})",
+                    node,
+                    result,
+                )
+                return result
         self.log_event("visit_Subscript(no change)", node)
         return node
 

@@ -339,6 +339,7 @@ class DataTree:
         return dict(
             extra_funcs=self.extra_funcs,
             extra_vars=self.extra_vars,
+            aux_vars=self.aux_vars,
             cache_dir=self.cache_dir,
             force_digitization=self.force_digitization,
         )
