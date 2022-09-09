@@ -1321,7 +1321,12 @@ class Flow:
                         continue
                     if arg.startswith("_arg"):
                         continue
-                    arguments.append(np.asarray(rg.get_named_array(arg)))
+                    arg_value = rg.get_named_array(arg)
+                    # aux_vars get passed through as is, not forced to be arrays
+                    if arg.startswith("__aux_var"):
+                        arguments.append(arg_value)
+                    else:
+                        arguments.append(np.asarray(arg_value))
                 kwargs = {}
                 if dtype is not None:
                     kwargs["dtype"] = dtype
@@ -1394,10 +1399,14 @@ class Flow:
                         "logsums",
                     }:
                         continue
-                    argument = np.asarray(rg.get_named_array(arg))
-                    if argument.dtype.kind == "O":
-                        argument = argument.astype("unicode")
-                    arguments.append(argument)
+                    argument = rg.get_named_array(arg)
+                    # aux_vars get passed through as is, not forced to be arrays
+                    if arg.startswith("__aux_var"):
+                        arguments.append(argument)
+                    else:
+                        if argument.dtype.kind == "O":
+                            argument = argument.astype("unicode")
+                        arguments.append(np.asarray(argument))
                 kwargs = {}
                 if dtype is not None:
                     kwargs["dtype"] = dtype
