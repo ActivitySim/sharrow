@@ -111,6 +111,7 @@ jobs:
     # now send to PyPI
     - name: Publish to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
+      if: github.repository_owner == 'ActivitySim'
       with:
         user: __token__
         password: ${{ secrets.PYPI_API_TOKEN }}
