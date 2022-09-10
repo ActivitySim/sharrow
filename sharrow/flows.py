@@ -599,6 +599,10 @@ class Flow:
             hashing_level=hashing_level,
             dim_order=dim_order,
             dim_exclude=dim_exclude,
+            error_model=error_model,
+            boundscheck=boundscheck,
+            nopython=nopython,
+            fastmath=fastmath,
         )
         # return from library if available
         if flow_library is not None and self.flow_hash in flow_library:
@@ -678,6 +682,12 @@ class Flow:
                 if k in all_raw_names:
                     self._used_extra_vars[k] = v
 
+        self._used_extra_funcs = set()
+        if self.tree.extra_funcs:
+            for f in self.tree.extra_funcs:
+                if f.__name__ in all_raw_names:
+                    self._used_extra_funcs.add(f.__name__)
+
         self._used_aux_vars = []
         for aux_var in self.tree.aux_vars:
             if aux_var in all_raw_names:
@@ -720,7 +730,9 @@ class Flow:
             _flow_hash_push(k)
             _flow_hash_push(v)
         for k in sorted(self._used_aux_vars):
-            _flow_hash_push(k)
+            _flow_hash_push(f"aux_var:{k}")
+        for k in sorted(self._used_extra_funcs):
+            _flow_hash_push(f"func:{k}")
         _flow_hash_push("---DataTree---")
         for k in self.arg_names:
             _flow_hash_push(f"arg:{k}")
