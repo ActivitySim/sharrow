@@ -1084,10 +1084,14 @@ class Flow:
                     import cloudpickle as pickle
                 except ModuleNotFoundError:
                     import pickle
-                dependencies.add("import pickle")
                 func_code += "\n\n# extra_funcs\n"
                 for x_func in self.tree.extra_funcs:
-                    func_code += f"\n\n{x_func.__name__} = pickle.loads({repr(pickle.dumps(x_func))})\n"
+                    if x_func.__name__ in self._used_extra_funcs:
+                        if x_func.__module__ == "__main__":
+                            dependencies.add("import pickle")
+                            func_code += f"\n\n{x_func.__name__} = pickle.loads({repr(pickle.dumps(x_func))})\n"
+                        else:
+                            func_code += f"\n\nfrom {x_func.__module__} import {x_func.__name__}\n"
 
             # write extra_vars file, if there are any used extra_vars
             if self._used_extra_vars:
