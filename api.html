@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
-    <title>API Reference &#8212; v2.2.4</title>
+    <title>API Reference &#8212; v2.3.0</title>
     
   <!-- Loaded before other Sphinx assets -->
   <link href="_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -101,7 +101,7 @@ const thebe_selector_output = ".output, .cell_output"
       <img src="_static/logo.png" class="logo" alt="logo">
       
       
-      <h1 class="site-logo" id="site-title">v2.2.4</h1>
+      <h1 class="site-logo" id="site-title">v2.3.0</h1>
       
     </a>
 </div><form class="bd-search d-flex align-items-center" action="search.html" method="get">
@@ -556,7 +556,7 @@ title="Print to PDF"
 <h2>DataTree<a class="headerlink" href="#datatree" title="Permalink to this headline">#</a></h2>
 <dl class="py class">
 <dt class="sig sig-object py" id="sharrow.DataTree">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">DataTree</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">graph</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">root_node_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extra_funcs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">()</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extra_vars</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cache_dir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">relationships</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">()</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">force_digitization</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dim_order</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sharrow/relationships.html#DataTree"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#sharrow.DataTree" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">DataTree</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">graph</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">root_node_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extra_funcs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">()</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extra_vars</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cache_dir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">relationships</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">()</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">force_digitization</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dim_order</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">aux_vars</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sharrow/relationships.html#DataTree"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#sharrow.DataTree" title="Permalink to this definition">#</a></dt>
 <dd><p>A tree representing linked datasets, from which data can flow.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -578,6 +578,8 @@ evaluate Flows, but doing so automatically on construction may be
 inefficient.</p></li>
 <li><p><strong>dim_order</strong> (<em>Tuple</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a><em>]</em><em>, </em><em>optional</em>) – The order of dimensions to use in Flow outputs.  Generally only needed
 if there are multiple dimensions in the root dataset.</p></li>
+<li><p><strong>aux_vars</strong> (<em>Mapping</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a><em>,</em><em>Any</em><em>]</em><em>, </em><em>optional</em>) – Additional named arrays or numba-typable variables that can be
+referenced by expressions in Flow objects created using this DataTree.</p></li>
 </ul>
 </dd>
 </dl>
@@ -701,7 +703,7 @@ the hash.</p></li>
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a>) – </p></li>
-<li><p><strong>dataset</strong> (<em>Dataset</em><em> or </em><a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v1.4.3)"><em>pandas.DataFrame</em></a>) – Will be coerced into a <cite>Dataset</cite> object if it is not already
+<li><p><strong>dataset</strong> (<em>Dataset</em><em> or </em><a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v1.4.4)"><em>pandas.DataFrame</em></a>) – Will be coerced into a <cite>Dataset</cite> object if it is not already
 in that format, using a no-copy process if possible.</p></li>
 <li><p><strong>relationships</strong> (<em>Tuple</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a><em> or </em><a class="reference internal" href="#sharrow.Relationship" title="sharrow.Relationship"><em>Relationship</em></a><em>]</em>) – Also add these relationships.</p></li>
 <li><p><strong>as_root</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a><em>, </em><em>default False</em>) – Set this new node as the root of the tree, displacing any existing
@@ -1110,7 +1112,7 @@ These functions can be found in the <code class="xref py py-mod docutils literal
 <dd><p>A generic constructor for creating Datasets from various similar objects.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>source</strong> (<a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v1.4.3)"><em>pandas.DataFrame</em></a><em>, </em><a class="reference external" href="https://arrow.apache.org/docs/python/generated/pyarrow.Table.html#pyarrow.Table" title="(in Apache Arrow v9.0.0)"><em>pyarrow.Table</em></a><em>, </em><a class="reference external" href="https://docs.xarray.dev/en/stable/generated/xarray.Dataset.html#xarray.Dataset" title="(in xarray v2022.6.1.dev0)"><em>xarray.Dataset</em></a><em>, or </em><em>Sequence</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a><em>]</em>) – The source from which to create a Dataset.  DataFrames and Tables
+<dd class="field-odd"><p><strong>source</strong> (<a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v1.4.4)"><em>pandas.DataFrame</em></a><em>, </em><a class="reference external" href="https://arrow.apache.org/docs/python/generated/pyarrow.Table.html#pyarrow.Table" title="(in Apache Arrow v9.0.0)"><em>pyarrow.Table</em></a><em>, </em><a class="reference external" href="https://docs.xarray.dev/en/stable/generated/xarray.Dataset.html#xarray.Dataset" title="(in xarray v2022.6.1.dev0)"><em>xarray.Dataset</em></a><em>, or </em><em>Sequence</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a><em>]</em>) – The source from which to create a Dataset.  DataFrames and Tables
 are converted to Datasets that have one dimension (the rows) and
 separate variables for each of the columns.  A list of strings
 creates a dataset with those named empty variables.</p>
@@ -1369,7 +1371,7 @@ otherwise this does nothing.</p></li>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>df</strong> (<a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v1.4.3)"><em>pandas.DataFrame</em></a><em> or </em><em>Mapping</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a><em>, </em><em>array-like</em><em>]</em>) – The columns (or keys) of <cite>df</cite> should match the named dimensions of
+<li><p><strong>df</strong> (<a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v1.4.4)"><em>pandas.DataFrame</em></a><em> or </em><em>Mapping</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a><em>, </em><em>array-like</em><em>]</em>) – The columns (or keys) of <cite>df</cite> should match the named dimensions of
 this Dataset.  The resulting extracted DataFrame will have one row
 per row of <cite>df</cite>, columns matching the data variables in this dataset,
 and each value is looked from the source Dataset.</p></li>
@@ -1418,7 +1420,7 @@ otherwise this does nothing.</p></li>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>df</strong> (<a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v1.4.3)"><em>pandas.DataFrame</em></a><em> or </em><em>Mapping</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a><em>, </em><em>array-like</em><em>]</em>) – The columns (or keys) of <cite>df</cite> should match the named dimensions of
+<li><p><strong>df</strong> (<a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v1.4.4)"><em>pandas.DataFrame</em></a><em> or </em><em>Mapping</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a><em>, </em><em>array-like</em><em>]</em>) – The columns (or keys) of <cite>df</cite> should match the named dimensions of
 this Dataset.  The resulting extracted DataFrame will have one row
 per row of <cite>df</cite>, columns matching the data variables in this dataset,
 and each value is looked from the source Dataset.</p></li>

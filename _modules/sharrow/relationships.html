@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>sharrow.relationships &#8212; v2.2.4</title>
+    <title>sharrow.relationships &#8212; v2.3.0</title>
     
   <!-- Loaded before other Sphinx assets -->
   <link href="../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -99,7 +99,7 @@ const thebe_selector_output = ".output, .cell_output"
       <img src="../../_static/logo.png" class="logo" alt="logo">
       
       
-      <h1 class="site-logo" id="site-title">v2.2.4</h1>
+      <h1 class="site-logo" id="site-title">v2.3.0</h1>
       
     </a>
 </div><form class="bd-search d-flex align-items-center" action="../../search.html" method="get">
@@ -535,6 +535,9 @@ title="Open an issue"
 <span class="sd">    dim_order : Tuple[str], optional</span>
 <span class="sd">        The order of dimensions to use in Flow outputs.  Generally only needed</span>
 <span class="sd">        if there are multiple dimensions in the root dataset.</span>
+<span class="sd">    aux_vars : Mapping[str,Any], optional</span>
+<span class="sd">        Additional named arrays or numba-typable variables that can be</span>
+<span class="sd">        referenced by expressions in Flow objects created using this DataTree.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="n">DatasetType</span> <span class="o">=</span> <span class="n">Dataset</span>
@@ -549,6 +552,7 @@ title="Open an issue"
         <span class="n">relationships</span><span class="o">=</span><span class="p">(),</span>
         <span class="n">force_digitization</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
         <span class="n">dim_order</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">aux_vars</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
     <span class="p">):</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">graph</span><span class="p">,</span> <span class="n">Dataset</span><span class="p">):</span>
@@ -569,6 +573,7 @@ title="Open an issue"
         <span class="bp">self</span><span class="o">.</span><span class="n">root_node_name</span> <span class="o">=</span> <span class="n">root_node_name</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">extra_funcs</span> <span class="o">=</span> <span class="n">extra_funcs</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">extra_vars</span> <span class="o">=</span> <span class="n">extra_vars</span> <span class="ow">or</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">aux_vars</span> <span class="o">=</span> <span class="n">aux_vars</span> <span class="ow">or</span> <span class="p">{}</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">cache_dir</span> <span class="o">=</span> <span class="n">cache_dir</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_cached_indexes</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
@@ -616,6 +621,7 @@ title="Open an issue"
         <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span>
             <span class="n">extra_funcs</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">extra_funcs</span><span class="p">,</span>
             <span class="n">extra_vars</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">extra_vars</span><span class="p">,</span>
+            <span class="n">aux_vars</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">aux_vars</span><span class="p">,</span>
             <span class="n">cache_dir</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">cache_dir</span><span class="p">,</span>
             <span class="n">force_digitization</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">force_digitization</span><span class="p">,</span>
         <span class="p">)</span>
@@ -1331,6 +1337,8 @@ title="Open an issue"
         <span class="k">if</span> <span class="n">mangled_name</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span> <span class="o">!=</span> <span class="s2">&quot;__&quot;</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="n">mangled_name</span><span class="p">)</span>
         <span class="n">name1</span><span class="p">,</span> <span class="n">name2</span> <span class="o">=</span> <span class="n">mangled_name</span><span class="p">[</span><span class="mi">2</span><span class="p">:]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;__&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">name1</span> <span class="o">==</span> <span class="s2">&quot;aux_var&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">aux_vars</span><span class="p">[</span><span class="n">name2</span><span class="p">]</span>
         <span class="n">dataset</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">name1</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;dataset&quot;</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">name2</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;_s_&quot;</span><span class="p">):</span>
             <span class="k">if</span> <span class="n">name2</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;__data&quot;</span><span class="p">):</span>
