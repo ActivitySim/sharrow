@@ -1,3 +1,4 @@
+import ast
 import base64
 import hashlib
 import importlib
@@ -598,6 +599,10 @@ class Flow:
             hashing_level=hashing_level,
             dim_order=dim_order,
             dim_exclude=dim_exclude,
+            error_model=error_model,
+            boundscheck=boundscheck,
+            nopython=nopython,
+            fastmath=fastmath,
         )
         # return from library if available
         if flow_library is not None and self.flow_hash in flow_library:
@@ -677,6 +682,17 @@ class Flow:
                 if k in all_raw_names:
                     self._used_extra_vars[k] = v
 
+        self._used_extra_funcs = set()
+        if self.tree.extra_funcs:
+            for f in self.tree.extra_funcs:
+                if f.__name__ in all_raw_names:
+                    self._used_extra_funcs.add(f.__name__)
+
+        self._used_aux_vars = []
+        for aux_var in self.tree.aux_vars:
+            if aux_var in all_raw_names:
+                self._used_aux_vars.append(aux_var)
+
         self._hashing_level = hashing_level
         if self._hashing_level > 1:
             func_code, all_name_tokens = self.init_sub_funcs(
@@ -713,6 +729,10 @@ class Flow:
             v = self._used_extra_vars[k]
             _flow_hash_push(k)
             _flow_hash_push(v)
+        for k in sorted(self._used_aux_vars):
+            _flow_hash_push(f"aux_var:{k}")
+        for k in sorted(self._used_extra_funcs):
+            _flow_hash_push(f"func:{k}")
         _flow_hash_push("---DataTree---")
         for k in self.arg_names:
             _flow_hash_push(f"arg:{k}")
@@ -786,6 +806,7 @@ class Flow:
         }
         self.arg_name_positions = index_slots
         candidate_names = self.tree.namespace_names()
+        candidate_names |= set(f"__aux_var__{i}" for i in self.tree.aux_vars.keys())
 
         meta_data = {}
 
@@ -901,6 +922,22 @@ class Flow:
                 "_outputs",
                 extra_vars=self.tree.extra_vars,
             )
+
+            aux_tokens = {
+                k: ast.parse(f"__aux_var__{k}", mode="eval").body
+                for k in self.tree.aux_vars.keys()
+            }
+
+            # now handle aux vars
+            expr = expression_for_numba(
+                expr,
+                "",
+                (),
+                spacevars=aux_tokens,
+                prefer_name="aux_var",
+                extra_vars=self.tree.extra_vars,
+            )
+
             if (k == init_expr) and (init_expr == expr) and k.isidentifier():
                 logger.error(f"unable to rewrite '{k}' to itself")
                 raise ValueError(f"unable to rewrite '{k}' to itself")
@@ -1047,10 +1084,14 @@ class Flow:
                     import cloudpickle as pickle
                 except ModuleNotFoundError:
                     import pickle
-                dependencies.add("import pickle")
                 func_code += "\n\n# extra_funcs\n"
                 for x_func in self.tree.extra_funcs:
-                    func_code += f"\n\n{x_func.__name__} = pickle.loads({repr(pickle.dumps(x_func))})\n"
+                    if x_func.__name__ in self._used_extra_funcs:
+                        if x_func.__module__ == "__main__":
+                            dependencies.add("import pickle")
+                            func_code += f"\n\n{x_func.__name__} = pickle.loads({repr(pickle.dumps(x_func))})\n"
+                        else:
+                            func_code += f"\n\nfrom {x_func.__module__} import {x_func.__name__}\n"
 
             # write extra_vars file, if there are any used extra_vars
             if self._used_extra_vars:
@@ -1296,7 +1337,12 @@ class Flow:
                         continue
                     if arg.startswith("_arg"):
                         continue
-                    arguments.append(np.asarray(rg.get_named_array(arg)))
+                    arg_value = rg.get_named_array(arg)
+                    # aux_vars get passed through as is, not forced to be arrays
+                    if arg.startswith("__aux_var"):
+                        arguments.append(arg_value)
+                    else:
+                        arguments.append(np.asarray(arg_value))
                 kwargs = {}
                 if dtype is not None:
                     kwargs["dtype"] = dtype
@@ -1369,10 +1415,14 @@ class Flow:
                         "logsums",
                     }:
                         continue
-                    argument = np.asarray(rg.get_named_array(arg))
-                    if argument.dtype.kind == "O":
-                        argument = argument.astype("unicode")
-                    arguments.append(argument)
+                    argument = rg.get_named_array(arg)
+                    # aux_vars get passed through as is, not forced to be arrays
+                    if arg.startswith("__aux_var"):
+                        arguments.append(argument)
+                    else:
+                        if argument.dtype.kind == "O":
+                            argument = argument.astype("unicode")
+                        arguments.append(np.asarray(argument))
                 kwargs = {}
                 if dtype is not None:
                     kwargs["dtype"] = dtype

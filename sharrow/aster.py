@@ -617,6 +617,23 @@ class RewriteForNumba(ast.NodeTransformer):
                     node,
                     missing_dim_value=_b,
                 )
+            # for XXX[...], there is no space name and XXX is the name of an aux_var
+            if (
+                node.value.id in self.spacevars
+                and isinstance(self.spacevars[node.value.id], ast.Name)
+                and self.spacename == ""
+            ):
+                result = ast.Subscript(
+                    value=self.spacevars[node.value.id],
+                    slice=self.visit(node.slice),
+                    ctx=node.ctx,
+                )
+                self.log_event(
+                    f"visit_Subscript(AuxVar {node.value.id})",
+                    node,
+                    result,
+                )
+                return result
         self.log_event("visit_Subscript(no change)", node)
         return node
 
@@ -631,6 +648,14 @@ class RewriteForNumba(ast.NodeTransformer):
                     ctx=node.ctx,
                 )
                 self.log_event(f"visit_Attribute(Raw {node.attr})", node, result)
+                return result
+            if self.spacename == "" and node.value.id in self.spacevars:
+                result = ast.Attribute(
+                    value=self.visit(node.value),
+                    attr=node.attr,
+                    ctx=node.ctx,
+                )
+                self.log_event("visit_Attribute(lead change)", node, result)
                 return result
             return node
         else:
@@ -648,11 +673,15 @@ class RewriteForNumba(ast.NodeTransformer):
             self.log_event("visit_Name(no change)", node)
             return node
         if self.spacename == "":
-            result = ast.Subscript(
-                value=ast.Name(id=self.rawname, ctx=ast.Load()),
-                slice=ast.Constant(self.spacevars[attr]),
-                ctx=node.ctx,
-            )
+            if isinstance(self.spacevars[attr], ast.Name):
+                # when spacevars values are ast.Name we are using it, it's probably an aux_var
+                result = self.spacevars[attr]
+            else:
+                result = ast.Subscript(
+                    value=ast.Name(id=self.rawname, ctx=ast.Load()),
+                    slice=ast.Constant(self.spacevars[attr]),
+                    ctx=node.ctx,
+                )
             self.log_event(f"visit_Name(Constant {attr})", node, result)
             return result
         else:
@@ -882,6 +911,28 @@ def expression_for_numba(
     extra_vars=None,
     blenders=None,
 ):
+    """
+    Rewrite an expression so numba can compile it.
+
+    Parameters
+    ----------
+    expr : str
+        The expression being rewritten
+    spacename : str
+        A namespace of variables that might be in the expression.
+    dim_slots : tuple or Any
+    spacevars : Mapping, optional
+    rawname : str
+    rawalias : str
+    digital_encodings : Mapping, optional
+    prefer_name : str, optional
+    extra_vars : Mapping, optional
+    blenders : Mapping, optional
+
+    Returns
+    -------
+    str
+    """
     return unparse_(
         RewriteForNumba(
             spacename,
