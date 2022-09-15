@@ -1,5 +1,6 @@
 import numba as nb
 import numpy as np
+from numba.extending import overload
 
 
 @nb.njit(cache=True)
@@ -127,3 +128,49 @@ def digital_decode(encoded_value, scale, offset, missing_value):
         return missing_value
     else:
         return (encoded_value * scale) + offset
+
+
+@overload(np.where)
+def _zero_len_array_where(condition, x=None, y=None):
+    if isinstance(condition, nb.types.Boolean):
+        if (
+            isinstance(x, nb.types.Array)
+            and x.ndim == 0
+            and isinstance(x.dtype, (nb.types.Integer, nb.types.Float))
+        ):
+            if isinstance(y, (nb.types.Integer, nb.types.Float)):
+
+                def impl(condition, x=None, y=None):
+                    if condition:
+                        return x.item()
+                    else:
+                        return y
+
+                return impl
+            elif (
+                isinstance(y, nb.types.Array)
+                and y.ndim == 0
+                and isinstance(y.dtype, (nb.types.Integer, nb.types.Float))
+            ):
+
+                def impl(condition, x=None, y=None):
+                    if condition:
+                        return x.item()
+                    else:
+                        return y.item()
+
+                return impl
+        elif isinstance(x, (nb.types.Integer, nb.types.Float)):
+            if (
+                isinstance(y, nb.types.Array)
+                and y.ndim == 0
+                and isinstance(y.dtype, (nb.types.Integer, nb.types.Float))
+            ):
+
+                def impl(condition, x=None, y=None):
+                    if condition:
+                        return x
+                    else:
+                        return y.item()
+
+                return impl
