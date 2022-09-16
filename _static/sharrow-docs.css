@@ -9,3 +9,8 @@ img[src*="#floatleft"] {
     float: left;
     margin-right: 20px;
 }
+
+div.cell_output > div.output.stream > div.highlight > pre {
+    font-size: 80%;
+    background-color: lightgoldenrodyellow;
+}
