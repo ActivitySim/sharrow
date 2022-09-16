@@ -682,3 +682,94 @@ def test_isin_and_between(dataframe_regression):
         check_names=False,
     )
     dataframe_regression.check(result)
+
+
+def test_nested_where(dataframe_regression):
+
+    data = example_data.get_data()
+    base = persons = data["persons"]
+
+    tree = DataTree(
+        base=persons,
+        extra_vars={
+            "pt1": 1,
+            "pt5": 5,
+            "pt34": [3, 4],
+        },
+    )
+
+    ss = tree.setup_flow(
+        {
+            "pt": "base.ptype",
+            "pt_shifted_1": "np.where(base.ptype<3, np.where(base.ptype<2, base.ptype*100, 0), base.ptype)",
+            "pt_shifted_2": "np.where(base.ptype<3, np.where(base.ptype<2, base.ptype*100, 0), 0)",
+            "pt_shifted_3": "np.where(base.ptype<3, 0, np.where(base.ptype>4, base.ptype*100, 0))",
+            "pt_shifted_4": "np.where(base.ptype<3, base.ptype, np.where(base.ptype>4, base.ptype*100, 0))",
+            "pt_shifted_5": "np.where(base.ptype<3, base.ptype, np.where(base.ptype>4, base.ptype*100, base.ptype))",
+            "pt_shifted_6": "np.where(base.ptype<3, 0, np.where(base.ptype>4, base.ptype*100, base.ptype))",
+        }
+    )
+    result = ss.load_dataframe(tree)
+    pd.testing.assert_series_equal(
+        pd.Series(
+            np.where(
+                base.ptype < 3,
+                np.where(base.ptype < 2, base.ptype * 100, 0),
+                base.ptype,
+            ).astype(np.float32),
+        ),
+        result["pt_shifted_1"],
+        check_names=False,
+    )
+    pd.testing.assert_series_equal(
+        pd.Series(
+            np.where(
+                base.ptype < 3, np.where(base.ptype < 2, base.ptype * 100, 0), 0
+            ).astype(np.float32),
+        ),
+        result["pt_shifted_2"],
+        check_names=False,
+    )
+    pd.testing.assert_series_equal(
+        pd.Series(
+            np.where(
+                base.ptype < 3, 0, np.where(base.ptype > 4, base.ptype * 100, 0)
+            ).astype(np.float32),
+        ),
+        result["pt_shifted_3"],
+        check_names=False,
+    )
+    pd.testing.assert_series_equal(
+        pd.Series(
+            np.where(
+                base.ptype < 3,
+                base.ptype,
+                np.where(base.ptype > 4, base.ptype * 100, 0),
+            ).astype(np.float32),
+        ),
+        result["pt_shifted_4"],
+        check_names=False,
+    )
+    pd.testing.assert_series_equal(
+        pd.Series(
+            np.where(
+                base.ptype < 3,
+                base.ptype,
+                np.where(base.ptype > 4, base.ptype * 100, base.ptype),
+            ).astype(np.float32),
+        ),
+        result["pt_shifted_5"],
+        check_names=False,
+    )
+    pd.testing.assert_series_equal(
+        pd.Series(
+            np.where(
+                base.ptype < 3,
+                0,
+                np.where(base.ptype > 4, base.ptype * 100, base.ptype),
+            ).astype(np.float32),
+        ),
+        result["pt_shifted_6"],
+        check_names=False,
+    )
+    dataframe_regression.check(result)
