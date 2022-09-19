@@ -773,3 +773,23 @@ def test_nested_where(dataframe_regression):
         check_names=False,
     )
     dataframe_regression.check(result)
+
+
+def test_isna():
+    data = example_data.get_data()
+    data["hhs"].loc[2717868, "income"] = np.nan
+    correct1 = data["hhs"].eval("((income < 0) | income.isna())")
+    tree = DataTree(
+        base=data["hhs"],
+    )
+    ss = tree.setup_flow(
+        {
+            "missing_income": "((income < 0) | income.isna())",
+            "income_is_na": "income.isna()",
+        }
+    )
+    result = ss.load()
+    assert result[0, 0] == 1
+    assert result[0, 1] == 1
+    assert result[:, 0].sum() == correct1.sum()
+    assert result[:, 1].sum() == 1

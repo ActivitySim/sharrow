@@ -1073,7 +1073,7 @@ class Flow:
                 "from contextlib import suppress",
                 "from numpy import log, exp, log1p, expm1",
                 "from sharrow.maths import piece, hard_sigmoid, transpose_leading, clip, digital_decode",
-                "from sharrow.sparse import get_blended_2",
+                "from sharrow.sparse import get_blended_2, isnan_fast_safe",
             }
 
             func_code = self._func_code
