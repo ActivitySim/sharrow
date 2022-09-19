@@ -197,12 +197,21 @@ class RedirectionAccessor:
         return b
 
 
-@nb.njit
+@nb.generated_jit(nopython=True)
 def isnan_fast_safe(x):
-    if int(x) == -9223372036854775808:
-        return True
+    if isinstance(x, nb.types.Float):
+
+        def func(x):
+            if int(x) == -9223372036854775808:
+                return True
+            else:
+                return False
+
+        return func
+    elif isinstance(x, (nb.types.UnicodeType, nb.types.UnicodeCharSeq)):
+        return lambda x: x == "\u0015"
     else:
-        return False
+        return lambda x: False
 
 
 @nb.njit

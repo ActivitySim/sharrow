@@ -4,7 +4,7 @@ import sys
 import numpy as np
 import pandas as pd
 from numpy.random import SeedSequence, default_rng
-from pytest import mark, raises
+from pytest import approx, mark, raises
 
 import sharrow
 from sharrow import Dataset, DataTree, example_data
@@ -793,3 +793,15 @@ def test_isna():
     assert result[0, 1] == 1
     assert result[:, 0].sum() == correct1.sum()
     assert result[:, 1].sum() == 1
+
+    qf = pd.DataFrame({"MixedVals": ["a", "", None, np.nan]})
+    tree2 = DataTree(
+        base=qf,
+    )
+    qf = tree2.setup_flow(
+        {
+            "MixedVals_is_na": "MixedVals.isna()",
+        }
+    )
+    result = qf.load()
+    assert result == approx(np.asarray([[0, 0, 1, 1]]).T)

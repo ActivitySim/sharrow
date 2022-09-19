@@ -1342,7 +1342,16 @@ class Flow:
                     if arg.startswith("__aux_var"):
                         arguments.append(arg_value)
                     else:
-                        arguments.append(np.asarray(arg_value))
+                        arg_value_array = np.asarray(arg_value)
+                        if arg_value_array.dtype.kind == "O":
+                            # convert object arrays to unicode str
+                            # and replace missing values with NAK='\u0015'
+                            # that can be found by `isnan_fast_safe`
+                            # This is done for compatability and likely ruins performance
+                            arg_value_array_ = arg_value_array.astype("unicode")
+                            arg_value_array_[pd.isnull(arg_value_array)] = "\u0015"
+                            arg_value_array = arg_value_array_
+                        arguments.append(arg_value_array)
                 kwargs = {}
                 if dtype is not None:
                     kwargs["dtype"] = dtype
@@ -1421,8 +1430,15 @@ class Flow:
                         arguments.append(argument)
                     else:
                         if argument.dtype.kind == "O":
-                            argument = argument.astype("unicode")
-                        arguments.append(np.asarray(argument))
+                            # convert object arrays to unicode str
+                            # and replace missing values with NAK='\u0015'
+                            # that can be found by `isnan_fast_safe`
+                            # This is done for compatability and likely ruins performance
+                            argument_ = argument.astype("unicode")
+                            argument_[pd.isnull(argument)] = "\u0015"
+                            arguments.append(np.asarray(argument_))
+                        else:
+                            arguments.append(np.asarray(argument))
                 kwargs = {}
                 if dtype is not None:
                     kwargs["dtype"] = dtype
