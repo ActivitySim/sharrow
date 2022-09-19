@@ -777,8 +777,7 @@ def test_nested_where(dataframe_regression):
 
 def test_isna():
     data = example_data.get_data()
-    data["hhs"].loc[2717868, "income"] = np.nan
-    correct1 = data["hhs"].eval("((income < 0) | income.isna())")
+    data["hhs"].loc[data["hhs"].income > 200000, "income"] = np.nan
     tree = DataTree(
         base=data["hhs"],
     )
@@ -791,8 +790,8 @@ def test_isna():
     result = ss.load()
     assert result[0, 0] == 1
     assert result[0, 1] == 1
-    assert result[:, 0].sum() == correct1.sum()
-    assert result[:, 1].sum() == 1
+    assert result[:, 0].sum() == 188
+    assert result[:, 1].sum() == 188
 
     qf = pd.DataFrame({"MixedVals": ["a", "", None, np.nan]})
     tree2 = DataTree(
