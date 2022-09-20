@@ -886,6 +886,20 @@ class RewriteForNumba(ast.NodeTransformer):
                 )
                 result = ast.BinOp(left=left, op=ast.BitAnd(), right=right)
 
+        # change XXX.isna() [with no arguments] to np.isnan(x)
+        if (
+            isinstance(node.func, ast.Attribute)
+            and node.func.attr == "isna"
+            and len(node.args) == 0
+            and len(node.keywords) == 0
+        ):
+            apply_args = [self.visit(node.func.value)]  # convert XXX into argument
+            result = ast.Call(
+                func=ast.Name("isnan_fast_safe"),
+                args=apply_args,
+                keywords=[],
+            )
+
         # if no other changes
         if result is None:
             args = [self.visit(i) for i in node.args]

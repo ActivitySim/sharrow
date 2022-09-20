@@ -4,7 +4,7 @@ import sys
 import numpy as np
 import pandas as pd
 from numpy.random import SeedSequence, default_rng
-from pytest import mark, raises
+from pytest import approx, mark, raises
 
 import sharrow
 from sharrow import Dataset, DataTree, example_data
@@ -773,3 +773,34 @@ def test_nested_where(dataframe_regression):
         check_names=False,
     )
     dataframe_regression.check(result)
+
+
+def test_isna():
+    data = example_data.get_data()
+    data["hhs"].loc[data["hhs"].income > 200000, "income"] = np.nan
+    tree = DataTree(
+        base=data["hhs"],
+    )
+    ss = tree.setup_flow(
+        {
+            "missing_income": "((income < 0) | income.isna())",
+            "income_is_na": "income.isna()",
+        }
+    )
+    result = ss.load()
+    assert result[0, 0] == 1
+    assert result[0, 1] == 1
+    assert result[:, 0].sum() == 188
+    assert result[:, 1].sum() == 188
+
+    qf = pd.DataFrame({"MixedVals": ["a", "", None, np.nan]})
+    tree2 = DataTree(
+        base=qf,
+    )
+    qf = tree2.setup_flow(
+        {
+            "MixedVals_is_na": "MixedVals.isna()",
+        }
+    )
+    result = qf.load()
+    assert result == approx(np.asarray([[0, 0, 1, 1]]).T)
