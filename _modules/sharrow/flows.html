@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>sharrow.flows &#8212; v2.3.1</title>
+    <title>sharrow.flows &#8212; v2.3.2</title>
     
   <!-- Loaded before other Sphinx assets -->
   <link href="../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -99,7 +99,7 @@ const thebe_selector_output = ".output, .cell_output"
       <img src="../../_static/logo.png" class="logo" alt="logo">
       
       
-      <h1 class="site-logo" id="site-title">v2.3.1</h1>
+      <h1 class="site-logo" id="site-title">v2.3.2</h1>
       
     </a>
 </div><form class="bd-search d-flex align-items-center" action="../../search.html" method="get">
@@ -1355,7 +1355,7 @@ title="Open an issue"
                 <span class="s2">&quot;from contextlib import suppress&quot;</span><span class="p">,</span>
                 <span class="s2">&quot;from numpy import log, exp, log1p, expm1&quot;</span><span class="p">,</span>
                 <span class="s2">&quot;from sharrow.maths import piece, hard_sigmoid, transpose_leading, clip, digital_decode&quot;</span><span class="p">,</span>
-                <span class="s2">&quot;from sharrow.sparse import get_blended_2&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;from sharrow.sparse import get_blended_2, isnan_fast_safe&quot;</span><span class="p">,</span>
             <span class="p">}</span>
 
             <span class="n">func_code</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_func_code</span>
@@ -1624,7 +1624,16 @@ title="Open an issue"
                     <span class="k">if</span> <span class="n">arg</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;__aux_var&quot;</span><span class="p">):</span>
                         <span class="n">arguments</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">arg_value</span><span class="p">)</span>
                     <span class="k">else</span><span class="p">:</span>
-                        <span class="n">arguments</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">arg_value</span><span class="p">))</span>
+                        <span class="n">arg_value_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">arg_value</span><span class="p">)</span>
+                        <span class="k">if</span> <span class="n">arg_value_array</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">kind</span> <span class="o">==</span> <span class="s2">&quot;O&quot;</span><span class="p">:</span>
+                            <span class="c1"># convert object arrays to unicode str</span>
+                            <span class="c1"># and replace missing values with NAK=&#39;\u0015&#39;</span>
+                            <span class="c1"># that can be found by `isnan_fast_safe`</span>
+                            <span class="c1"># This is done for compatability and likely ruins performance</span>
+                            <span class="n">arg_value_array_</span> <span class="o">=</span> <span class="n">arg_value_array</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">&quot;unicode&quot;</span><span class="p">)</span>
+                            <span class="n">arg_value_array_</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">isnull</span><span class="p">(</span><span class="n">arg_value_array</span><span class="p">)]</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="se">\u0015</span><span class="s2">&quot;</span>
+                            <span class="n">arg_value_array</span> <span class="o">=</span> <span class="n">arg_value_array_</span>
+                        <span class="n">arguments</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">arg_value_array</span><span class="p">)</span>
                 <span class="n">kwargs</span> <span class="o">=</span> <span class="p">{}</span>
                 <span class="k">if</span> <span class="n">dtype</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
                     <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;dtype&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">dtype</span>
@@ -1703,8 +1712,15 @@ title="Open an issue"
                         <span class="n">arguments</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">argument</span><span class="p">)</span>
                     <span class="k">else</span><span class="p">:</span>
                         <span class="k">if</span> <span class="n">argument</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">kind</span> <span class="o">==</span> <span class="s2">&quot;O&quot;</span><span class="p">:</span>
-                            <span class="n">argument</span> <span class="o">=</span> <span class="n">argument</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">&quot;unicode&quot;</span><span class="p">)</span>
-                        <span class="n">arguments</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">argument</span><span class="p">))</span>
+                            <span class="c1"># convert object arrays to unicode str</span>
+                            <span class="c1"># and replace missing values with NAK=&#39;\u0015&#39;</span>
+                            <span class="c1"># that can be found by `isnan_fast_safe`</span>
+                            <span class="c1"># This is done for compatability and likely ruins performance</span>
+                            <span class="n">argument_</span> <span class="o">=</span> <span class="n">argument</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">&quot;unicode&quot;</span><span class="p">)</span>
+                            <span class="n">argument_</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">isnull</span><span class="p">(</span><span class="n">argument</span><span class="p">)]</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="se">\u0015</span><span class="s2">&quot;</span>
+                            <span class="n">arguments</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">argument_</span><span class="p">))</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="n">arguments</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">argument</span><span class="p">))</span>
                 <span class="n">kwargs</span> <span class="o">=</span> <span class="p">{}</span>
                 <span class="k">if</span> <span class="n">dtype</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
                     <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;dtype&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">dtype</span>
