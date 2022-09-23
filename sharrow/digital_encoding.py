@@ -234,6 +234,10 @@ class _DigitalEncodings:
         by_dict : {8, 16, 32}, optional
             Encode by dictionary, using this bitwidth.  If given, all
             arguments other than this and `x` are ignored.
+        joint_dict : bool or str, optional
+            If given as a string, the variables in `name` will be encoded
+            with joint dictionary encoding under this name.  Or simply give
+            a `True` value to apply the same with a random unique name.
 
         Returns
         -------
@@ -287,6 +291,22 @@ class _DigitalEncodings:
 
 
 def multivalue_digitize_by_dictionary(ds, encode_vars=None, encoding_name=None):
+    """
+    Apply a joint dictionary encoding to a collection of Dataset variables.
+
+    Parameters
+    ----------
+    ds : Dataset
+    encode_vars : Collection[str], optional
+        The collection of dataset variable names that will be encoded with
+        a joint dictionary.
+    encoding_name : str, optional
+        Use this name for the newly created joint encoding.
+
+    Returns
+    -------
+
+    """
     logger = logging.getLogger("sharrow")
     if not isinstance(encoding_name, str):
         i = 0

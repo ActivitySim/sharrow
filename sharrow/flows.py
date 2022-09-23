@@ -582,6 +582,7 @@ class Flow:
         hashing_level=1,
         dim_order=None,
         dim_exclude=None,
+        bool_wrapping=False,
     ):
         assert isinstance(tree, DataTree)
         tree.digitize_relationships(inplace=True)
@@ -603,6 +604,7 @@ class Flow:
             boundscheck=boundscheck,
             nopython=nopython,
             fastmath=fastmath,
+            bool_wrapping=bool_wrapping,
         )
         # return from library if available
         if flow_library is not None and self.flow_hash in flow_library:
@@ -641,6 +643,7 @@ class Flow:
         hashing_level=1,
         dim_order=None,
         dim_exclude=None,
+        bool_wrapping=False,
     ):
         """
         Initialize up to the flow_hash
@@ -660,6 +663,7 @@ class Flow:
         self._secondary_flows = {}
         self.dim_order = dim_order
         self.dim_exclude = dim_exclude
+        self.bool_wrapping = bool_wrapping
 
         all_raw_names = set()
         all_name_tokens = set()
@@ -776,6 +780,7 @@ class Flow:
         _flow_hash_push(f"boundscheck={boundscheck}")
         _flow_hash_push(f"error_model={error_model}")
         _flow_hash_push(f"fastmath={fastmath}")
+        _flow_hash_push(f"bool_wrapping={bool_wrapping}")
 
         self.flow_hash = base64.b32encode(flow_hash.digest()).decode()
         self.flow_hash_audit = "]\n# [".join(flow_hash_audit)
@@ -873,6 +878,7 @@ class Flow:
                             digital_encodings=digital_encodings,
                             extra_vars=self.tree.extra_vars,
                             blenders=blenders,
+                            bool_wrapping=self.bool_wrapping,
                         )
                     except KeyError as key_err:
                         if ".." in key_err.args[0]:
@@ -896,6 +902,7 @@ class Flow:
                                     prefer_name=other_spacename,
                                     extra_vars=self.tree.extra_vars,
                                     blenders=blenders,
+                                    bool_wrapping=self.bool_wrapping,
                                 )
                             except KeyError as err:  # noqa: F841
                                 pass
@@ -921,6 +928,7 @@ class Flow:
                 self.output_name_positions,
                 "_outputs",
                 extra_vars=self.tree.extra_vars,
+                bool_wrapping=self.bool_wrapping,
             )
 
             aux_tokens = {
@@ -936,6 +944,7 @@ class Flow:
                 spacevars=aux_tokens,
                 prefer_name="aux_var",
                 extra_vars=self.tree.extra_vars,
+                bool_wrapping=self.bool_wrapping,
             )
 
             if (k == init_expr) and (init_expr == expr) and k.isidentifier():
