@@ -337,6 +337,7 @@ class RewriteForNumba(ast.NodeTransformer):
         preferred_spacename=None,
         extra_vars=None,
         blenders=None,
+        bool_wrapping=False,
     ):
         self.spacename = spacename
         self.dim_slots = dim_slots
@@ -347,6 +348,7 @@ class RewriteForNumba(ast.NodeTransformer):
         self.preferred_spacename = preferred_spacename
         self.extra_vars = extra_vars or {}
         self.blenders = blenders or {}
+        self.bool_wrapping = bool_wrapping
 
     def log_event(self, tag, node1=None, node2=None):
         if logger.getEffectiveLevel() <= 0:
@@ -691,7 +693,7 @@ class RewriteForNumba(ast.NodeTransformer):
 
     def visit_UnaryOp(self, node):
         # convert bitflip `~x` operator into `~np.bool_(x)`
-        if isinstance(node.op, ast.Invert):
+        if self.bool_wrapping and isinstance(node.op, ast.Invert):
             return ast.UnaryOp(
                 op=node.op,
                 operand=bool_wrap(self.visit(node.operand)),
@@ -707,7 +709,9 @@ class RewriteForNumba(ast.NodeTransformer):
         left = self.visit(node.left)
         right = self.visit(node.right)
 
-        if isinstance(node.op, (ast.BitAnd, ast.BitOr, ast.BitXor)):
+        if self.bool_wrapping and isinstance(
+            node.op, (ast.BitAnd, ast.BitOr, ast.BitXor)
+        ):
 
             result = ast.BinOp(
                 left=bool_wrap(left),
@@ -924,6 +928,7 @@ def expression_for_numba(
     prefer_name=None,
     extra_vars=None,
     blenders=None,
+    bool_wrapping=False,
 ):
     """
     Rewrite an expression so numba can compile it.
@@ -958,6 +963,7 @@ def expression_for_numba(
             prefer_name,
             extra_vars,
             blenders,
+            bool_wrapping,
         ).visit(ast.parse(expr))
     )
 
