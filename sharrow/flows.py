@@ -1308,10 +1308,19 @@ class Flow:
         if str(self.cache_dir) not in sys.path:
             logger.debug(f"inserting {self.cache_dir} into sys.path")
             sys.path.insert(0, str(self.cache_dir))
+            added_cache_dir_to_sys_path = True
+        else:
+            added_cache_dir_to_sys_path = False
         importlib.invalidate_caches()
         logger.debug(f"importing {self.name}")
-        module = importlib.import_module(self.name)
-        sys.path = sys.path[1:]
+        try:
+            module = importlib.import_module(self.name)
+        except ModuleNotFoundError:
+            for i in sys.path:
+                logger.error("- sys.path: {i}")
+            raise
+        if added_cache_dir_to_sys_path:
+            sys.path = sys.path[1:]
         self._runner = getattr(module, "runner", None)
         self._dotter = getattr(module, "dotter", None)
         self._irunner = getattr(module, "irunner", None)
