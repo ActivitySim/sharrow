@@ -1305,9 +1305,10 @@ class Flow:
                 )
                 f_code.write(f"flow_hash = {self.flow_hash!r}\n")
 
-        if str(self.cache_dir) not in sys.path:
-            logger.debug(f"inserting {self.cache_dir} into sys.path")
-            sys.path.insert(0, str(self.cache_dir))
+        abs_cache_dir = os.path.abspath(self.cache_dir)
+        if str(abs_cache_dir) not in sys.path:
+            logger.debug(f"inserting {abs_cache_dir} into sys.path")
+            sys.path.insert(0, str(abs_cache_dir))
             added_cache_dir_to_sys_path = True
         else:
             added_cache_dir_to_sys_path = False
@@ -1316,9 +1317,15 @@ class Flow:
         try:
             module = importlib.import_module(self.name)
         except ModuleNotFoundError:
-            for i in sys.path:
-                logger.error("- sys.path: {i}")
-            raise
+            # maybe we got out in front of the file system, wait a beat and retry
+            time.sleep(2)
+            try:
+                module = importlib.import_module(self.name)
+            except ModuleNotFoundError:
+                logger.error(f"- os.getcwd: {os.getcwd()}")
+                for i in sys.path:
+                    logger.error(f"- sys.path: {i}")
+                raise
         if added_cache_dir_to_sys_path:
             sys.path = sys.path[1:]
         self._runner = getattr(module, "runner", None)
