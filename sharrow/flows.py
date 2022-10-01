@@ -881,6 +881,21 @@ class Flow:
                             bool_wrapping=self.bool_wrapping,
                         )
                     except KeyError as key_err:
+                        # there was an error, but lets make sure we process the
+                        # whole expression to rewrite all the things we can before
+                        # moving on to the fallback processing.
+                        expr = expression_for_numba(
+                            expr,
+                            spacename,
+                            dim_slots,
+                            dim_slots,
+                            digital_encodings=digital_encodings,
+                            extra_vars=self.tree.extra_vars,
+                            blenders=blenders,
+                            bool_wrapping=self.bool_wrapping,
+                            swallow_errors=True,
+                        )
+                        # Now for the fallback processing...
                         if ".." in key_err.args[0]:
                             topkey, attrkey = key_err.args[0].split("..")
                         else:

@@ -338,6 +338,7 @@ class RewriteForNumba(ast.NodeTransformer):
         extra_vars=None,
         blenders=None,
         bool_wrapping=False,
+        swallow_errors=False,
     ):
         self.spacename = spacename
         self.dim_slots = dim_slots
@@ -349,6 +350,7 @@ class RewriteForNumba(ast.NodeTransformer):
         self.extra_vars = extra_vars or {}
         self.blenders = blenders or {}
         self.bool_wrapping = bool_wrapping
+        self.swallow_errors = swallow_errors
 
     def log_event(self, tag, node1=None, node2=None):
         if logger.getEffectiveLevel() <= 0:
@@ -394,12 +396,16 @@ class RewriteForNumba(ast.NodeTransformer):
 
         if self.spacevars is not None:
             if attr not in self.spacevars:
-                if topname == pref_topname:
+                if topname == pref_topname and not self.swallow_errors:
                     raise KeyError(f"{topname}..{attr}")
                 # we originally raised a KeyError here regardless, but what if we just
                 # give back the original node, and see if other spaces,
                 # possibly fallback spaces, might work?  If nothing works then
                 # it will still eventually error out when compiling?
+                # The swallow errors option allows us to continue processing
+                # using the same rules, then circle back later to clean up
+                # errors, so that as-yet unprocessed Ast elements get the
+                # chance to be seen by the first pass.
                 return original_node
 
         dim_slots = self.dim_slots
@@ -929,6 +935,7 @@ def expression_for_numba(
     extra_vars=None,
     blenders=None,
     bool_wrapping=False,
+    swallow_errors=False,
 ):
     """
     Rewrite an expression so numba can compile it.
@@ -964,6 +971,7 @@ def expression_for_numba(
             extra_vars,
             blenders,
             bool_wrapping,
+            swallow_errors,
         ).visit(ast.parse(expr))
     )
 

@@ -205,9 +205,11 @@ class Relationship:
         if "->" in s:
             parent, child = s.split("->", 1)
             i = "position"
-        elif "@":
+        elif "@" in s:
             parent, child = s.split("@", 1)
             i = "label"
+        else:
+            raise ValueError(f"cannot interpret relationship {s!r}")
         p1, p2 = parent.split(".", 1)
         c1, c2 = child.split(".", 1)
         p1 = p1.strip()
@@ -432,9 +434,11 @@ class DataTree:
             if "->" in s:
                 parent, child = s.split("->", 1)
                 i = "position"
-            elif "@":
+            elif "@" in s:
                 parent, child = s.split("@", 1)
                 i = "label"
+            else:
+                raise ValueError(f"cannot interpret relationship {s!r}")
             p1, p2 = parent.split(".", 1)
             c1, c2 = child.split(".", 1)
             p1 = p1.strip()
