@@ -271,10 +271,13 @@ class _At_Accessor(_Df_Accessor):
                 raw_idxs[k] = np.asarray(v)
                 modified_idxs[k] = v
             else:
-                upstream = xr.DataArray(np.asarray(v), dims=["index"])
-                downstream = self._obj[k]
-                mapper = {i: j for (j, i) in enumerate(downstream.to_numpy())}
-                offsets = xr.apply_ufunc(np.vectorize(mapper.get), upstream)
+                if v.size:
+                    upstream = xr.DataArray(np.asarray(v), dims=["index"])
+                    downstream = self._obj[k]
+                    mapper = {i: j for (j, i) in enumerate(downstream.to_numpy())}
+                    offsets = xr.apply_ufunc(np.vectorize(mapper.get), upstream)
+                else:
+                    offsets = xr.DataArray([], dims=["index"])
                 raw_idxs[target] = np.asarray(offsets)
                 modified_idxs[target] = self._obj[f"_digitized_{target}_of_{k}"][
                     offsets

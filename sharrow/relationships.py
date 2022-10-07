@@ -1112,7 +1112,10 @@ class DataTree:
 
                 # vectorize version
                 mapper = {i: j for (j, i) in enumerate(downstream.to_numpy())}
-                offsets = xr.apply_ufunc(np.vectorize(mapper.get), upstream)
+                if upstream.size:
+                    offsets = xr.apply_ufunc(np.vectorize(mapper.get), upstream)
+                else:
+                    offsets = xr.DataArray([], dims=["index"])
                 if offsets.dtype.kind != "i":
                     warnings.warn(
                         f"detected missing values in digitizing {r.parent_data}.{r.parent_name}",
