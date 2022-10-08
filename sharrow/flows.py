@@ -503,6 +503,96 @@ def mnl_transform(
 """
 )
 
+NL_1D_TEMPLATE = """
+
+from sharrow.nested_logit import _utility_to_probability
+
+@nb.jit(cache=True, parallel=True, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath})
+def nl_transform(
+    argshape,
+    {joined_namespace_names}
+    dtype=np.{dtype},
+    dotarray=None,
+    random_draws=None,
+    pick_counted=False,
+    logsums=False,
+    n_nodes=0,
+    n_alts=0,
+    edges_up=None,  # int input shape=[edges]
+    edges_dn=None,  # int input shape=[edges]
+    mu_params=None,  # float input shape=[nests]
+    start_slots=None,  # int input shape=[nests]
+    len_slots=None,  # int input shape=[nests]
+):
+    if dotarray is None:
+        raise ValueError("dotarray cannot be None")
+    assert dotarray.ndim == 2
+    result = np.full((argshape[0], random_draws.shape[1]), -1, dtype=np.int32)
+    result_p = np.zeros((argshape[0], random_draws.shape[1]), dtype=dtype)
+    if pick_counted:
+        pick_count = np.zeros((argshape[0], random_draws.shape[1]), dtype=np.int32)
+    else:
+        pick_count = np.zeros((argshape[0], 0), dtype=np.int32)
+    if logsums:
+        _logsums = np.zeros((argshape[0], ), dtype=dtype)
+    else:
+        _logsums = np.zeros((0, ), dtype=dtype)
+    if argshape[0] > 1000:
+        for j0 in nb.prange(argshape[0]):
+            intermediate = np.zeros({len_self_raw_functions}, dtype=dtype)
+            {meta_code_stack_dot}
+            utility = np.zeros(n_nodes, dtype=dtype)
+            utility[:n_alts] = np.dot(intermediate, dotarray)
+            logprob = np.zeros(n_nodes, dtype=dtype)
+            probability = np.zeros(n_nodes, dtype=dtype)
+            _utility_to_probability(
+                n_alts,
+                edges_up,  # int input shape=[edges]
+                edges_dn,  # int input shape=[edges]
+                mu_params,  # float input shape=[nests]
+                start_slots,  # int input shape=[nests]
+                len_slots,  # int input shape=[nests]
+                logsums,
+                utility,  # float output shape=[nodes]
+                logprob,  # float output shape=[nodes]
+                probability,  # float output shape=[nodes]
+            )
+            if logsums:
+                _logsums[j0] = utility[-1]
+            if pick_counted:
+                _sample_choices_maker_counted(probability[:n_alts], random_draws[j0], result[j0], result_p[j0], pick_count[j0])
+            else:
+                _sample_choices_maker(probability[:n_alts], random_draws[j0], result[j0], result_p[j0])
+    else:
+        intermediate = np.zeros({len_self_raw_functions}, dtype=dtype)
+        for j0 in range(argshape[0]):
+            {meta_code_stack_dot}
+            utility = np.zeros(n_nodes, dtype=dtype)
+            utility[:n_alts] = np.dot(intermediate, dotarray)
+            logprob = np.zeros(n_nodes, dtype=dtype)
+            probability = np.zeros(n_nodes, dtype=dtype)
+            _utility_to_probability(
+                n_alts,
+                edges_up,  # int input shape=[edges]
+                edges_dn,  # int input shape=[edges]
+                mu_params,  # float input shape=[nests]
+                start_slots,  # int input shape=[nests]
+                len_slots,  # int input shape=[nests]
+                logsums,
+                utility,  # float output shape=[nodes]
+                logprob,  # float output shape=[nodes]
+                probability,  # float output shape=[nodes]
+            )
+            if logsums:
+                _logsums[j0] = utility[-1]
+            if pick_counted:
+                _sample_choices_maker_counted(probability[:n_alts], random_draws[j0], result[j0], result_p[j0], pick_count[j0])
+            else:
+                _sample_choices_maker(probability[:n_alts], random_draws[j0], result[j0], result_p[j0])
+    return result, result_p, pick_count, _logsums
+
+"""
+
 
 class Flow:
     """
@@ -1276,6 +1366,9 @@ class Flow:
                         mnl_template = MNL_1D_TEMPLATE.format(**locals()).format(
                             **locals()
                         )
+                        nl_template = NL_1D_TEMPLATE.format(**locals()).format(
+                            **locals()
+                        )
                     elif n_root_dims == 2:
                         meta_template = IRUNNER_2D_TEMPLATE.format(**locals()).format(
                             **locals()
@@ -1289,6 +1382,7 @@ class Flow:
                         mnl_template = MNL_2D_TEMPLATE.format(**locals()).format(
                             **locals()
                         )
+                        nl_template = ""
                     else:
                         raise ValueError(f"invalid n_root_dims {n_root_dims}")
 
@@ -1299,6 +1393,8 @@ class Flow:
                 f_code.write(blacken(textwrap.dedent(line_template)))
                 f_code.write("\n\n")
                 f_code.write(blacken(textwrap.dedent(mnl_template)))
+                f_code.write("\n\n")
+                f_code.write(blacken(textwrap.dedent(nl_template)))
                 f_code.write("\n\n")
                 f_code.write(blacken(textwrap.dedent(meta_template)))
                 f_code.write("\n\n")
@@ -1347,6 +1443,7 @@ class Flow:
         self._dotter = getattr(module, "dotter", None)
         self._irunner = getattr(module, "irunner", None)
         self._imnl = getattr(module, "mnl_transform", None)
+        self._inestedlogit = getattr(module, "nl_transform", None)
         self._idotter = getattr(module, "idotter", None)
         if not writing:
             self.function_names = module.function_names
@@ -1433,6 +1530,7 @@ class Flow:
         mnl=None,
         pick_counted=False,
         logsums=False,
+        nesting=None,
     ):
         assert isinstance(rg, DataTree)
         with warnings.catch_warnings():
@@ -1440,9 +1538,31 @@ class Flow:
                 "ignore", category=nb.NumbaExperimentalFeatureWarning
             )
             try:
+                known_arg_names = {
+                    "dtype",
+                    "dotarray",
+                    "argshape",
+                    "random_draws",
+                    "pick_counted",
+                    "logsums",
+                }
                 if runner is None:
                     if mnl is not None:
-                        runner_ = self._imnl
+                        if nesting is None:
+                            runner_ = self._imnl
+                        else:
+                            runner_ = self._inestedlogit
+                            known_arg_names.update(
+                                {
+                                    "n_nodes",
+                                    "n_alts",
+                                    "edges_up",
+                                    "edges_dn",
+                                    "mu_params",
+                                    "start_slots",
+                                    "len_slots",
+                                }
+                            )
                     elif dot is None:
                         runner_ = self._irunner
                     else:
@@ -1455,14 +1575,7 @@ class Flow:
                     named_args = inspect.getfullargspec(runner_).args
                 arguments = []
                 for arg in named_args:
-                    if arg in {
-                        "dtype",
-                        "dotarray",
-                        "argshape",
-                        "random_draws",
-                        "pick_counted",
-                        "logsums",
-                    }:
+                    if arg in known_arg_names:
                         continue
                     argument = rg.get_named_array(arg)
                     # aux_vars get passed through as is, not forced to be arrays
@@ -1488,6 +1601,10 @@ class Flow:
                     kwargs["random_draws"] = mnl
                     kwargs["pick_counted"] = pick_counted
                     kwargs["logsums"] = logsums
+                if nesting is not None:
+                    nesting.pop("edges_1st", None)  # unused in simple NL
+                    nesting.pop("edges_alloc", None)  # unused in simple NL
+                    kwargs.update(nesting)
                 tree_root_dims = rg.root_dataset.dims
                 argshape = [
                     tree_root_dims[i]
@@ -1526,10 +1643,11 @@ class Flow:
         runner=None,
         dtype=None,
         dot=None,
-        mnl_draws=None,
+        logit_draws=None,
         pick_counted=False,
         compile_watch=False,
         logsums=False,
+        nesting=None,
     ):
         """
         Compute the flow outputs.
@@ -1557,7 +1675,7 @@ class Flow:
             dot-product of the computed expressions and this array of coefficients,
             but without ever materializing the array of computed expression values
             in memory, achiving significant performance gains.
-        mnl_draws : array-like, optional
+        logit_draws : array-like, optional
             An array of random values in the unit interval. If provided, `dot` must
             also be provided. The dot-product is treated as the utility function
             for a multinomial logit model, and these draws are used to simulate
@@ -1566,6 +1684,8 @@ class Flow:
             Watch for compiled code.
         logsums : bool, default False
             Also return logsums when making draws from MNL models.
+        nesting : dict, optional
+            Nesting arrays
         """
         if compile_watch:
             compile_watch = time.time()
@@ -1583,13 +1703,13 @@ class Flow:
             dot = np.expand_dims(dot, -1)
             dot_collapse = True
         mnl_collapse = False
-        if mnl_draws is not None and mnl_draws.ndim == 1:
-            mnl_draws = np.expand_dims(mnl_draws, -1)
+        if logit_draws is not None and logit_draws.ndim == 1:
+            logit_draws = np.expand_dims(logit_draws, -1)
             mnl_collapse = True
         if not source.relationships_are_digitized:
             source = source.digitize_relationships()
         if source.relationships_are_digitized:
-            if mnl_draws is None:
+            if logit_draws is None:
                 result = self.iload_raw(source, runner=runner, dtype=dtype, dot=dot)
             else:
                 result, result_p, pick_count, out_logsum = self.iload_raw(
@@ -1597,9 +1717,10 @@ class Flow:
                     runner=runner,
                     dtype=dtype,
                     dot=dot,
-                    mnl=mnl_draws,
+                    mnl=logit_draws,
                     pick_counted=pick_counted,
                     logsums=logsums,
+                    nesting=nesting,
                 )
         else:
             raise RuntimeError("please digitize")
@@ -1627,7 +1748,7 @@ class Flow:
                     },
                 )
                 result.coords["expressions"] = self.function_names
-            elif dot_collapse and mnl_draws is None:
+            elif dot_collapse and logit_draws is None:
                 result = xr.DataArray(
                     np.squeeze(result, -1),
                     dims=use_dims,
@@ -1678,7 +1799,7 @@ class Flow:
                     dims=use_dims + list(plus_dims),
                     coords=source.root_dataset.coords,
                 )
-        elif dot_collapse and mnl_draws is None:
+        elif dot_collapse and logit_draws is None:
             result = np.squeeze(result, -1)
         elif mnl_collapse:
             result = np.squeeze(result, -1)
@@ -1852,7 +1973,7 @@ class Flow:
             compile_watch=compile_watch,
         )
 
-    def mnl_draws(
+    def logit_draws(
         self,
         coefficients,
         draws,
@@ -1861,6 +1982,7 @@ class Flow:
         logsums=False,
         dtype=None,
         compile_watch=False,
+        nesting=None,
     ):
         """
         Make random simulated choices for a multinomial logit model.
@@ -1892,6 +2014,8 @@ class Flow:
         compile_watch : bool, default False
             Set the `compiled_recently` flag on this flow to True if any file
             modification activity is observed in the cache directory.
+        nesting : dict, optional
+            Nesting instructions
 
         Returns
         -------
@@ -1906,11 +2030,12 @@ class Flow:
         return self._load(
             source=source,
             dot=coefficients,
-            mnl_draws=draws,
+            logit_draws=draws,
             dtype=dtype,
             pick_counted=pick_counted,
             compile_watch=compile_watch,
             logsums=logsums,
+            nesting=nesting,
         )
 
     @property
