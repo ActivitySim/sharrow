@@ -479,6 +479,8 @@ def mnl_transform(
           local_sum = np.sum(partial)
           if logsums:
             _logsums[j0] = np.log(local_sum)
+            if logsums == 1:
+              continue
           partial /= local_sum
           if pick_counted:
             _sample_choices_maker_counted(partial, random_draws[j0], result[j0], result_p[j0], pick_count[j0])
@@ -494,6 +496,8 @@ def mnl_transform(
           local_sum = np.sum(partial)
           if logsums:
             _logsums[j0] = np.log(local_sum)
+            if logsums == 1:
+              continue
           partial /= local_sum
           if pick_counted:
             _sample_choices_maker_counted(partial, random_draws[j0], result[j0], result_p[j0], pick_count[j0])
@@ -527,8 +531,12 @@ def nl_transform(
     if dotarray is None:
         raise ValueError("dotarray cannot be None")
     assert dotarray.ndim == 2
-    result = np.full((argshape[0], random_draws.shape[1]), -1, dtype=np.int32)
-    result_p = np.zeros((argshape[0], random_draws.shape[1]), dtype=dtype)
+    if logsums == 1:
+        result = np.full((0, random_draws.shape[1]), -1, dtype=np.int32)
+        result_p = np.zeros((0, random_draws.shape[1]), dtype=dtype)
+    else:
+        result = np.full((argshape[0], random_draws.shape[1]), -1, dtype=np.int32)
+        result_p = np.zeros((argshape[0], random_draws.shape[1]), dtype=dtype)
     if pick_counted:
         pick_count = np.zeros((argshape[0], random_draws.shape[1]), dtype=np.int32)
     else:
@@ -543,8 +551,12 @@ def nl_transform(
             {meta_code_stack_dot}
             utility = np.zeros(n_nodes, dtype=dtype)
             utility[:n_alts] = np.dot(intermediate, dotarray)
-            logprob = np.zeros(n_nodes, dtype=dtype)
-            probability = np.zeros(n_nodes, dtype=dtype)
+            if logsums == 1:
+              logprob = np.zeros(0, dtype=dtype)
+              probability = np.zeros(0, dtype=dtype)
+            else:
+              logprob = np.zeros(n_nodes, dtype=dtype)
+              probability = np.zeros(n_nodes, dtype=dtype)
             _utility_to_probability(
                 n_alts,
                 edges_up,  # int input shape=[edges]
@@ -552,25 +564,30 @@ def nl_transform(
                 mu_params,  # float input shape=[nests]
                 start_slots,  # int input shape=[nests]
                 len_slots,  # int input shape=[nests]
-                logsums,
+                (logsums==1),
                 utility,  # float output shape=[nodes]
                 logprob,  # float output shape=[nodes]
                 probability,  # float output shape=[nodes]
             )
             if logsums:
                 _logsums[j0] = utility[-1]
-            if pick_counted:
-                _sample_choices_maker_counted(probability[:n_alts], random_draws[j0], result[j0], result_p[j0], pick_count[j0])
-            else:
-                _sample_choices_maker(probability[:n_alts], random_draws[j0], result[j0], result_p[j0])
+            if logsums != 1:
+                if pick_counted:
+                    _sample_choices_maker_counted(probability[:n_alts], random_draws[j0], result[j0], result_p[j0], pick_count[j0])
+                else:
+                    _sample_choices_maker(probability[:n_alts], random_draws[j0], result[j0], result_p[j0])
     else:
         intermediate = np.zeros({len_self_raw_functions}, dtype=dtype)
         for j0 in range(argshape[0]):
             {meta_code_stack_dot}
             utility = np.zeros(n_nodes, dtype=dtype)
             utility[:n_alts] = np.dot(intermediate, dotarray)
-            logprob = np.zeros(n_nodes, dtype=dtype)
-            probability = np.zeros(n_nodes, dtype=dtype)
+            if logsums == 1:
+                logprob = np.zeros(0, dtype=dtype)
+                probability = np.zeros(0, dtype=dtype)
+            else:
+                logprob = np.zeros(n_nodes, dtype=dtype)
+                probability = np.zeros(n_nodes, dtype=dtype)
             _utility_to_probability(
                 n_alts,
                 edges_up,  # int input shape=[edges]
@@ -578,17 +595,18 @@ def nl_transform(
                 mu_params,  # float input shape=[nests]
                 start_slots,  # int input shape=[nests]
                 len_slots,  # int input shape=[nests]
-                logsums,
+                (logsums==1),
                 utility,  # float output shape=[nodes]
                 logprob,  # float output shape=[nodes]
                 probability,  # float output shape=[nodes]
             )
             if logsums:
                 _logsums[j0] = utility[-1]
-            if pick_counted:
-                _sample_choices_maker_counted(probability[:n_alts], random_draws[j0], result[j0], result_p[j0], pick_count[j0])
-            else:
-                _sample_choices_maker(probability[:n_alts], random_draws[j0], result[j0], result_p[j0])
+            if logsums != 1:
+                if pick_counted:
+                    _sample_choices_maker_counted(probability[:n_alts], random_draws[j0], result[j0], result_p[j0], pick_count[j0])
+                else:
+                    _sample_choices_maker(probability[:n_alts], random_draws[j0], result[j0], result_p[j0])
     return result, result_p, pick_count, _logsums
 
 """
@@ -1646,7 +1664,7 @@ class Flow:
         logit_draws=None,
         pick_counted=False,
         compile_watch=False,
-        logsums=False,
+        logsums=0,
         nesting=None,
     ):
         """
@@ -1682,8 +1700,9 @@ class Flow:
             choices from the implied probabilities.
         compile_watch : bool, default False
             Watch for compiled code.
-        logsums : bool, default False
-            Also return logsums when making draws from MNL models.
+        logsums : int, default 0
+            Set to 1 to return only logsums instead of making draws from logit models.
+            Set to 2 to return both logsums and draws.
         nesting : dict, optional
             Nesting arrays
         """
@@ -1979,7 +1998,7 @@ class Flow:
         draws,
         source=None,
         pick_counted=False,
-        logsums=False,
+        logsums=0,
         dtype=None,
         compile_watch=False,
         nesting=None,
@@ -2005,8 +2024,9 @@ class Flow:
             tree used to initialize this flow is used.
         pick_counted : bool, default False
             Whether to tally multiple repeated choices with a pick count.
-        logsums : bool, default False
-            Whether to also return logsums.
+        logsums : int, default 0
+            Set to 1 to return only logsums instead of making draws from logit models.
+            Set to 2 to return both logsums and draws.
         dtype : str or dtype
             Override the default dtype for the probability. May trigger re-compilation
             of the underlying code.  The choices and pick counts (if included)
@@ -2034,7 +2054,7 @@ class Flow:
             dtype=dtype,
             pick_counted=pick_counted,
             compile_watch=compile_watch,
-            logsums=logsums,
+            logsums=np.int8(logsums),
             nesting=nesting,
         )
 

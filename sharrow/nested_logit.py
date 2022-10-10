@@ -1,3 +1,5 @@
+from typing import Mapping
+
 import numba as nb
 import numpy as np
 
@@ -136,3 +138,57 @@ def _utility_to_logsums_array(
         )
         logsums[n] = _util[-1]
     return logsums
+
+
+def construct_nesting_tree(alternatives, nesting_settings):
+    """
+    Construct a larch NestingTree from ActivitySim settings.
+
+    Parameters
+    ----------
+    alternatives : Mapping or Sequence
+        If given as a Mapping (dict), the keys are the alternative names
+        as strings, and the values are alternative code numbers to use
+        in larch.  If given as a Sequence, the values are the alternative
+        names, and unique sequential codes will be created starting from 1.
+    nesting_settings : Mapping
+        The 'NESTS' section of the ActivitySim config file.
+
+    Returns
+    -------
+    NestingTree
+    """
+    from larch.model.tree import NestingTree
+
+    if not isinstance(alternatives, Mapping):
+        alt_names = list(alternatives)
+        alt_codes = np.arange(1, len(alt_names) + 1)
+        alternatives = dict(zip(alt_names, alt_codes))
+
+    tree = NestingTree()
+    nest_names_to_codes = alternatives.copy()
+    nest_names_to_codes["root"] = 0
+    for alt_name, alt_code in alternatives.items():
+        tree.add_node(alt_code, name=alt_name)
+
+    def make_nest(cfg, parent_code=0):
+        nonlocal nest_names_to_codes
+        if cfg["name"] != "root":
+            if cfg["name"] not in nest_names_to_codes:
+                n = tree.new_node(
+                    name=cfg["name"],
+                    parameter=str(cfg["coefficient"]),
+                    parent=parent_code,
+                )
+                nest_names_to_codes[cfg["name"]] = n
+            else:
+                tree.add_edge(parent_code, nest_names_to_codes[cfg["name"]])
+        for a in cfg["alternatives"]:
+            if isinstance(a, str):
+                tree.add_edge(nest_names_to_codes[cfg["name"]], nest_names_to_codes[a])
+            else:
+                make_nest(a, parent_code=nest_names_to_codes[cfg["name"]])
+
+    make_nest(nesting_settings)
+
+    return tree
