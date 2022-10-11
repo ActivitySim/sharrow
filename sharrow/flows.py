@@ -469,39 +469,21 @@ def mnl_transform(
         _logsums = np.zeros((argshape[0], ), dtype=dtype)
     else:
         _logsums = np.zeros((0, ), dtype=dtype)
-    if argshape[0] > 1000:
-        for j0 in nb.prange(argshape[0]):
-          partial = np.zeros(argshape[1], dtype=dtype)
-          for j1 in range(argshape[1]):
+    for j0 in nb.prange(argshape[0]):
+        partial = np.zeros(argshape[1], dtype=dtype)
+        for j1 in range(argshape[1]):
             intermediate = np.zeros({len_self_raw_functions}, dtype=dtype)
             {meta_code_stack_dot}
             partial[j1] = np.exp(np.dot(intermediate, dotarray))[0]
-          local_sum = np.sum(partial)
-          if logsums:
+        local_sum = np.sum(partial)
+        if logsums:
             _logsums[j0] = np.log(local_sum)
             if logsums == 1:
               continue
-          partial /= local_sum
-          if pick_counted:
+        partial /= local_sum
+        if pick_counted:
             _sample_choices_maker_counted(partial, random_draws[j0], result[j0], result_p[j0], pick_count[j0])
-          else:
-            _sample_choices_maker(partial, random_draws[j0], result[j0], result_p[j0])
-    else:
-        intermediate = np.zeros({len_self_raw_functions}, dtype=dtype)
-        partial = np.zeros(argshape[1], dtype=dtype)
-        for j0 in range(argshape[0]):
-          for j1 in range(argshape[1]):
-            {meta_code_stack_dot}
-            partial[j1] = np.exp(np.dot(intermediate, dotarray))[0]
-          local_sum = np.sum(partial)
-          if logsums:
-            _logsums[j0] = np.log(local_sum)
-            if logsums == 1:
-              continue
-          partial /= local_sum
-          if pick_counted:
-            _sample_choices_maker_counted(partial, random_draws[j0], result[j0], result_p[j0], pick_count[j0])
-          else:
+        else:
             _sample_choices_maker(partial, random_draws[j0], result[j0], result_p[j0])
     return result, result_p, pick_count, _logsums
 """
@@ -545,40 +527,8 @@ def nl_transform(
         _logsums = np.zeros((argshape[0], ), dtype=dtype)
     else:
         _logsums = np.zeros((0, ), dtype=dtype)
-    if argshape[0] > 1000:
-        for j0 in nb.prange(argshape[0]):
+    for j0 in nb.prange(argshape[0]):
             intermediate = np.zeros({len_self_raw_functions}, dtype=dtype)
-            {meta_code_stack_dot}
-            utility = np.zeros(n_nodes, dtype=dtype)
-            utility[:n_alts] = np.dot(intermediate, dotarray)
-            if logsums == 1:
-              logprob = np.zeros(0, dtype=dtype)
-              probability = np.zeros(0, dtype=dtype)
-            else:
-              logprob = np.zeros(n_nodes, dtype=dtype)
-              probability = np.zeros(n_nodes, dtype=dtype)
-            _utility_to_probability(
-                n_alts,
-                edges_up,  # int input shape=[edges]
-                edges_dn,  # int input shape=[edges]
-                mu_params,  # float input shape=[nests]
-                start_slots,  # int input shape=[nests]
-                len_slots,  # int input shape=[nests]
-                (logsums==1),
-                utility,  # float output shape=[nodes]
-                logprob,  # float output shape=[nodes]
-                probability,  # float output shape=[nodes]
-            )
-            if logsums:
-                _logsums[j0] = utility[-1]
-            if logsums != 1:
-                if pick_counted:
-                    _sample_choices_maker_counted(probability[:n_alts], random_draws[j0], result[j0], result_p[j0], pick_count[j0])
-                else:
-                    _sample_choices_maker(probability[:n_alts], random_draws[j0], result[j0], result_p[j0])
-    else:
-        intermediate = np.zeros({len_self_raw_functions}, dtype=dtype)
-        for j0 in range(argshape[0]):
             {meta_code_stack_dot}
             utility = np.zeros(n_nodes, dtype=dtype)
             utility[:n_alts] = np.dot(intermediate, dotarray)
@@ -1592,6 +1542,7 @@ class Flow:
                 except AttributeError:
                     named_args = inspect.getfullargspec(runner_).args
                 arguments = []
+                _arguments_names = []
                 for arg in named_args:
                     if arg in known_arg_names:
                         continue
@@ -1610,6 +1561,7 @@ class Flow:
                             arguments.append(np.asarray(argument_))
                         else:
                             arguments.append(np.asarray(argument))
+                    _arguments_names.append(arg)
                 kwargs = {}
                 if dtype is not None:
                     kwargs["dtype"] = dtype
@@ -1628,6 +1580,27 @@ class Flow:
                     tree_root_dims[i]
                     for i in presorted(tree_root_dims, self.dim_order, self.dim_exclude)
                 ]
+                # if 1:
+                #     logger.critical(f"========= PASSING ARGUMENT TO SHARROW LOAD ==========")
+                #     logger.critical(f"{argshape=}")
+                #     for _name, _info in zip(_arguments_names, arguments):
+                #         try:
+                #             logger.critical(f"ARG {_name}: {_info.dtype}, {_info.shape}")
+                #         except AttributeError:
+                #             alt_repr = repr(_info)
+                #             if len(alt_repr) < 200:
+                #                 logger.critical(f"ARG {_name}: {alt_repr}")
+                #             else:
+                #                 logger.critical(f"ARG {_name}: type={type(_info)}")
+                #     for _name, _info in kwargs.items():
+                #         try:
+                #             logger.critical(f"KWARG {_name}: {_info.dtype}, {_info.shape}")
+                #         except AttributeError:
+                #             alt_repr = repr(_info)
+                #             if len(alt_repr) < 200:
+                #                 logger.critical(f"KWARG {_name}: {alt_repr}")
+                #             else:
+                #                 logger.critical(f"KWARG {_name}: type={type(_info)}")
                 return runner_(np.asarray(argshape), *arguments, **kwargs)
             except nb.TypingError as err:
                 _raw_functions = getattr(self, "_raw_functions", {})
