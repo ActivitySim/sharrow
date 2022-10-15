@@ -10,6 +10,16 @@ import xarray as xr
 from .dataset import Dataset, construct
 
 try:
+    from dask.array import Array as dask_array_type
+except ModuleNotFoundError:
+    dask_array_type = ()
+
+try:
+    from sparse import SparseArray as sparse_array_type
+except ModuleNotFoundError:
+    sparse_array_type = ()
+
+try:
     from ast import unparse
 except ImportError:
     from astunparse import unparse as _unparse
@@ -134,6 +144,17 @@ def xgather(source, positions, indexes):
         return gather(source, indexes)
     else:
         return gather(igather(source, positions), indexes)
+
+
+def _dataarray_to_numpy(self) -> np.ndarray:
+    """Coerces wrapped data to numpy and returns a numpy.ndarray"""
+    data = self.data
+    if isinstance(data, dask_array_type):
+        data = data.compute()
+    if isinstance(data, sparse_array_type):
+        data = data.todense()
+    data = np.asarray(data)
+    return data
 
 
 class Relationship:
@@ -637,11 +658,19 @@ class DataTree:
                             ]
                             if r.indexing == "label":
                                 t1 = t2.sel(
-                                    {r.child_name: t1[r.parent_name].to_numpy()}
+                                    {
+                                        r.child_name: _dataarray_to_numpy(
+                                            t1[r.parent_name]
+                                        )
+                                    }
                                 )
                             else:  # by position
                                 t1 = t2.isel(
-                                    {r.child_name: t1[r.parent_name].to_numpy()}
+                                    {
+                                        r.child_name: _dataarray_to_numpy(
+                                            t1[r.parent_name]
+                                        )
+                                    }
                                 )
                         # final node in path
                         e = path[-1]
@@ -651,9 +680,11 @@ class DataTree:
                         if t1 is None:
                             t1 = self._graph.nodes[r.parent_data].get("dataset")
                         if r.indexing == "label":
-                            _labels[r.child_name] = t1[r.parent_name].to_numpy()
+                            _labels[r.child_name] = _dataarray_to_numpy(
+                                t1[r.parent_name]
+                            )
                         else:  # by position
-                            _idx = t1[r.parent_name].to_numpy()
+                            _idx = _dataarray_to_numpy(t1[r.parent_name])
                             if not np.issubdtype(_idx.dtype, np.integer):
                                 _idx = _idx.astype(np.int64)
                             _positions[r.child_name] = _idx
@@ -872,7 +903,7 @@ class DataTree:
             result[k] = result_k
 
         if as_dict:
-            result = {k: v.to_numpy() for k, v in result.items()}
+            result = {k: _dataarray_to_numpy(v) for k, v in result.items()}
         else:
             result = Dataset(result)
         if use_cache:
@@ -1069,7 +1100,7 @@ class DataTree:
                 return dataset[name2[:-8]].data.indptr
             elif name2.endswith("__indices"):
                 return dataset[name2[:-9]].data.indices
-        return dataset[name2].to_numpy()
+        return _dataarray_to_numpy(dataset[name2])
 
     _BY_OFFSET = "digitizedOffset"
 
@@ -1111,7 +1142,7 @@ class DataTree:
                 downstream = c_dataset[r.child_name]
 
                 # vectorize version
-                mapper = {i: j for (j, i) in enumerate(downstream.to_numpy())}
+                mapper = {i: j for (j, i) in enumerate(_dataarray_to_numpy(downstream))}
                 if upstream.size:
                     offsets = xr.apply_ufunc(np.vectorize(mapper.get), upstream)
                 else:
