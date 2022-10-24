@@ -643,6 +643,29 @@ def is_dict_like(value: Any) -> bool:
     return hasattr(value, "keys") and hasattr(value, "__getitem__")
 
 
+@xr.register_dataset_accessor("single_dim")
+class _SingleDim:
+    """
+    Convenience accessor for single-dimension datasets.
+    """
+
+    __slots__ = ("dataset", "dim_name")
+
+    def __init__(self, dataset: "Dataset"):
+        self.dataset = dataset
+        if len(self.dataset.dims) != 1:
+            raise ValueError("single_dim implies a single dimension dataset")
+        self.dim_name = self.dataset.dims.__iter__().__next__()
+
+    @property
+    def coords(self):
+        return self.dataset.coords[self.dim_name]
+
+    @property
+    def index(self):
+        return self.dataset.indexes[self.dim_name]
+
+
 @xr.register_dataset_accessor("iloc")
 class _iLocIndexer:
     """
