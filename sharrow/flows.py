@@ -390,16 +390,18 @@ def mnl_transform(
     random_draws=None,
     pick_counted=False,
     logsums=False,
+    choice_dtype=np.int32,
+    pick_count_dtype=np.int32,
 ):
     if dotarray is None:
         raise ValueError("dotarray cannot be None")
     assert dotarray.ndim == 2
-    result = np.full((argshape[0], random_draws.shape[1]), -1, dtype=np.int32)
+    result = np.full((argshape[0], random_draws.shape[1]), -1, dtype=choice_dtype)
     result_p = np.zeros((argshape[0], random_draws.shape[1]), dtype=dtype)
     if pick_counted:
-        pick_count = np.zeros((argshape[0], random_draws.shape[1]), dtype=np.int32)
+        pick_count = np.zeros((argshape[0], random_draws.shape[1]), dtype=pick_count_dtype)
     else:
-        pick_count = np.zeros((argshape[0], 0), dtype=np.int32)
+        pick_count = np.zeros((argshape[0], 0), dtype=pick_count_dtype)
     if logsums:
         _logsums = np.zeros((argshape[0], ), dtype=dtype)
     else:
@@ -449,6 +451,8 @@ def mnl_transform(
     random_draws=None,
     pick_counted=False,
     logsums=False,
+    choice_dtype=np.int32,
+    pick_count_dtype=np.int32,
 ):
     if dotarray is None:
         raise ValueError("dotarray cannot be None")
@@ -459,12 +463,12 @@ def mnl_transform(
     assert random_draws.ndim == 2
     assert random_draws.shape[0] == argshape[0]
 
-    result = np.full((argshape[0], random_draws.shape[1]), -1, dtype=np.int32)
+    result = np.full((argshape[0], random_draws.shape[1]), -1, dtype=choice_dtype)
     result_p = np.zeros((argshape[0], random_draws.shape[1]), dtype=dtype)
     if pick_counted:
-        pick_count = np.zeros((argshape[0], random_draws.shape[1]), dtype=np.int32)
+        pick_count = np.zeros((argshape[0], random_draws.shape[1]), dtype=pick_count_dtype)
     else:
-        pick_count = np.zeros((argshape[0], 0), dtype=np.int32)
+        pick_count = np.zeros((argshape[0], 0), dtype=pick_count_dtype)
     if logsums:
         _logsums = np.zeros((argshape[0], ), dtype=dtype)
     else:
@@ -509,20 +513,22 @@ def nl_transform(
     mu_params=None,  # float input shape=[nests]
     start_slots=None,  # int input shape=[nests]
     len_slots=None,  # int input shape=[nests]
+    choice_dtype=np.int32,
+    pick_count_dtype=np.int32,
 ):
     if dotarray is None:
         raise ValueError("dotarray cannot be None")
     assert dotarray.ndim == 2
     if logsums == 1:
-        result = np.full((0, random_draws.shape[1]), -1, dtype=np.int32)
+        result = np.full((0, random_draws.shape[1]), -1, dtype=choice_dtype)
         result_p = np.zeros((0, random_draws.shape[1]), dtype=dtype)
     else:
-        result = np.full((argshape[0], random_draws.shape[1]), -1, dtype=np.int32)
+        result = np.full((argshape[0], random_draws.shape[1]), -1, dtype=choice_dtype)
         result_p = np.zeros((argshape[0], random_draws.shape[1]), dtype=dtype)
     if pick_counted:
-        pick_count = np.zeros((argshape[0], random_draws.shape[1]), dtype=np.int32)
+        pick_count = np.zeros((argshape[0], random_draws.shape[1]), dtype=pick_count_dtype)
     else:
-        pick_count = np.zeros((argshape[0], 0), dtype=np.int32)
+        pick_count = np.zeros((argshape[0], 0), dtype=pick_count_dtype)
     if logsums:
         _logsums = np.zeros((argshape[0], ), dtype=dtype)
     else:
@@ -1513,6 +1519,8 @@ class Flow:
                     "random_draws",
                     "pick_counted",
                     "logsums",
+                    "choice_dtype",
+                    "pick_count_dtype",
                 }
                 if runner is None:
                     if mnl is not None:
@@ -1580,6 +1588,17 @@ class Flow:
                     tree_root_dims[i]
                     for i in presorted(tree_root_dims, self.dim_order, self.dim_exclude)
                 ]
+                if mnl is not None:
+                    if nesting is not None:
+                        n_alts = nesting["n_alts"]
+                    elif len(argshape) == 2:
+                        n_alts = argshape[1]
+                    else:
+                        n_alts = kwargs["dotarray"].shape[1]
+                    if n_alts < 128:
+                        kwargs["choice_dtype"] = np.int8
+                    elif n_alts < 32768:
+                        kwargs["choice_dtype"] = np.int16
                 # if 1:
                 #     logger.critical(f"========= PASSING ARGUMENT TO SHARROW LOAD ==========")
                 #     logger.critical(f"{argshape=}")
