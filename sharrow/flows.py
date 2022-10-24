@@ -406,28 +406,16 @@ def mnl_transform(
         _logsums = np.zeros((argshape[0], ), dtype=dtype)
     else:
         _logsums = np.zeros((0, ), dtype=dtype)
-    if argshape[0] > 1000:
-        for j0 in nb.prange(argshape[0]):
+    for j0 in nb.prange(argshape[0]):
             intermediate = np.zeros({len_self_raw_functions}, dtype=dtype)
             {meta_code_stack_dot}
-            partial = np.exp(np.dot(intermediate, dotarray))
+            dotprod = np.dot(intermediate, dotarray)
+            shifter = np.max(dotprod)
+            partial = np.exp(dotprod - shifter)
             local_sum = np.sum(partial)
             partial /= local_sum
             if logsums:
-                _logsums[j0] = np.log(local_sum)
-            if pick_counted:
-                _sample_choices_maker_counted(partial, random_draws[j0], result[j0], result_p[j0], pick_count[j0])
-            else:
-                _sample_choices_maker(partial, random_draws[j0], result[j0], result_p[j0])
-    else:
-        intermediate = np.zeros({len_self_raw_functions}, dtype=dtype)
-        for j0 in range(argshape[0]):
-            {meta_code_stack_dot}
-            partial = np.exp(np.dot(intermediate, dotarray))
-            local_sum = np.sum(partial)
-            partial /= local_sum
-            if logsums:
-                _logsums[j0] = np.log(local_sum)
+                _logsums[j0] = np.log(local_sum) + shifter
             if pick_counted:
                 _sample_choices_maker_counted(partial, random_draws[j0], result[j0], result_p[j0], pick_count[j0])
             else:
@@ -478,10 +466,13 @@ def mnl_transform(
         for j1 in range(argshape[1]):
             intermediate = np.zeros({len_self_raw_functions}, dtype=dtype)
             {meta_code_stack_dot}
-            partial[j1] = np.exp(np.dot(intermediate, dotarray))[0]
+            partial[j1] = np.dot(intermediate, dotarray)[0]
+        shifter = np.max(partial)
+        for j1 in range(argshape[1]):
+            partial[j1] = np.exp(partial[j1] - shifter)
         local_sum = np.sum(partial)
         if logsums:
-            _logsums[j0] = np.log(local_sum)
+            _logsums[j0] = np.log(local_sum) + shifter
             if logsums == 1:
               continue
         partial /= local_sum
