@@ -1775,7 +1775,7 @@ class Flow:
                     dims=_dims,
                     coords=_coords,
                 )
-                if pick_count.size == 0:
+                if pick_count is not None and pick_count.size == 0:
                     pick_count = None
                 if pick_count is not None:
                     pick_count = xr.DataArray(
@@ -1808,7 +1808,7 @@ class Flow:
             else:
                 dot_ = xr.DataArray(dot)
                 plus_dims = dot_.dims[1:]
-                _dims = use_dims[:-1] + list(plus_dims)
+                _dims = use_dims + list(plus_dims)
                 _coords = {
                     i: j for i, j in source.root_dataset.coords.items() if i in _dims
                 }
@@ -1817,12 +1817,13 @@ class Flow:
                     dims=_dims,
                     coords=_coords,
                 )
-                result_p = xr.DataArray(
-                    result_p,
-                    dims=_dims,
-                    coords=_coords,
-                )
-                if pick_count.size == 0:
+                if result_p is not None:
+                    result_p = xr.DataArray(
+                        result_p,
+                        dims=_dims,
+                        coords=_coords,
+                    )
+                if pick_count is not None and pick_count.size == 0:
                     pick_count = None
                 if pick_count is not None:
                     pick_count = xr.DataArray(
