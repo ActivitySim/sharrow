@@ -873,6 +873,43 @@ def to_zarr_with_attr(self, *args, **kwargs):
 
 
 @register_dataset_method
+def to_table(self):
+    """
+    Convert dataset contents to a pyarrow Table.
+
+    This dataset must not contain more than one dimension.
+    """
+    assert isinstance(self, Dataset)
+    if len(self.dims) != 1:
+        raise ValueError("Only 1-dim datasets can be converted to tables")
+
+    import pyarrow as pa
+
+    from .relationships import sparse_array_type
+
+    def to_numpy(var):
+        """Coerces wrapped data to numpy and returns a numpy.ndarray"""
+        data = var.data
+        if hasattr(data, "chunks"):
+            data = data.compute()
+        if isinstance(data, sparse_array_type):
+            data = data.todense()
+        return np.asarray(data)
+
+    pydict = {}
+    for i in self.variables:
+        dictionary = self[i].attrs.get("DICTIONARY", None)
+        if dictionary is not None:
+            pydict[i] = pa.DictionaryArray.from_arrays(
+                to_numpy(self[i]),
+                dictionary,
+            )
+        else:
+            pydict[i] = pa.array(to_numpy(self[i]))
+    return pa.Table.from_pydict(pydict)
+
+
+@register_dataset_method
 def select_and_rename(self, name_dict=None, **names):
     """
     Select and rename variables from this Dataset
