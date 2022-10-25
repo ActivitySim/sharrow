@@ -1705,9 +1705,17 @@ class Flow:
             dot = np.expand_dims(dot, -1)
             dot_collapse = True
         mnl_collapse = False
+        idca_collapse = False
         if logit_draws is not None and logit_draws.ndim == 1:
             logit_draws = np.expand_dims(logit_draws, -1)
             mnl_collapse = True
+        elif (
+            logit_draws is not None
+            and logit_draws.ndim == 2
+            and dot.ndim == 2
+            and dot.shape[1] == 1
+        ):
+            idca_collapse = True
         if not source.relationships_are_digitized:
             source = source.digitize_relationships()
         if source.relationships_are_digitized:
@@ -1795,6 +1803,53 @@ class Flow:
                         result_p.coords[plus_dim] = dot.coords[plus_dim]
                         if pick_count is not None:
                             pick_count.coords[plus_dim] = dot.coords[plus_dim]
+            elif idca_collapse:
+                # when logit draws has 2 dims
+                if isinstance(logit_draws, xr.DataArray):
+                    plus_dims = list(logit_draws.dims[1:])
+                else:
+                    plus_dims = list(xr.DataArray(logit_draws).dims[1:])
+                _dims = use_dims[:-1] + plus_dims
+                _coords = {
+                    i: j for i, j in source.root_dataset.coords.items() if i in _dims
+                }
+                result = xr.DataArray(
+                    result,
+                    dims=_dims,
+                    coords=_coords,
+                )
+                result_p = xr.DataArray(
+                    result_p,
+                    dims=_dims,
+                    coords=_coords,
+                )
+                if pick_count is not None and pick_count.size == 0:
+                    pick_count = None
+                if pick_count is not None:
+                    pick_count = xr.DataArray(
+                        pick_count,
+                        dims=_dims,
+                        coords=_coords,
+                    )
+                if out_logsum is not None:
+                    out_logsum = xr.DataArray(
+                        out_logsum,
+                        dims=_dims[: out_logsum.ndim],
+                        coords={
+                            i: j
+                            for i, j in source.root_dataset.coords.items()
+                            if i in _dims[: out_logsum.ndim]
+                        },
+                    )
+                for plus_dim in plus_dims:
+                    if (
+                        isinstance(logit_draws, xr.DataArray)
+                        and plus_dim in logit_draws.coords
+                    ):
+                        result.coords[plus_dim] = logit_draws.coords[plus_dim]
+                        result_p.coords[plus_dim] = logit_draws.coords[plus_dim]
+                        if pick_count is not None:
+                            pick_count.coords[plus_dim] = logit_draws.coords[plus_dim]
             elif isinstance(dot, xr.DataArray):
                 plus_dims = dot.dims[1:]
                 result = xr.DataArray(
