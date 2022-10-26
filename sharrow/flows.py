@@ -1873,21 +1873,47 @@ class Flow:
                     dot.ndim == 2
                     and logit_draws.ndim == len(use_dims) + 1
                     and logit_draws.shape[-1] == 1
+                    and self._logit_ndims == 1
                 ):
-                    result_dims = use_dims[:-1] + dot_trailing_dim
+                    result_dims = use_dims
                     result_squeeze = (-1,)
+                elif (
+                    dot.ndim == 2
+                    and logit_draws.ndim == len(use_dims) + 1
+                    and logit_draws.shape[-1] > 1
+                    and self._logit_ndims == 1
+                ):
+                    result_dims = use_dims + logit_draws_trailing_dim
                 elif (
                     dot.ndim == 2
                     and logit_draws.ndim == len(use_dims) + 1
                     and logit_draws.shape[-1] == 0
                 ):
                     # logsums only
-                    result_dims = use_dims[:-1] + dot_trailing_dim
+                    result_dims = use_dims
+                    result_squeeze = (-1,)
+                elif (
+                    dot.ndim == 2
+                    and logit_draws.ndim == len(use_dims) + 1
+                    and logit_draws.shape[-1] > 1
+                    and self._logit_ndims == 2
+                ):
+                    # wide choices
+                    result_dims = use_dims + logit_draws_trailing_dim
+                elif (
+                    dot.ndim == 2
+                    and logit_draws.ndim == len(use_dims) + 1
+                    and logit_draws.shape[-1] == 1
+                    and self._logit_ndims == 2
+                ):
+                    # wide choices
+                    result_dims = use_dims
                     result_squeeze = (-1,)
                 else:
                     print(f"{dot.ndim=}")
                     print(f"{logit_draws.ndim=}")
                     print(f"{len(use_dims)=}")
+                    print(f"{self._logit_ndims=}")
                     raise NotImplementedError()
 
         # dot_collapse = False
