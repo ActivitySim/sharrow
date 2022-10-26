@@ -372,6 +372,8 @@ MNL_1D_TEMPLATE = (
     MNL_GENERIC_TEMPLATE
     + """
 
+logit_ndims = 1
+
 @nb.jit(cache=True, parallel=True, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath})
 def mnl_transform_plus1d(
     argshape,
@@ -461,6 +463,8 @@ def mnl_transform_plus1d(
 MNL_2D_TEMPLATE = (
     MNL_GENERIC_TEMPLATE
     + """
+
+logit_ndims = 2
 
 @nb.jit(cache=True, parallel=True, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath})
 def mnl_transform(
@@ -654,7 +658,14 @@ def squeeze(x, *args):
     x = zero_size_to_None(x)
     if x is None:
         return None
-    return np.squeeze(x, *args)
+    try:
+        return np.squeeze(x, *args)
+    except Exception:
+        if hasattr(x, "shape"):
+            logger.error(f"failed to squeeze {args!r} from array of shape {x.shape}")
+        else:
+            logger.error(f"failed to squeeze {args!r} from array of unknown shape")
+        raise
 
 
 class Flow:
@@ -1505,6 +1516,7 @@ class Flow:
         self._runner = getattr(module, "runner", None)
         self._dotter = getattr(module, "dotter", None)
         self._irunner = getattr(module, "irunner", None)
+        self._logit_ndims = getattr(module, "logit_ndims", None)
         self._imnl = getattr(module, "mnl_transform", None)
         self._imnl_plus1d = getattr(module, "mnl_transform_plus1d", None)
         self._inestedlogit = getattr(module, "nl_transform", None)
@@ -1692,27 +1704,32 @@ class Flow:
                         kwargs["choice_dtype"] = np.int8
                     elif n_alts < 32768:
                         kwargs["choice_dtype"] = np.int16
-                # if 1:
-                #     logger.critical(f"========= PASSING ARGUMENT TO SHARROW LOAD ==========")
-                #     logger.critical(f"{argshape=}")
-                #     for _name, _info in zip(_arguments_names, arguments):
-                #         try:
-                #             logger.critical(f"ARG {_name}: {_info.dtype}, {_info.shape}")
-                #         except AttributeError:
-                #             alt_repr = repr(_info)
-                #             if len(alt_repr) < 200:
-                #                 logger.critical(f"ARG {_name}: {alt_repr}")
-                #             else:
-                #                 logger.critical(f"ARG {_name}: type={type(_info)}")
-                #     for _name, _info in kwargs.items():
-                #         try:
-                #             logger.critical(f"KWARG {_name}: {_info.dtype}, {_info.shape}")
-                #         except AttributeError:
-                #             alt_repr = repr(_info)
-                #             if len(alt_repr) < 200:
-                #                 logger.critical(f"KWARG {_name}: {alt_repr}")
-                #             else:
-                #                 logger.critical(f"KWARG {_name}: type={type(_info)}")
+                if logger.isEnabledFor(logging.DEBUG):
+                    logger.debug(
+                        "========= PASSING ARGUMENT TO SHARROW LOAD =========="
+                    )
+                    logger.debug(f"{argshape=}")
+                    for _name, _info in zip(_arguments_names, arguments):
+                        try:
+                            logger.debug(f"ARG {_name}: {_info.dtype}, {_info.shape}")
+                        except AttributeError:
+                            alt_repr = repr(_info)
+                            if len(alt_repr) < 200:
+                                logger.debug(f"ARG {_name}: {alt_repr}")
+                            else:
+                                logger.debug(f"ARG {_name}: type={type(_info)}")
+                    for _name, _info in kwargs.items():
+                        try:
+                            logger.debug(f"KWARG {_name}: {_info.dtype}, {_info.shape}")
+                        except AttributeError:
+                            alt_repr = repr(_info)
+                            if len(alt_repr) < 200:
+                                logger.debug(f"KWARG {_name}: {alt_repr}")
+                            else:
+                                logger.debug(f"KWARG {_name}: type={type(_info)}")
+                    logger.debug(
+                        "========= ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ =========="
+                    )
                 return runner_(np.asarray(argshape), *arguments, **kwargs)
             except nb.TypingError as err:
                 _raw_functions = getattr(self, "_raw_functions", {})
@@ -1808,8 +1825,14 @@ class Flow:
         )
 
         if logit_draws is not None:
-            while logit_draws.ndim < len(use_dims) + 1:
-                logit_draws = np.expand_dims(logit_draws, -1)
+            if dot is None:
+                raise NotImplementedError
+            if dot.ndim == 1 or (dot.ndim == 2 and dot.shape[1] == 1):
+                while logit_draws.ndim < self._logit_ndims:
+                    logit_draws = np.expand_dims(logit_draws, -1)
+            else:
+                while logit_draws.ndim < self._logit_ndims + 1:
+                    logit_draws = np.expand_dims(logit_draws, -1)
 
         result_dims = None
         result_squeeze = None
@@ -1839,7 +1862,7 @@ class Flow:
                 else:
                     logit_draws_trailing_dim = [logit_draws.dims[-1]]
                 if dot.ndim == 1 and logit_draws.ndim == len(use_dims):
-                    raise NotImplementedError
+                    result_dims = use_dims[:-1] + logit_draws_trailing_dim
                 elif dot.ndim == 2 and logit_draws.ndim == len(use_dims):
                     result_dims = use_dims[:-1] + dot_trailing_dim
                 elif dot.ndim == 1 and logit_draws.ndim == len(use_dims) + 1:
