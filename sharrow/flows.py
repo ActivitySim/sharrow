@@ -166,12 +166,8 @@ def irunner(
     dtype=np.{dtype},
 ):
     result = np.empty((argshape[0], {len_self_raw_functions}), dtype=dtype)
-    if argshape[0] > 1000:
-        for j0 in nb.prange(argshape[0]):
-            linemaker(result[j0], j0, {joined_namespace_names})
-    else:
-        for j0 in range(argshape[0]):
-            linemaker(result[j0], j0, {joined_namespace_names})
+    for j0 in nb.prange(argshape[0]):
+        linemaker(result[j0], j0, {joined_namespace_names})
     return result
 """
 
@@ -183,13 +179,8 @@ def irunner(
     dtype=np.{dtype},
 ):
     result = np.empty((argshape[0], argshape[1], {len_self_raw_functions}), dtype=dtype)
-    if argshape[0] * argshape[1] > 1000:
-        for j0 in nb.prange(argshape[0]):
-          for j1 in range(argshape[1]):
-            linemaker(result[j0, j1], j0, j1, {joined_namespace_names})
-    else:
-        for j0 in range(argshape[0]):
-          for j1 in range(argshape[1]):
+    for j0 in nb.prange(argshape[0]):
+        for j1 in range(argshape[1]):
             linemaker(result[j0, j1], j0, j1, {joined_namespace_names})
     return result
 """
@@ -382,7 +373,7 @@ MNL_1D_TEMPLATE = (
     + """
 
 @nb.jit(cache=True, parallel=True, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath})
-def mnl_transform(
+def mnl_transform_plus1d(
     argshape,
     {joined_namespace_names}
     dtype=np.{dtype},
@@ -424,6 +415,47 @@ def mnl_transform(
 
 """
 )
+# @nb.jit(cache=True, parallel=True, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath})
+# def mnl_transform_plus1d(
+#     argshape,
+#     {joined_namespace_names}
+#     dtype=np.{dtype},
+#     dotarray=None,
+#     random_draws=None,
+#     pick_counted=False,
+#     logsums=False,
+#     choice_dtype=np.int32,
+#     pick_count_dtype=np.int32,
+# ):
+#     if dotarray is None:
+#         raise ValueError("dotarray cannot be None")
+#     assert dotarray.ndim == 2
+#     result = np.full((argshape[0], argshape[1], random_draws.shape[1]), -1, dtype=choice_dtype)
+#     result_p = np.zeros((argshape[0], argshape[1], random_draws.shape[1]), dtype=dtype)
+#     if pick_counted:
+#         pick_count = np.zeros((argshape[0], argshape[1], random_draws.shape[1]), dtype=pick_count_dtype)
+#     else:
+#         pick_count = np.zeros((argshape[0], argshape[1], 0), dtype=pick_count_dtype)
+#     if logsums:
+#         _logsums = np.zeros((argshape[0], argshape[1], ), dtype=dtype)
+#     else:
+#         _logsums = np.zeros((0, 0), dtype=dtype)
+#     for j0 in nb.prange(argshape[0]):
+#         for k0 in range(argshape[1]):
+#             intermediate = np.zeros({len_self_raw_functions}, dtype=dtype)
+#             {meta_code_stack_dot}
+#             dotprod = np.dot(intermediate, dotarray)
+#             shifter = np.max(dotprod)
+#             partial = np.exp(dotprod - shifter)
+#             local_sum = np.sum(partial)
+#             partial /= local_sum
+#             if logsums:
+#                 _logsums[j0,k0] = np.log(local_sum) + shifter
+#             if pick_counted:
+#                 _sample_choices_maker_counted(partial, random_draws[j0,k0], result[j0,k0], result_p[j0,k0], pick_count[j0,k0])
+#             else:
+#                 _sample_choices_maker(partial, random_draws[j0,k0], result[j0,k0], result_p[j0,k0])
+#     return result, result_p, pick_count, _logsums
 
 
 MNL_2D_TEMPLATE = (
@@ -481,6 +513,59 @@ def mnl_transform(
         else:
             _sample_choices_maker(partial, random_draws[j0], result[j0], result_p[j0])
     return result, result_p, pick_count, _logsums
+
+
+@nb.jit(cache=True, parallel=True, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath})
+def mnl_transform_plus1d(
+    argshape,
+    {joined_namespace_names}
+    dtype=np.{dtype},
+    dotarray=None,
+    random_draws=None,
+    pick_counted=False,
+    logsums=False,
+    choice_dtype=np.int32,
+    pick_count_dtype=np.int32,
+):
+    if dotarray is None:
+        raise ValueError("dotarray cannot be None")
+    assert dotarray.ndim == 2
+    assert dotarray.shape[1] >= 1
+    if random_draws is None:
+        raise ValueError("random_draws cannot be None")
+    assert random_draws.ndim == 3
+    assert random_draws.shape[0] == argshape[0]
+    assert random_draws.shape[1] == argshape[1]
+
+    result = np.full((argshape[0], argshape[1], random_draws.shape[2]), -1, dtype=choice_dtype)
+    result_p = np.zeros((argshape[0], argshape[1], random_draws.shape[2]), dtype=dtype)
+    if pick_counted:
+        pick_count = np.zeros((argshape[0], argshape[1], random_draws.shape[2]), dtype=pick_count_dtype)
+    else:
+        pick_count = np.zeros((argshape[0], argshape[1], 0), dtype=pick_count_dtype)
+    if logsums:
+        _logsums = np.zeros((argshape[0], argshape[1], ), dtype=dtype)
+    else:
+        _logsums = np.zeros((0, 0), dtype=dtype)
+    for j0 in nb.prange(argshape[0]):
+        for j1 in range(argshape[1]):
+            intermediate = np.zeros({len_self_raw_functions}, dtype=dtype)
+            {meta_code_stack_dot}
+            partial = np.dot(intermediate, dotarray)
+            shifter = np.max(partial)
+            partial = np.exp(partial - shifter)
+            local_sum = np.sum(partial)
+            if logsums:
+                _logsums[j0,j1] = np.log(local_sum) + shifter
+                if logsums == 1:
+                    continue
+            partial /= local_sum
+            if pick_counted:
+                _sample_choices_maker_counted(partial, random_draws[j0,j1], result[j0,j1], result_p[j0,j1], pick_count[j0,j1])
+            else:
+                _sample_choices_maker(partial, random_draws[j0,j1], result[j0,j1], result_p[j0,j1])
+    return result, result_p, pick_count, _logsums
+
 """
 )
 
@@ -557,6 +642,19 @@ def nl_transform(
     return result, result_p, pick_count, _logsums
 
 """
+
+
+def zero_size_to_None(x):
+    if x is not None and x.size == 0:
+        return None
+    return x
+
+
+def squeeze(x, *args):
+    x = zero_size_to_None(x)
+    if x is None:
+        return None
+    return np.squeeze(x, *args)
 
 
 class Flow:
@@ -1408,6 +1506,7 @@ class Flow:
         self._dotter = getattr(module, "dotter", None)
         self._irunner = getattr(module, "irunner", None)
         self._imnl = getattr(module, "mnl_transform", None)
+        self._imnl_plus1d = getattr(module, "mnl_transform_plus1d", None)
         self._inestedlogit = getattr(module, "nl_transform", None)
         self._idotter = getattr(module, "idotter", None)
         if not writing:
@@ -1516,7 +1615,10 @@ class Flow:
                 if runner is None:
                     if mnl is not None:
                         if nesting is None:
-                            runner_ = self._imnl
+                            if dot.shape[1] > 1:
+                                runner_ = self._imnl_plus1d
+                            else:
+                                runner_ = self._imnl
                         else:
                             runner_ = self._inestedlogit
                             known_arg_names.update(
@@ -1697,25 +1799,93 @@ class Flow:
             source = self.tree
         if dtype is None and dot is not None:
             dtype = dot.dtype
-        dot_collapse = False
+
+        if logit_draws is None and logsums == 1:
+            logit_draws = np.zeros(source.shape + (0,), dtype=dtype)
+
+        use_dims = list(
+            presorted(source.root_dataset.dims, self.dim_order, self.dim_exclude)
+        )
+
+        if logit_draws is not None:
+            while logit_draws.ndim < len(use_dims) + 1:
+                logit_draws = np.expand_dims(logit_draws, -1)
+
+        result_dims = None
+        result_squeeze = None
+        if dot is None:
+            # returning extracted raw data, with all dims plus expressions
+            result_dims = use_dims + ["expressions"]
+            result_squeeze = None
+        else:
+            if not isinstance(dot, xr.DataArray):
+                dot_trailing_dim = ["ALT_COL"]
+            else:
+                dot_trailing_dim = [dot.dims[1]]
+            if dot.ndim == 1 and logit_draws is None:
+                # returning a dot-product for idca-type data
+                result_dims = use_dims
+                result_squeeze = (-1,)
+            elif dot.ndim == 2 and logit_draws is None:
+                # returning a dot-product for idco-type data
+                result_dims = use_dims + dot_trailing_dim
+                result_squeeze = None
+            elif dot.ndim > 2 and logit_draws is None:
+                raise NotImplementedError
+            else:
+                # returning a logit model result
+                if not isinstance(logit_draws, xr.DataArray):
+                    logit_draws_trailing_dim = ["DRAW"]
+                else:
+                    logit_draws_trailing_dim = [logit_draws.dims[-1]]
+                if dot.ndim == 1 and logit_draws.ndim == len(use_dims):
+                    raise NotImplementedError
+                elif dot.ndim == 2 and logit_draws.ndim == len(use_dims):
+                    result_dims = use_dims[:-1] + dot_trailing_dim
+                elif dot.ndim == 1 and logit_draws.ndim == len(use_dims) + 1:
+                    result_dims = use_dims[:-1] + logit_draws_trailing_dim
+                    if logit_draws.shape[-1] == 1:
+                        result_squeeze = (-1,)
+                elif (
+                    dot.ndim == 2
+                    and logit_draws.ndim == len(use_dims) + 1
+                    and logit_draws.shape[-1] == 1
+                ):
+                    result_dims = use_dims[:-1] + dot_trailing_dim
+                    result_squeeze = (-1,)
+                elif (
+                    dot.ndim == 2
+                    and logit_draws.ndim == len(use_dims) + 1
+                    and logit_draws.shape[-1] == 0
+                ):
+                    # logsums only
+                    result_dims = use_dims[:-1] + dot_trailing_dim
+                    result_squeeze = (-1,)
+                else:
+                    print(f"{dot.ndim=}")
+                    print(f"{logit_draws.ndim=}")
+                    print(f"{len(use_dims)=}")
+                    raise NotImplementedError()
+
+        # dot_collapse = False
         result_p = None
         pick_count = None
         out_logsum = None
         if dot is not None and dot.ndim == 1:
             dot = np.expand_dims(dot, -1)
-            dot_collapse = True
-        mnl_collapse = False
-        idca_collapse = False
-        if logit_draws is not None and logit_draws.ndim == 1:
-            logit_draws = np.expand_dims(logit_draws, -1)
-            mnl_collapse = True
-        elif (
-            logit_draws is not None
-            and logit_draws.ndim == 2
-            and dot.ndim == 2
-            and dot.shape[1] == 1
-        ):
-            idca_collapse = True
+            # dot_collapse = True
+        # mnl_collapse = False
+        # idca_collapse = False
+        # if logit_draws is not None and logit_draws.ndim == 1:
+        #     logit_draws = np.expand_dims(logit_draws, -1)
+        #     mnl_collapse = True
+        # elif (
+        #     logit_draws is not None
+        #     and logit_draws.ndim == 2
+        #     and dot.ndim == 2
+        #     and dot.shape[1] == 1
+        # ):
+        #     idca_collapse = True
         if not source.relationships_are_digitized:
             source = source.digitize_relationships()
         if source.relationships_are_digitized:
@@ -1732,6 +1902,8 @@ class Flow:
                     logsums=logsums,
                     nesting=nesting,
                 )
+                pick_count = zero_size_to_None(pick_count)
+                out_logsum = zero_size_to_None(out_logsum)
         else:
             raise RuntimeError("please digitize")
         if as_dataframe:
@@ -1744,163 +1916,208 @@ class Flow:
                 {k: result[:, n] for n, k in enumerate(self._raw_functions.keys())}
             )
         elif as_dataarray:
-            use_dims = list(
-                presorted(source.root_dataset.dims, self.dim_order, self.dim_exclude)
-            )
-            if dot is None:
+
+            if result_squeeze:
+                result = squeeze(result, result_squeeze)
+                result_p = squeeze(result_p, result_squeeze)
+                pick_count = squeeze(pick_count, result_squeeze)
+            result_coords = {
+                k: v for k, v in source.root_dataset.coords.items() if k in result_dims
+            }
+            if result is not None:
                 result = xr.DataArray(
                     result,
-                    dims=use_dims + ["expressions"],
+                    dims=result_dims,
+                    coords=result_coords,
+                )
+                if "expressions" in result_dims:
+                    result.coords["expressions"] = self.function_names
+            if result_p is not None:
+                result_p = xr.DataArray(
+                    result_p,
+                    dims=result_dims,
+                    coords=result_coords,
+                )
+            if pick_count is not None:
+                pick_count = xr.DataArray(
+                    pick_count,
+                    dims=result_dims,
+                    coords=result_coords,
+                )
+            if out_logsum is not None:
+                out_logsum = xr.DataArray(
+                    out_logsum,
+                    dims=result_dims[: out_logsum.ndim],
                     coords={
                         k: v
                         for k, v in source.root_dataset.coords.items()
-                        if k in use_dims
+                        if k in result_dims[: out_logsum.ndim]
                     },
                 )
-                result.coords["expressions"] = self.function_names
-            elif dot_collapse and logit_draws is None:
-                result = xr.DataArray(
-                    np.squeeze(result, -1),
-                    dims=use_dims,
-                    coords=source.root_dataset.coords,
-                )
-            elif mnl_collapse:
-                if isinstance(dot, xr.DataArray):
-                    plus_dims = list(dot.dims[1:])
-                else:
-                    plus_dims = []
-                _dims = use_dims[:-1] + plus_dims
-                _coords = {
-                    i: j for i, j in source.root_dataset.coords.items() if i in _dims
-                }
-                result = xr.DataArray(
-                    np.squeeze(result, -1),
-                    dims=_dims,
-                    coords=_coords,
-                )
-                result_p = xr.DataArray(
-                    np.squeeze(result_p, -1),
-                    dims=_dims,
-                    coords=_coords,
-                )
-                if pick_count is not None and pick_count.size == 0:
-                    pick_count = None
-                if pick_count is not None:
-                    pick_count = xr.DataArray(
-                        np.squeeze(pick_count, -1),
-                        dims=_dims,
-                        coords=_coords,
-                    )
-                if out_logsum is not None:
-                    out_logsum = xr.DataArray(
-                        out_logsum,
-                        dims=_dims,
-                        coords=_coords,
-                    )
-                for plus_dim in plus_dims:
-                    if plus_dim in dot.coords:
-                        result.coords[plus_dim] = dot.coords[plus_dim]
-                        result_p.coords[plus_dim] = dot.coords[plus_dim]
-                        if pick_count is not None:
-                            pick_count.coords[plus_dim] = dot.coords[plus_dim]
-            elif idca_collapse:
-                # when logit draws has 2 dims
-                if isinstance(logit_draws, xr.DataArray):
-                    plus_dims = list(logit_draws.dims[1:])
-                else:
-                    plus_dims = list(xr.DataArray(logit_draws).dims[1:])
-                _dims = use_dims[:-1] + plus_dims
-                _coords = {
-                    i: j for i, j in source.root_dataset.coords.items() if i in _dims
-                }
-                result = xr.DataArray(
-                    result,
-                    dims=_dims,
-                    coords=_coords,
-                )
-                result_p = xr.DataArray(
-                    result_p,
-                    dims=_dims,
-                    coords=_coords,
-                )
-                if pick_count is not None and pick_count.size == 0:
-                    pick_count = None
-                if pick_count is not None:
-                    pick_count = xr.DataArray(
-                        pick_count,
-                        dims=_dims,
-                        coords=_coords,
-                    )
-                if out_logsum is not None:
-                    out_logsum = xr.DataArray(
-                        out_logsum,
-                        dims=_dims[: out_logsum.ndim],
-                        coords={
-                            i: j
-                            for i, j in source.root_dataset.coords.items()
-                            if i in _dims[: out_logsum.ndim]
-                        },
-                    )
-                for plus_dim in plus_dims:
-                    if (
-                        isinstance(logit_draws, xr.DataArray)
-                        and plus_dim in logit_draws.coords
-                    ):
-                        result.coords[plus_dim] = logit_draws.coords[plus_dim]
-                        result_p.coords[plus_dim] = logit_draws.coords[plus_dim]
-                        if pick_count is not None:
-                            pick_count.coords[plus_dim] = logit_draws.coords[plus_dim]
-            elif isinstance(dot, xr.DataArray):
-                plus_dims = dot.dims[1:]
-                result = xr.DataArray(
-                    result,
-                    dims=use_dims + list(plus_dims),
-                    coords=source.root_dataset.coords,
-                )
-                for plus_dim in plus_dims:
-                    if plus_dim in dot.coords:
-                        result.coords[plus_dim] = dot.coords[plus_dim]
-            else:
-                dot_ = xr.DataArray(dot)
-                plus_dims = dot_.dims[1:]
-                _dims = use_dims + list(plus_dims)
-                _coords = {
-                    i: j for i, j in source.root_dataset.coords.items() if i in _dims
-                }
-                result = xr.DataArray(
-                    result,
-                    dims=_dims,
-                    coords=_coords,
-                )
-                if result_p is not None:
-                    result_p = xr.DataArray(
-                        result_p,
-                        dims=_dims,
-                        coords=_coords,
-                    )
-                if pick_count is not None and pick_count.size == 0:
-                    pick_count = None
-                if pick_count is not None:
-                    pick_count = xr.DataArray(
-                        pick_count,
-                        dims=_dims,
-                        coords=_coords,
-                    )
-                if out_logsum is not None:
-                    out_logsum = xr.DataArray(
-                        out_logsum,
-                        dims=_dims[: out_logsum.ndim],
-                        coords={
-                            i: j
-                            for i, j in source.root_dataset.coords.items()
-                            if i in _dims[: out_logsum.ndim]
-                        },
-                    )
-        elif dot_collapse and logit_draws is None:
-            result = np.squeeze(result, -1)
-        elif mnl_collapse:
-            result = np.squeeze(result, -1)
-            result_p = np.squeeze(result_p, -1)
+
+            # use_dims = list(
+            #     presorted(source.root_dataset.dims, self.dim_order, self.dim_exclude)
+            # )
+            # if dot is None:
+            #     result = xr.DataArray(
+            #         result,
+            #         dims=use_dims + ["expressions"],
+            #         coords={
+            #             k: v
+            #             for k, v in source.root_dataset.coords.items()
+            #             if k in use_dims
+            #         },
+            #     )
+            #     result.coords["expressions"] = self.function_names
+            # elif dot_collapse and logit_draws is None:
+            #     result = xr.DataArray(
+            #         np.squeeze(result, -1),
+            #         dims=use_dims,
+            #         coords=source.root_dataset.coords,
+            #     )
+            # elif mnl_collapse:
+            #     if isinstance(dot, xr.DataArray):
+            #         plus_dims = list(dot.dims[1:])
+            #     else:
+            #         plus_dims = []
+            #     _dims = use_dims[:-1] + plus_dims
+            #     _coords = {
+            #         i: j for i, j in source.root_dataset.coords.items() if i in _dims
+            #     }
+            #     result = xr.DataArray(
+            #         np.squeeze(result, -1),
+            #         dims=_dims,
+            #         coords=_coords,
+            #     )
+            #     result_p = xr.DataArray(
+            #         np.squeeze(result_p, -1),
+            #         dims=_dims,
+            #         coords=_coords,
+            #     )
+            #     if pick_count is not None and pick_count.size == 0:
+            #         pick_count = None
+            #     if pick_count is not None:
+            #         pick_count = xr.DataArray(
+            #             np.squeeze(pick_count, -1),
+            #             dims=_dims,
+            #             coords=_coords,
+            #         )
+            #     if out_logsum is not None:
+            #         out_logsum = xr.DataArray(
+            #             out_logsum,
+            #             dims=_dims,
+            #             coords=_coords,
+            #         )
+            #     for plus_dim in plus_dims:
+            #         if plus_dim in dot.coords:
+            #             result.coords[plus_dim] = dot.coords[plus_dim]
+            #             result_p.coords[plus_dim] = dot.coords[plus_dim]
+            #             if pick_count is not None:
+            #                 pick_count.coords[plus_dim] = dot.coords[plus_dim]
+            # elif idca_collapse:
+            #     # when logit draws has 2 dims
+            #     if isinstance(logit_draws, xr.DataArray):
+            #         plus_dims = list(logit_draws.dims[1:])
+            #     else:
+            #         plus_dims = list(xr.DataArray(logit_draws).dims[1:])
+            #     _dims = use_dims[:-1] + plus_dims
+            #     _coords = {
+            #         i: j for i, j in source.root_dataset.coords.items() if i in _dims
+            #     }
+            #     result = xr.DataArray(
+            #         result,
+            #         dims=_dims,
+            #         coords=_coords,
+            #     )
+            #     result_p = xr.DataArray(
+            #         result_p,
+            #         dims=_dims,
+            #         coords=_coords,
+            #     )
+            #     if pick_count is not None and pick_count.size == 0:
+            #         pick_count = None
+            #     if pick_count is not None:
+            #         pick_count = xr.DataArray(
+            #             pick_count,
+            #             dims=_dims,
+            #             coords=_coords,
+            #         )
+            #     if out_logsum is not None:
+            #         out_logsum = xr.DataArray(
+            #             out_logsum,
+            #             dims=_dims[: out_logsum.ndim],
+            #             coords={
+            #                 i: j
+            #                 for i, j in source.root_dataset.coords.items()
+            #                 if i in _dims[: out_logsum.ndim]
+            #             },
+            #         )
+            #     for plus_dim in plus_dims:
+            #         if (
+            #             isinstance(logit_draws, xr.DataArray)
+            #             and plus_dim in logit_draws.coords
+            #         ):
+            #             result.coords[plus_dim] = logit_draws.coords[plus_dim]
+            #             result_p.coords[plus_dim] = logit_draws.coords[plus_dim]
+            #             if pick_count is not None:
+            #                 pick_count.coords[plus_dim] = logit_draws.coords[plus_dim]
+            # elif isinstance(dot, xr.DataArray):
+            #     plus_dims = dot.dims[1:]
+            #     result = xr.DataArray(
+            #         result,
+            #         dims=use_dims + list(plus_dims),
+            #         coords=source.root_dataset.coords,
+            #     )
+            #     for plus_dim in plus_dims:
+            #         if plus_dim in dot.coords:
+            #             result.coords[plus_dim] = dot.coords[plus_dim]
+            # else:
+            #     dot_ = xr.DataArray(dot)
+            #     plus_dims = dot_.dims[1:]
+            #     _dims = use_dims + list(plus_dims)
+            #     _coords = {
+            #         i: j for i, j in source.root_dataset.coords.items() if i in _dims
+            #     }
+            #     result = xr.DataArray(
+            #         result,
+            #         dims=_dims,
+            #         coords=_coords,
+            #     )
+            #     if result_p is not None:
+            #         result_p = xr.DataArray(
+            #             result_p,
+            #             dims=_dims,
+            #             coords=_coords,
+            #         )
+            #     if pick_count is not None and pick_count.size == 0:
+            #         pick_count = None
+            #     if pick_count is not None:
+            #         pick_count = xr.DataArray(
+            #             pick_count,
+            #             dims=_dims,
+            #             coords=_coords,
+            #         )
+            #     if out_logsum is not None:
+            #         out_logsum = xr.DataArray(
+            #             out_logsum,
+            #             dims=_dims[: out_logsum.ndim],
+            #             coords={
+            #                 i: j
+            #                 for i, j in source.root_dataset.coords.items()
+            #                 if i in _dims[: out_logsum.ndim]
+            #             },
+            #         )
+        else:
+            if result_squeeze:
+                result = squeeze(result, result_squeeze)
+                result_p = squeeze(result_p, result_squeeze)
+                pick_count = squeeze(pick_count, result_squeeze)
+
+        # elif dot_collapse and logit_draws is None:
+        #     result = np.squeeze(result, -1)
+        # elif mnl_collapse:
+        #     result = np.squeeze(result, -1)
+        #     result_p = np.squeeze(result_p, -1)
         if compile_watch:
             self.compiled_recently = False
             for i in os.walk(os.path.join(self.cache_dir, self.name)):
@@ -1926,13 +2143,12 @@ class Flow:
                 del self.compiled_recently
             except AttributeError:
                 pass
+        if out_logsum is not None:
+            return result, result_p, pick_count, out_logsum
+        if pick_count is not None:
+            return result, result_p, pick_count
         if result_p is not None:
-            if logsums:
-                return result, result_p, pick_count, out_logsum
-            if pick_counted:
-                return result, result_p, pick_count
-            else:
-                return result, result_p
+            return result, result_p
         return result
 
     def load(self, source=None, dtype=None, compile_watch=False):
@@ -2073,7 +2289,7 @@ class Flow:
     def logit_draws(
         self,
         coefficients,
-        draws,
+        draws=None,
         source=None,
         pick_counted=False,
         logsums=0,
