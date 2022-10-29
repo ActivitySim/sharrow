@@ -1863,6 +1863,20 @@ class Flow:
                     logit_draws_trailing_dim = [logit_draws.dims[-1]]
                 if dot.ndim == 1 and logit_draws.ndim == len(use_dims):
                     result_dims = use_dims[:-1] + logit_draws_trailing_dim
+                elif (
+                    dot.ndim == 2
+                    and dot.shape[1] == 1
+                    and logit_draws.ndim == len(use_dims)
+                    and logit_draws.shape[-1] == 1
+                ):
+                    result_dims = use_dims[:-1]
+                    result_squeeze = (-1,)
+                elif (
+                    dot.ndim == 2
+                    and dot.shape[1] == 1
+                    and logit_draws.ndim == len(use_dims)
+                ):
+                    result_dims = use_dims[:-1] + logit_draws_trailing_dim
                 elif dot.ndim == 2 and logit_draws.ndim == len(use_dims):
                     result_dims = use_dims[:-1] + dot_trailing_dim
                 elif dot.ndim == 1 and logit_draws.ndim == len(use_dims) + 1:
