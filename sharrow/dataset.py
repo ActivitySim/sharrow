@@ -665,6 +665,10 @@ class _SingleDim:
     def index(self):
         return self.dataset.indexes[self.dim_name]
 
+    @property
+    def size(self):
+        return self.dataset.dims[self.dim_name]
+
 
 @xr.register_dataset_accessor("iloc")
 class _iLocIndexer:
