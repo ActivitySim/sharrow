@@ -365,6 +365,7 @@ class DataTree:
             aux_vars=self.aux_vars,
             cache_dir=self.cache_dir,
             force_digitization=self.force_digitization,
+            dim_order=self.dim_order,
         )
 
     def __repr__(self):
@@ -1260,7 +1261,11 @@ class DataTree:
                     upside = ", ".join(unparse(t) for t in upside_ast)
                 except:  # noqa: E722
                     for t in upside_ast:
-                        print(f"t:{t}")
+                        str_t = str(t)
+                        if len(str_t) < 2000:
+                            print(f"t:{str_t}")
+                        else:
+                            print(f"t:{str_t[:200]}...")
                     raise
 
                 # check for redirection target
