@@ -597,7 +597,7 @@ def from_zarr(store, *args, **kwargs):
     ----------
     http://zarr.readthedocs.io/
     """
-    return xr.Dataset(xr.open_zarr(store, *args, **kwargs))
+    return xr.open_zarr(store, *args, **kwargs)
 
 
 def from_zarr_with_attr(*args, **kwargs):
