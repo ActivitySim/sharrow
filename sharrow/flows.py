@@ -385,10 +385,14 @@ def mnl_transform_plus1d(
     logsums=False,
     choice_dtype=np.int32,
     pick_count_dtype=np.int32,
+    mask=None,
 ):
     if dotarray is None:
         raise ValueError("dotarray cannot be None")
     assert dotarray.ndim == 2
+    if mask is not None:
+        assert mask.ndim == 1
+        assert mask.shape[0] == argshape[0]
     result = np.full((argshape[0], random_draws.shape[1]), -1, dtype=choice_dtype)
     result_p = np.zeros((argshape[0], random_draws.shape[1]), dtype=dtype)
     if pick_counted:
@@ -400,6 +404,9 @@ def mnl_transform_plus1d(
     else:
         _logsums = np.zeros((0, ), dtype=dtype)
     for j0 in nb.prange(argshape[0]):
+            if mask is not None:
+                if not mask[j0]:
+                    continue
             intermediate = np.zeros({len_self_raw_functions}, dtype=dtype)
             {meta_code_stack_dot}
             dotprod = np.dot(intermediate, dotarray)
@@ -477,6 +484,7 @@ def mnl_transform(
     logsums=False,
     choice_dtype=np.int32,
     pick_count_dtype=np.int32,
+    mask=None,
 ):
     if dotarray is None:
         raise ValueError("dotarray cannot be None")
@@ -486,6 +494,9 @@ def mnl_transform(
         raise ValueError("random_draws cannot be None")
     assert random_draws.ndim == 2
     assert random_draws.shape[0] == argshape[0]
+    if mask is not None:
+        assert mask.ndim == 1
+        assert mask.shape[0] == argshape[0]
 
     result = np.full((argshape[0], random_draws.shape[1]), -1, dtype=choice_dtype)
     result_p = np.zeros((argshape[0], random_draws.shape[1]), dtype=dtype)
@@ -498,6 +509,9 @@ def mnl_transform(
     else:
         _logsums = np.zeros((0, ), dtype=dtype)
     for j0 in nb.prange(argshape[0]):
+        if mask is not None:
+            if not mask[j0]:
+                continue
         partial = np.zeros(argshape[1], dtype=dtype)
         for j1 in range(argshape[1]):
             intermediate = np.zeros({len_self_raw_functions}, dtype=dtype)
@@ -530,6 +544,7 @@ def mnl_transform_plus1d(
     logsums=False,
     choice_dtype=np.int32,
     pick_count_dtype=np.int32,
+    mask=None,
 ):
     if dotarray is None:
         raise ValueError("dotarray cannot be None")
@@ -540,6 +555,10 @@ def mnl_transform_plus1d(
     assert random_draws.ndim == 3
     assert random_draws.shape[0] == argshape[0]
     assert random_draws.shape[1] == argshape[1]
+    if mask is not None:
+        assert mask.ndim == 2
+        assert mask.shape[0] == argshape[0]
+        assert mask.shape[1] == argshape[1]
 
     result = np.full((argshape[0], argshape[1], random_draws.shape[2]), -1, dtype=choice_dtype)
     result_p = np.zeros((argshape[0], argshape[1], random_draws.shape[2]), dtype=dtype)
@@ -553,6 +572,9 @@ def mnl_transform_plus1d(
         _logsums = np.zeros((0, 0), dtype=dtype)
     for j0 in nb.prange(argshape[0]):
         for j1 in range(argshape[1]):
+            if mask is not None:
+                if not mask[j0,j1]:
+                    continue
             intermediate = np.zeros({len_self_raw_functions}, dtype=dtype)
             {meta_code_stack_dot}
             partial = np.dot(intermediate, dotarray)
@@ -595,10 +617,14 @@ def nl_transform(
     len_slots=None,  # int input shape=[nests]
     choice_dtype=np.int32,
     pick_count_dtype=np.int32,
+    mask=None,
 ):
     if dotarray is None:
         raise ValueError("dotarray cannot be None")
     assert dotarray.ndim == 2
+    if mask is not None:
+        assert mask.ndim == 1
+        assert mask.shape[0] == argshape[0]
     if logsums == 1:
         result = np.full((0, random_draws.shape[1]), -1, dtype=choice_dtype)
         result_p = np.zeros((0, random_draws.shape[1]), dtype=dtype)
@@ -614,6 +640,9 @@ def nl_transform(
     else:
         _logsums = np.zeros((0, ), dtype=dtype)
     for j0 in nb.prange(argshape[0]):
+            if mask is not None:
+                if not mask[j0]:
+                    continue
             intermediate = np.zeros({len_self_raw_functions}, dtype=dtype)
             {meta_code_stack_dot}
             utility = np.zeros(n_nodes, dtype=dtype)
@@ -1607,6 +1636,7 @@ class Flow:
         pick_counted=False,
         logsums=False,
         nesting=None,
+        mask=None,
     ):
         assert isinstance(rg, DataTree)
         with warnings.catch_warnings():
@@ -1623,6 +1653,7 @@ class Flow:
                     "logsums",
                     "choice_dtype",
                     "pick_count_dtype",
+                    "mask",
                 }
                 if runner is None:
                     if mnl is not None:
@@ -1688,6 +1719,8 @@ class Flow:
                     nesting.pop("edges_1st", None)  # unused in simple NL
                     nesting.pop("edges_alloc", None)  # unused in simple NL
                     kwargs.update(nesting)
+                if mask is not None:
+                    kwargs["mask"] = mask
                 tree_root_dims = rg.root_dataset.dims
                 argshape = [
                     tree_root_dims[i]
@@ -1768,6 +1801,7 @@ class Flow:
         compile_watch=False,
         logsums=0,
         nesting=None,
+        mask=None,
     ):
         """
         Compute the flow outputs.
@@ -1807,6 +1841,7 @@ class Flow:
             Set to 2 to return both logsums and draws.
         nesting : dict, optional
             Nesting arrays
+        mask : array-like, optional
         """
         if compile_watch:
             compile_watch = time.time()
@@ -1953,7 +1988,9 @@ class Flow:
             source = source.digitize_relationships()
         if source.relationships_are_digitized:
             if logit_draws is None:
-                result = self.iload_raw(source, runner=runner, dtype=dtype, dot=dot)
+                result = self.iload_raw(
+                    source, runner=runner, dtype=dtype, dot=dot, mask=mask
+                )
             else:
                 result, result_p, pick_count, out_logsum = self.iload_raw(
                     source,
@@ -1964,6 +2001,7 @@ class Flow:
                     pick_counted=pick_counted,
                     logsums=logsums,
                     nesting=nesting,
+                    mask=mask,
                 )
                 pick_count = zero_size_to_None(pick_count)
                 out_logsum = zero_size_to_None(out_logsum)
@@ -2360,6 +2398,7 @@ class Flow:
         compile_watch=False,
         nesting=None,
         as_dataarray=False,
+        mask=None,
     ):
         """
         Make random simulated choices for a multinomial logit model.
@@ -2395,6 +2434,8 @@ class Flow:
         nesting : dict, optional
             Nesting instructions
         as_dataarray : bool, default False
+        mask : array-like, optional
+            Only compute values for items where mask is truthy.
 
         Returns
         -------
@@ -2416,6 +2457,7 @@ class Flow:
             logsums=np.int8(logsums),
             nesting=nesting,
             as_dataarray=as_dataarray,
+            mask=mask,
         )
 
     @property
