@@ -358,6 +358,12 @@ class DataTree:
             self.root_dataset.dims[i] for i in dim_order if i not in self.dim_exclude
         )
 
+    @property
+    def root_dims(self):
+        from .flows import presorted
+
+        return tuple(presorted(self.root_dataset, self.dim_order, self.dim_exclude))
+
     def __shallow_copy_extras(self):
         return dict(
             extra_funcs=self.extra_funcs,
@@ -574,9 +580,14 @@ class DataTree:
 
             return Dataset({k: self[k] for k in item})
         try:
-            return self._getitem(item)
+            result = self._getitem(item, dim_names_from_top=True)
         except KeyError:
-            return self._getitem(item, include_blank_dims=True)
+            result = self._getitem(
+                item, include_blank_dims=True, dim_names_from_top=True
+            )
+        if result.dims != self.root_dims:
+            result, _ = xr.broadcast(result, self.root_dataset)
+        return result
 
     def finditem(self, item, maybe_in=None):
         if maybe_in is not None and maybe_in in self._graph.nodes:
@@ -586,7 +597,12 @@ class DataTree:
         return self._getitem(item, just_node_name=True)
 
     def _getitem(
-        self, item, include_blank_dims=False, only_dims=False, just_node_name=False
+        self,
+        item,
+        include_blank_dims=False,
+        only_dims=False,
+        just_node_name=False,
+        dim_names_from_top=False,
     ):
 
         if isinstance(item, (list, tuple)):
@@ -640,9 +656,15 @@ class DataTree:
                     else:
                         result = dataset[item]
                     dims_in_result = set(result.dims)
+                    top_dim_names = {}
                     for path in nx.algorithms.simple_paths.all_simple_edge_paths(
                         self._graph, self.root_node_name, current_node
                     ):
+                        if dim_names_from_top:
+                            e = path[0]
+                            top_dim_name = self._graph.edges[e].get("parent_name")
+                        else:
+                            top_dim_name = None
                         path_dim = self._graph.edges[path[-1]].get("child_name")
                         if path_dim not in dims_in_result:
                             continue
@@ -689,12 +711,15 @@ class DataTree:
                             if not np.issubdtype(_idx.dtype, np.integer):
                                 _idx = _idx.astype(np.int64)
                             _positions[r.child_name] = _idx
-
+                        if top_dim_name is not None:
+                            top_dim_names[r.child_name] = top_dim_name
                     y = xgather(result, _positions, _labels)
                     if len(result.dims) == 1 and len(y.dims) == 1:
                         y = y.rename({y.dims[0]: result.dims[0]})
                     elif len(dims_in_result) == len(y.dims):
                         y = y.rename({_i: _j for _i, _j in zip(y.dims, result.dims)})
+                    if top_dim_names is not None:
+                        y = y.rename(top_dim_names)
                     return y
             else:
                 examined.add(current_node)
