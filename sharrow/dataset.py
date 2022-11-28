@@ -669,6 +669,11 @@ class _SingleDim:
     def size(self):
         return self.dataset.dims[self.dim_name]
 
+    def to_pyarrow(self):
+        return pa.Table.from_pydict(
+            {k: pa.array(v.to_numpy()) for k, v in self.dataset.variables.items()}
+        )
+
 
 @xr.register_dataset_accessor("iloc")
 class _iLocIndexer:
