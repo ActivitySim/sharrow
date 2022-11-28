@@ -515,11 +515,13 @@ def mnl_transform(
                 continue
         partial = np.zeros(argshape[1], dtype=dtype)
         intermediate = np.zeros({len_self_raw_functions}, dtype=dtype)
+        shifter = dtype(-99999)
         for j1 in range(argshape[1]):
             intermediate[:] = 0
             {meta_code_stack_dot}
-            partial[j1] = np.dot(intermediate, dotarray)
-        shifter = np.max(partial)
+            v = partial[j1] = np.dot(intermediate, dotarray)
+            if v > shifter:
+                shifter = v
         for j1 in range(argshape[1]):
             partial[j1] = np.exp(partial[j1] - shifter)
         local_sum = np.sum(partial)
