@@ -366,16 +366,6 @@ def _sample_choices_maker_counted(
             out_pick_count[unique_s] += 1
             s += 1
 
-@nb.jit(cache=True, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath}, nogil={nopython})
-def _parallel_chunksize(n):
-    old_chunksize = nb.get_parallel_chunksize()
-    if n > 10000:
-        n_threads = nb.get_num_threads()
-        chunk_size = int(n / n_threads / 100)
-        if chunk_size > 50:
-            nb.set_parallel_chunksize(chunk_size)
-    return old_chunksize
-
 """
 
 MNL_1D_TEMPLATE = (
@@ -413,7 +403,6 @@ def mnl_transform_plus1d(
         _logsums = np.zeros((argshape[0], ), dtype=dtype)
     else:
         _logsums = np.zeros((0, ), dtype=dtype)
-    old_chunksize = _parallel_chunksize(argshape[0])
     for j0 in nb.prange(argshape[0]):
             if mask is not None:
                 if not mask[j0]:
@@ -431,7 +420,6 @@ def mnl_transform_plus1d(
                 _sample_choices_maker_counted(partial, random_draws[j0], result[j0], result_p[j0], pick_count[j0])
             else:
                 _sample_choices_maker(partial, random_draws[j0], result[j0], result_p[j0])
-    nb.set_parallel_chunksize(old_chunksize)
     return result, result_p, pick_count, _logsums
 
 """
@@ -521,7 +509,6 @@ def mnl_transform(
         _logsums = np.zeros((argshape[0], ), dtype=dtype)
     else:
         _logsums = np.zeros((0, ), dtype=dtype)
-    old_chunksize = _parallel_chunksize(argshape[0])
     for j0 in nb.prange(argshape[0]):
         if mask is not None:
             if not mask[j0]:
@@ -547,7 +534,6 @@ def mnl_transform(
             _sample_choices_maker_counted(partial, random_draws[j0], result[j0], result_p[j0], pick_count[j0])
         else:
             _sample_choices_maker(partial, random_draws[j0], result[j0], result_p[j0])
-    nb.set_parallel_chunksize(old_chunksize)
     return result, result_p, pick_count, _logsums
 
 
@@ -588,7 +574,6 @@ def mnl_transform_plus1d(
         _logsums = np.zeros((argshape[0], argshape[1], ), dtype=dtype)
     else:
         _logsums = np.zeros((0, 0), dtype=dtype)
-    old_chunksize = _parallel_chunksize(argshape[0])
     for j0 in nb.prange(argshape[0]):
         partial = np.zeros(dotarray.shape[1], dtype=dtype)
         for j1 in range(argshape[1]):
@@ -610,7 +595,6 @@ def mnl_transform_plus1d(
                 _sample_choices_maker_counted(partial, random_draws[j0,j1], result[j0,j1], result_p[j0,j1], pick_count[j0,j1])
             else:
                 _sample_choices_maker(partial, random_draws[j0,j1], result[j0,j1], result_p[j0,j1])
-    nb.set_parallel_chunksize(old_chunksize)
     return result, result_p, pick_count, _logsums
 
 """
@@ -660,7 +644,6 @@ def nl_transform(
         _logsums = np.zeros((argshape[0], ), dtype=dtype)
     else:
         _logsums = np.zeros((0, ), dtype=dtype)
-    old_chunksize = _parallel_chunksize(argshape[0])
     for j0 in nb.prange(argshape[0]):
             if mask is not None:
                 if not mask[j0]:
@@ -694,7 +677,6 @@ def nl_transform(
                     _sample_choices_maker_counted(probability[:n_alts], random_draws[j0], result[j0], result_p[j0], pick_count[j0])
                 else:
                     _sample_choices_maker(probability[:n_alts], random_draws[j0], result[j0], result_p[j0])
-    nb.set_parallel_chunksize(old_chunksize)
     return result, result_p, pick_count, _logsums
 
 """
