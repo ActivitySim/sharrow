@@ -373,7 +373,7 @@ def _parallel_chunksize(n):
         n_threads = nb.get_num_threads()
         chunk_size = int(n / n_threads / 100)
         if chunk_size > 50:
-            set_parallel_chunksize(chunk_size)
+            nb.set_parallel_chunksize(chunk_size)
     return old_chunksize
 
 """
