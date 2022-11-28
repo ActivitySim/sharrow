@@ -515,7 +515,7 @@ def mnl_transform(
                 continue
         partial = np.zeros(argshape[1], dtype=dtype)
         intermediate = np.zeros({len_self_raw_functions}, dtype=dtype)
-        shifter = dtype(-99999)
+        shifter = -99999
         for j1 in range(argshape[1]):
             intermediate[:] = 0
             {meta_code_stack_dot}
