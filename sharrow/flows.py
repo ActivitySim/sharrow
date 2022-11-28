@@ -490,6 +490,7 @@ def mnl_transform(
         raise ValueError("dotarray cannot be None")
     assert dotarray.ndim == 2
     assert dotarray.shape[1] == 1
+    dotarray = dotarray.reshape(-1)
     if random_draws is None:
         raise ValueError("random_draws cannot be None")
     assert random_draws.ndim == 2
@@ -513,10 +514,11 @@ def mnl_transform(
             if not mask[j0]:
                 continue
         partial = np.zeros(argshape[1], dtype=dtype)
+        intermediate = np.zeros({len_self_raw_functions}, dtype=dtype)
         for j1 in range(argshape[1]):
-            intermediate = np.zeros({len_self_raw_functions}, dtype=dtype)
+            intermediate[:] = 0
             {meta_code_stack_dot}
-            partial[j1] = np.dot(intermediate, dotarray)[0]
+            partial[j1] = np.dot(intermediate, dotarray)
         shifter = np.max(partial)
         for j1 in range(argshape[1]):
             partial[j1] = np.exp(partial[j1] - shifter)
@@ -571,13 +573,14 @@ def mnl_transform_plus1d(
     else:
         _logsums = np.zeros((0, 0), dtype=dtype)
     for j0 in nb.prange(argshape[0]):
+        partial = np.zeros(dotarray.shape[1], dtype=dtype)
         for j1 in range(argshape[1]):
             if mask is not None:
                 if not mask[j0,j1]:
                     continue
             intermediate = np.zeros({len_self_raw_functions}, dtype=dtype)
             {meta_code_stack_dot}
-            partial = np.dot(intermediate, dotarray)
+            partial = np.dot(intermediate, dotarray, out=partial)
             shifter = np.max(partial)
             partial = np.exp(partial - shifter)
             local_sum = np.sum(partial)
