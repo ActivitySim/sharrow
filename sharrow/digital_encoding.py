@@ -289,6 +289,24 @@ class _DigitalEncodings:
                 bag.add(de["offset_source"])
         return bag
 
+    def drop_dims(self, dim_name, *, errors="raise"):
+        if isinstance(dim_name, str):
+            vars_to_drop = set()
+            for k in self._obj.variables:
+                k_attrs = self._obj._variables[k].attrs
+                if "digital_encoding" in k_attrs:
+                    offset_array_name = k_attrs["digital_encoding"].get("offset_source")
+                    if dim_name in self._obj._variables[offset_array_name].dims:
+                        vars_to_drop.add(k)
+                if dim_name in self._obj._variables[k].dims:
+                    vars_to_drop.add(k)
+            return self._obj.drop_vars(vars_to_drop, errors=errors)
+        else:
+            obj = self._obj
+            for i in dim_name:
+                obj = obj.digital_encoding.drop_dims(i, errors=errors)
+            return obj
+
 
 def multivalue_digitize_by_dictionary(ds, encode_vars=None, encoding_name=None):
     """
