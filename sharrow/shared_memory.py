@@ -248,7 +248,7 @@ class SharedMemDatasetAccessor:
     def delete_shared_memory_files(key):
         delete_shared_memory_files(key)
 
-    def to_shared_memory(self, key=None, mode="r+"):
+    def to_shared_memory(self, key=None, mode="r+", _dupe=True):
         """
         Load this Dataset into shared memory.
 
@@ -390,7 +390,7 @@ class SharedMemDatasetAccessor:
         create_shared_list(
             [pickle.dumps(self._obj.attrs)] + [pickle.dumps(i) for i in wrappers], key
         )
-        return type(self).from_shared_memory(key, own_data=True, mode=mode)
+        return type(self).from_shared_memory(key, own_data=mem, mode=mode)
 
     @property
     def shared_memory_key(self):
@@ -409,9 +409,10 @@ class SharedMemDatasetAccessor:
         key : str
             An identifying key for this shared memory.  Use the same key
             in `from_shared_memory` to recreate this Dataset elsewhere.
-        own_data : bool, default False
+        own_data : bool or memmap, default False
             The returned Dataset object references the shared memory but is
-            not the "owner" of this data unless this flag is set.
+            not the "owner" of this data unless this flag is set.  Pass a
+            memmap to reuse an existing buffer.
 
         Returns
         -------
@@ -429,7 +430,12 @@ class SharedMemDatasetAccessor:
         except AttributeError:
             # for memmap, list is loaded from pickle, not shared ram
             pass
-        mem = open_shared_memory_array(key, mode=mode)
+
+        if own_data and not (own_data is True):
+            mem = own_data
+            own_data = True
+        else:
+            mem = open_shared_memory_array(key, mode=mode)
         _shared_memory_objs_.append(mem)
         if key.startswith("memmap:"):
             buffer = memoryview(mem)
