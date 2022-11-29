@@ -396,6 +396,11 @@ class DataTree:
             s += "\n relationships: none"
         return s
 
+    def view_relationships(self, fontname="Arial", fontsize=9):
+        from .viz import display_svg, make_graph
+
+        return display_svg(make_graph(self, fontname=fontname, fontsize=fontsize))
+
     def _hash_features(self):
         h = []
         if len(self._graph.nodes):
