@@ -683,6 +683,36 @@ def test_isin_and_between(dataframe_regression):
     )
     dataframe_regression.check(result)
 
+    # test masking
+    mask = (persons.index % 2) == 0
+
+    result = ss.load_dataframe(tree, mask=mask)
+    pd.testing.assert_series_equal(
+        result["pt"].isin([1, 5]).astype(np.float32).where(mask, np.nan),
+        result["pt_in_15"],
+        check_names=False,
+    )
+    pd.testing.assert_series_equal(
+        result["pt"].isin([3, 4]).astype(np.float32).where(mask, np.nan),
+        result["pt_in_34"],
+        check_names=False,
+    )
+    pd.testing.assert_series_equal(
+        result["pt"].between(1, 5).astype(np.float32).where(mask, np.nan),
+        result["pt_tween_15"],
+        check_names=False,
+    )
+    pd.testing.assert_series_equal(
+        result["pt"].between(2, 5).astype(np.float32).where(mask, np.nan),
+        result["pt_tween_25"],
+        check_names=False,
+    )
+    pd.testing.assert_series_equal(
+        result["pt"].between(3, 5).astype(np.float32).where(mask, np.nan),
+        result["pt_tween_35"],
+        check_names=False,
+    )
+
 
 def test_nested_where(dataframe_regression):
 

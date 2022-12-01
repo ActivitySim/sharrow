@@ -164,9 +164,17 @@ def irunner(
     argshape,
     {joined_namespace_names}
     dtype=np.{dtype},
+    mask=None,
 ):
     result = np.empty((argshape[0], {len_self_raw_functions}), dtype=dtype)
+    if mask is not None:
+        assert mask.ndim == 1
+        assert mask.shape[0] == argshape[0]
     for j0 in nb.prange(argshape[0]):
+        if mask is not None:
+            if not mask[j0]:
+                result[j0, :] = np.nan
+                continue
         linemaker(result[j0], j0, {joined_namespace_names})
     return result
 """
@@ -177,10 +185,18 @@ def irunner(
     argshape,
     {joined_namespace_names}
     dtype=np.{dtype},
+    mask=None,
 ):
     result = np.empty((argshape[0], argshape[1], {len_self_raw_functions}), dtype=dtype)
+    if mask is not None:
+        assert mask.ndim == 2
+        assert mask.shape[0] == argshape[0]
+        assert mask.shape[1] == argshape[1]
     for j0 in nb.prange(argshape[0]):
         for j1 in range(argshape[1]):
+            if mask is not None:
+                if not mask[j0, j1]:
+                    result[j0, j1, :] = np.nan
             linemaker(result[j0, j1], j0, j1, {joined_namespace_names})
     return result
 """
@@ -1682,6 +1698,9 @@ class Flow:
                             )
                     elif dot is None:
                         runner_ = self._irunner
+                        known_arg_names.update({"mask"})
+                        if dtype is not None and not np.issubdtype(dtype, np.floating):
+                            raise TypeError("cannot use mask unless dtype is float")
                     else:
                         runner_ = self._idotter
                 else:
@@ -2257,7 +2276,7 @@ class Flow:
             return result, result_p
         return result
 
-    def load(self, source=None, dtype=None, compile_watch=False):
+    def load(self, source=None, dtype=None, compile_watch=False, mask=None):
         """
         Compute the flow outputs as a numpy array.
 
@@ -2272,14 +2291,18 @@ class Flow:
         compile_watch : bool, default False
             Set the `compiled_recently` flag on this flow to True if any file
             modification activity is observed in the cache directory.
+        mask : array-like, optional
+            Only compute values for items where mask is truthy.
 
         Returns
         -------
         numpy.array
         """
-        return self._load(source=source, dtype=dtype, compile_watch=compile_watch)
+        return self._load(
+            source=source, dtype=dtype, compile_watch=compile_watch, mask=mask
+        )
 
-    def load_dataframe(self, source=None, dtype=None, compile_watch=False):
+    def load_dataframe(self, source=None, dtype=None, compile_watch=False, mask=None):
         """
         Compute the flow outputs as a pandas.DataFrame.
 
@@ -2294,16 +2317,22 @@ class Flow:
         compile_watch : bool, default False
             Set the `compiled_recently` flag on this flow to True if any file
             modification activity is observed in the cache directory.
+        mask : array-like, optional
+            Only compute values for items where mask is truthy.
 
         Returns
         -------
         pandas.DataFrame
         """
         return self._load(
-            source=source, dtype=dtype, as_dataframe=True, compile_watch=compile_watch
+            source=source,
+            dtype=dtype,
+            as_dataframe=True,
+            compile_watch=compile_watch,
+            mask=mask,
         )
 
-    def load_dataarray(self, source=None, dtype=None, compile_watch=False):
+    def load_dataarray(self, source=None, dtype=None, compile_watch=False, mask=None):
         """
         Compute the flow outputs as a xarray.DataArray.
 
@@ -2318,13 +2347,19 @@ class Flow:
         compile_watch : bool, default False
             Set the `compiled_recently` flag on this flow to True if any file
             modification activity is observed in the cache directory.
+        mask : array-like, optional
+            Only compute values for items where mask is truthy.
 
         Returns
         -------
         xarray.DataArray
         """
         return self._load(
-            source=source, dtype=dtype, as_dataarray=True, compile_watch=compile_watch
+            source=source,
+            dtype=dtype,
+            as_dataarray=True,
+            compile_watch=compile_watch,
+            mask=mask,
         )
 
     def dot(self, coefficients, source=None, dtype=None, compile_watch=False):
