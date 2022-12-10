@@ -1851,8 +1851,16 @@ class Flow:
                             f" - {argname}: {sig}"
                             for (sig, argname) in zip(k, named_args)
                         )
+                        timers = (
+                            f.overloads[k]
+                            .metadata["timers"]
+                            .get("compiler_lock", "N/A")
+                        )
                         logger.warning(
-                            f"cache miss in {self.flow_hash}\n{runner_name}(\n{warning_text}\n)"
+                            f"cache miss in {self.flow_hash}\n{runner_name}(\n"
+                            f"{warning_text}\n"
+                            f")\n"
+                            f"Compile Time: {timers}"
                         )
                         warnings.warn(f"{self.flow_hash}", CacheMissWarning)
                         compiled_recently = True
