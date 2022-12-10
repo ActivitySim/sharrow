@@ -1341,3 +1341,51 @@ class DataTree:
         return type(self)(
             self._graph.copy(), self.root_node_name, **self.__shallow_copy_extras()
         )
+
+    def all_var_names(self, uniquify=False, _duplicated_names=None):
+        ordered_names = []
+        require_unique = _duplicated_names is None and not uniquify
+        need_second_pass = _duplicated_names is None and uniquify
+        print(f"{require_unique=}")
+        discovered_names = set()
+        duplicated_names = _duplicated_names or set()
+        for spacename, space in self.subspaces_iter():
+            for name in space.variables:
+                if name in duplicated_names:
+                    if require_unique:
+                        raise ValueError(f"duplicate name {name}")
+                    elif uniquify:
+                        ordered_names.append(f"{spacename}.{name}")
+                    else:
+                        ordered_names.append(name)
+                elif name in discovered_names:
+                    duplicated_names.add(name)
+                    if require_unique:
+                        raise ValueError(f"duplicate name {name}")
+                    else:
+                        ordered_names.append(name)
+                else:
+                    discovered_names.add(name)
+                    ordered_names.append(name)
+        if need_second_pass:
+            return self.all_var_names(uniquify=True, _duplicated_names=duplicated_names)
+        return ordered_names
+
+    def merged_dataset(self, columns=None, uniquify=False):
+        if columns is None:
+            columns = self.all_var_names(uniquify=uniquify)
+        if len(self.root_dataset.dims) > 1:
+            raise NotImplementedError("only single dim root datasets")
+        dim_name = self.root_dataset.single_dim.dim_name
+        vx = []
+        coords = {}
+        for k in columns:
+            v = self._getitem(k).single_dim.rename(dim_name)
+            if v.name == v.dims[0]:
+                coords[v.name] = v
+            else:
+                vx.append(v)
+        result = xr.merge(vx, compat="override", join="override")
+        if coords:
+            result.assign_coords(coords)
+        return result
