@@ -1647,7 +1647,7 @@ class Flow:
                 else:
                     raise err
 
-    def iload_raw(
+    def _iload_raw(
         self,
         rg,
         runner=None,
@@ -2012,11 +2012,11 @@ class Flow:
             source = source.digitize_relationships()
         if source.relationships_are_digitized:
             if logit_draws is None:
-                result = self.iload_raw(
+                result = self._iload_raw(
                     source, runner=runner, dtype=dtype, dot=dot, mask=mask
                 )
             else:
-                result, result_p, pick_count, out_logsum = self.iload_raw(
+                result, result_p, pick_count, out_logsum = self._iload_raw(
                     source,
                     runner=runner,
                     dtype=dtype,
