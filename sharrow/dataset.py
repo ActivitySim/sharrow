@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 import pyarrow as pa
 import xarray as xr
-from xarray import Dataset
+from xarray import DataArray, Dataset
 
 from .accessors import register_dataset_method
 from .aster import extract_all_name_tokens
@@ -673,6 +673,35 @@ class _SingleDim:
         return pa.Table.from_pydict(
             {k: pa.array(v.to_numpy()) for k, v in self.dataset.variables.items()}
         )
+
+
+@xr.register_dataarray_accessor("single_dim")
+class _SingleDimArray:
+    """
+    Convenience accessor for single-dimension datasets.
+    """
+
+    __slots__ = ("dataarray", "dim_name")
+
+    def __init__(self, dataarray: "DataArray"):
+        self.dataarray = dataarray
+        if len(self.dataarray.dims) != 1:
+            raise ValueError("single_dim implies a single dimension dataset")
+        self.dim_name = self.dataarray.dims[0]
+
+    @property
+    def coords(self):
+        return self.dataarray.coords[self.dim_name]
+
+    @property
+    def index(self):
+        return self.dataarray.indexes[self.dim_name]
+
+    def rename(self, name: str) -> DataArray:
+        """Rename the single dimension."""
+        if self.dim_name == name:
+            return self.dataarray
+        return self.dataarray.rename({self.dim_name: name})
 
 
 @xr.register_dataset_accessor("iloc")
