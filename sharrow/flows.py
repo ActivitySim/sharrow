@@ -147,7 +147,7 @@ def coerce_to_range_index(idx):
 FUNCTION_TEMPLATE = """
 
 # {init_expr}
-@nb.jit(cache=True, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath}, nogil={nopython})
+@nb.jit(cache=False, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath}, nogil={nopython})
 def {fname}(
     {argtokens}
     _outputs,
@@ -254,7 +254,7 @@ def idotter(
 """
 
 ILINER_1D_TEMPLATE = """
-@nb.jit(cache=True, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath}, nogil={nopython})
+@nb.jit(cache=False, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath}, nogil={nopython})
 def linemaker(
     intermediate, j0,
     {joined_namespace_names}
@@ -264,7 +264,7 @@ def linemaker(
 """
 
 ILINER_2D_TEMPLATE = """
-@nb.jit(cache=True, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath}, nogil={nopython})
+@nb.jit(cache=False, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath}, nogil={nopython})
 def linemaker(
     intermediate, j0, j1,
     {joined_namespace_names}
