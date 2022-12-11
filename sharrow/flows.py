@@ -1824,7 +1824,7 @@ class Flow:
                     raise err
 
     def check_cache_misses(self, *funcs, fresh=True, log_details=True):
-        compiled_recently = False
+        self.compiled_recently = False
         if not hasattr(self, "_known_cache_misses"):
             self._known_cache_misses = {}
         if not funcs:
@@ -1879,9 +1879,9 @@ class Flow:
                             f"Compile Time: {timers}"
                         )
                         warnings.warn(f"{self.flow_hash}", CacheMissWarning)
-                        compiled_recently = True
+                        self.compiled_recently = True
                         self._known_cache_misses[runner_name][k] = v
-        return compiled_recently
+        return self.compiled_recently
 
     @property
     def cache_misses(self):
