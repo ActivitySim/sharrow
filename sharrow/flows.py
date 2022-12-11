@@ -1796,7 +1796,9 @@ class Flow:
                     )
                 result = runner_(np.asarray(argshape), *arguments, **kwargs)
                 if compile_watch:
-                    self.check_cache_misses(runner_)
+                    self.check_cache_misses(
+                        runner_, log_details=compile_watch != "simple"
+                    )
                 return result
             except nb.TypingError as err:
                 _raw_functions = getattr(self, "_raw_functions", {})
@@ -1821,7 +1823,7 @@ class Flow:
                 else:
                     raise err
 
-    def check_cache_misses(self, *funcs):
+    def check_cache_misses(self, *funcs, fresh=True, log_details=True):
         compiled_recently = False
         if not hasattr(self, "_known_cache_misses"):
             self._known_cache_misses = {}
@@ -1844,28 +1846,53 @@ class Flow:
             cache_misses = f.stats.cache_misses
             runner_name = f.__name__
             if cache_misses:
-                known_cache_misses = self._known_cache_misses.get(runner_name, {})
+                if runner_name not in self._known_cache_misses:
+                    self._known_cache_misses[runner_name] = {}
+                if fresh:
+                    known_cache_misses = self._known_cache_misses[runner_name]
+                else:
+                    known_cache_misses = {}
                 for k, v in cache_misses.items():
                     if v > known_cache_misses.get(k, 0):
-                        warning_text = "\n".join(
-                            f" - {argname}: {sig}"
-                            for (sig, argname) in zip(k, named_args)
-                        )
+                        if log_details:
+                            warning_text = "\n".join(
+                                f" - {argname}: {sig}"
+                                for (sig, argname) in zip(k, named_args)
+                            )
+                            warning_text = f"\n{runner_name}(\n{warning_text}\n)"
+                        else:
+                            warning_text = ""
                         timers = (
                             f.overloads[k]
                             .metadata["timers"]
                             .get("compiler_lock", "N/A")
                         )
+                        if isinstance(timers, float):
+                            if timers < 1e-3:
+                                timers = f"{timers/1e-6:.0f} µs"
+                            elif timers < 1:
+                                timers = f"{timers/1e-3:.1f} ms"
+                            else:
+                                timers = f"{timers:.2f} s"
                         logger.warning(
-                            f"cache miss in {self.flow_hash}\n{runner_name}(\n"
-                            f"{warning_text}\n"
-                            f")\n"
+                            f"cache miss in {self.flow_hash}{warning_text}\n"
                             f"Compile Time: {timers}"
                         )
                         warnings.warn(f"{self.flow_hash}", CacheMissWarning)
                         compiled_recently = True
-            self._known_cache_misses[runner_name] = cache_misses
+                        self._known_cache_misses[runner_name][k] = v
         return compiled_recently
+
+    @property
+    def cache_misses(self):
+        """dict[str, dict]: Numba cache misses across all defined flow methods."""
+        misses = {}
+        for k, v in self.__dict__.items():
+            from numba.core.dispatcher import Dispatcher
+
+            if isinstance(v, Dispatcher):
+                misses[k] = v.stats.cache_misses.copy()
+        return misses
 
     def _load(
         self,
@@ -2148,27 +2175,27 @@ class Flow:
                 result_p = squeeze(result_p, result_squeeze)
                 pick_count = squeeze(pick_count, result_squeeze)
 
-        if compile_watch:
-            self.compiled_recently = False
-            for i in os.walk(os.path.join(self.cache_dir, self.name)):
-                for f in i[2]:
-                    fi = os.path.join(i[0], f)
-                    try:
-                        t = os.path.getmtime(fi)
-                    except FileNotFoundError:
-                        # something is actively happening in this directory
-                        self.compiled_recently = True
-                        logger.warning(
-                            f"unidentified activity (file deletion) detected for {self.name}"
-                        )
-                        break
-                    if t > compile_watch:
-                        self.compiled_recently = True
-                        logger.warning(f"compilation activity detected for {self.name}")
-                        break
-                if self.compiled_recently:
-                    break
-        else:
+        # if compile_watch:
+        #     self.compiled_recently = False
+        #     for i in os.walk(os.path.join(self.cache_dir, self.name)):
+        #         for f in i[2]:
+        #             fi = os.path.join(i[0], f)
+        #             try:
+        #                 t = os.path.getmtime(fi)
+        #             except FileNotFoundError:
+        #                 # something is actively happening in this directory
+        #                 self.compiled_recently = True
+        #                 logger.warning(
+        #                     f"unidentified activity (file deletion) detected for {self.name}"
+        #                 )
+        #                 break
+        #             if t > compile_watch:
+        #                 self.compiled_recently = True
+        #                 logger.warning(f"compilation activity detected for {self.name}")
+        #                 break
+        #         if self.compiled_recently:
+        #             break
+        if not compile_watch:
             try:
                 del self.compiled_recently
             except AttributeError:
