@@ -339,6 +339,7 @@ class RewriteForNumba(ast.NodeTransformer):
         blenders=None,
         bool_wrapping=False,
         swallow_errors=False,
+        get_default=False,
     ):
         self.spacename = spacename
         self.dim_slots = dim_slots
@@ -351,6 +352,7 @@ class RewriteForNumba(ast.NodeTransformer):
         self.blenders = blenders or {}
         self.bool_wrapping = bool_wrapping
         self.swallow_errors = swallow_errors
+        self.get_default = get_default
 
     def log_event(self, tag, node1=None, node2=None):
         if logger.getEffectiveLevel() <= 0:
@@ -910,6 +912,41 @@ class RewriteForNumba(ast.NodeTransformer):
                 keywords=[],
             )
 
+        # implement x.get("y",z)
+        if (
+            isinstance(node.func, ast.Attribute)
+            and node.func.attr == "get"
+            and node.func.value.id == self.spacename
+        ):
+            if len(node.args) == 2 and len(node.keywords) == 0:
+                try:
+                    return self._replacement(
+                        ast_String_value(node.args[0]), node.func.value.ctx, node
+                    )
+                except KeyError:
+                    if self.get_default:
+                        return self.visit(node.args[1])
+                    else:
+                        raise
+            if (
+                len(node.args) == 1
+                and len(node.keywords) == 1
+                and "default" == node.keywords[0].arg
+            ):
+                try:
+                    return self._replacement(
+                        ast_String_value(node.args[0]), node.func.value.ctx, node
+                    )
+                except KeyError:
+                    if self.get_default:
+                        return self.visit(node.keywords[0].value)
+                    else:
+                        raise
+            if len(node.args) == 1 and len(node.keywords) == 0:
+                return self._replacement(
+                    ast_String_value(node.args[0]), node.func.value.ctx, node
+                )
+
         # if no other changes
         if result is None:
             args = [self.visit(i) for i in node.args]
@@ -936,6 +973,7 @@ def expression_for_numba(
     blenders=None,
     bool_wrapping=False,
     swallow_errors=False,
+    get_default=False,
 ):
     """
     Rewrite an expression so numba can compile it.
@@ -972,6 +1010,7 @@ def expression_for_numba(
             blenders,
             bool_wrapping,
             swallow_errors,
+            get_default,
         ).visit(ast.parse(expr))
     )
 

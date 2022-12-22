@@ -1131,7 +1131,12 @@ class DataTree:
                 return dataset[name2[:-8]].data.indptr
             elif name2.endswith("__indices"):
                 return dataset[name2[:-9]].data.indices
-        return _dataarray_to_numpy(dataset[name2])
+        try:
+            _d = dataset[name2]
+        except KeyError as err:
+            raise KeyError(f"{name1}.{name2}") from err
+        else:
+            return _dataarray_to_numpy(_d)
 
     _BY_OFFSET = "digitizedOffset"
 

@@ -834,3 +834,55 @@ def test_isna():
     )
     result = qf.load()
     assert result == approx(np.asarray([[0, 0, 1, 1]]).T)
+
+
+def test_get(dataframe_regression):
+    data = example_data.get_data()
+    skims = data["skims"]
+    households = data["hhs"]
+
+    prng = default_rng(SeedSequence(42))
+    households["otaz_idx"] = households["TAZ"] - 1
+    households["dtaz_idx"] = prng.choice(np.arange(25), 5000)
+    households["timeperiod5"] = prng.choice(np.arange(5), 5000)
+    households["timeperiod3"] = np.clip(households["timeperiod5"], 1, 3) - 1
+    households["rownum"] = np.arange(len(households))
+
+    tree = DataTree(
+        base=households,
+        skims=skims,
+        relationships=(
+            "base.otaz_idx->skims.otaz",
+            "base.dtaz_idx->skims.dtaz",
+            "base.timeperiod5->skims.time_period",
+        ),
+    )
+
+    ss = tree.setup_flow(
+        {
+            "income": "base.get('income', 0)",
+            "sov_time_by_income": "skims.SOV_TIME/base.get('income', 0)",
+            "missing_data": "base.get('missing_data', -1)",
+            "missing_skim": "skims.get('missing_core', -2)",
+            "sov_time_by_income_2": "skims.get('SOV_TIME')/base.income",
+            "sov_cost_by_income_2": "skims.get('HOV3_TIME', 999)",
+        },
+    )
+    result = ss._load(tree, as_dataframe=True)
+    dataframe_regression.check(result)
+
+    s2 = tree.setup_flow(
+        {
+            "income": "base.get('income', default=0)",
+            "sov_time_by_income": "skims.SOV_TIME/base.get('income', default=0)",
+            "missing_data": "base.get('missing_data', default=-1)",
+            "missing_skim": "skims.get('missing_core', default=-2)",
+            "sov_time_by_income_2": "skims.get('SOV_TIME', default=0)/base.income",
+            "sov_cost_by_income_2": "skims.get('HOV3_TIME', default=999)",
+        },
+    )
+    result = s2._load(tree, as_dataframe=True)
+
+    assert s2.flow_hash != ss.flow_hash
+
+    dataframe_regression.check(result)

@@ -1144,6 +1144,26 @@ class Flow:
                                 other_way = True
                                 # at least one variable was found in a fallback
                                 break
+                        if not other_way and "get" in expr:
+                            # any remaining "get" expressions with defaults should now use them
+                            try:
+                                expr = expression_for_numba(
+                                    expr,
+                                    spacename,
+                                    dim_slots,
+                                    dim_slots,
+                                    digital_encodings=digital_encodings,
+                                    extra_vars=self.tree.extra_vars,
+                                    blenders=blenders,
+                                    bool_wrapping=self.bool_wrapping,
+                                    get_default=True,
+                                )
+                            except KeyError as err:  # noqa: F841
+                                pass
+                            else:
+                                other_way = True
+                                # at least one variable was found in a get
+                                break
                         if not other_way:
                             raise
                 if prior_expr == expr:
@@ -1815,13 +1835,13 @@ class Flow:
                     if problem:
                         raise NameError(problem.group(1)) from err
                 raise
-            except KeyError as err:
-                # raise the inner key error which is more helpful
-                context = getattr(err, "__context__", None)
-                if context:
-                    raise context
-                else:
-                    raise err
+            # except KeyError as err:
+            #     # raise the inner key error which is more helpful
+            #     context = getattr(err, "__context__", None)
+            #     if context:
+            #         raise context
+            #     else:
+            #         raise err
 
     def check_cache_misses(self, *funcs, fresh=True, log_details=True):
         self.compiled_recently = False
