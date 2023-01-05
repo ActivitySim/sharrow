@@ -143,7 +143,29 @@ def dataset_from_dataframe_fast(
         return Dataset.from_dataframe(dataframe, sparse)
 
     if not dataframe.columns.is_unique:
-        raise ValueError("cannot convert DataFrame with non-unique columns")
+        # if the dataframe has non-unique column names, but all the duplicate
+        # names contain the same data, we can recover safely by dropping the
+        # duplicates, otherwise throw an error.
+        cannot_fix = False
+        dupe_columns = dataframe.columns.duplicated()
+        dupe_column_names = dataframe.columns[dupe_columns]
+        for j in dupe_column_names:
+            subframe = dataframe[j]
+            ref_col = subframe.iloc[:, 0]
+            for k in range(1, len(subframe.columns)):
+                if not ref_col.equals(subframe.iloc[:, k]):
+                    cannot_fix = True
+                    break
+                if cannot_fix:
+                    break
+        dupe_column_names = [f"- {i}" for i in dupe_column_names]
+        logger.error(
+            "DataFrame has non-unique columns\n" + "\n".join(dupe_column_names)
+        )
+        if cannot_fix:
+            raise ValueError("cannot convert DataFrame with non-unique columns")
+        else:
+            dataframe = dataframe.loc[:, ~dupe_columns]
 
     if isinstance(dataframe.index, pd.CategoricalIndex):
         idx = dataframe.index.remove_unused_categories()
