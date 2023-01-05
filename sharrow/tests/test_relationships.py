@@ -3,6 +3,7 @@ import sys
 
 import numpy as np
 import pandas as pd
+import xarray as xr
 from numpy.random import SeedSequence, default_rng
 from pytest import approx, mark, raises
 
@@ -886,3 +887,82 @@ def test_get(dataframe_regression):
     assert s2.flow_hash != ss.flow_hash
 
     dataframe_regression.check(result)
+
+
+def test_get_native():
+    data = example_data.get_data()
+    skims = data["skims"]
+    households = data["hhs"]
+
+    prng = default_rng(SeedSequence(42))
+    households["otaz"] = households["TAZ"]
+    households["otaz_idx"] = households["TAZ"] - 1
+    households["dtaz"] = prng.choice(np.arange(1, 26), 5000)
+    households["timeperiod5"] = prng.choice(np.arange(5), 5000)
+    households["timeperiod3"] = np.clip(households["timeperiod5"], 1, 3) - 1
+    households["rownum"] = np.arange(len(households))
+    households["time5"] = prng.choice(["EA", "AM", "MD", "PM", "EV"], 5000)
+    households["time3"] = prng.choice(["AM", "MD", "PM"], 5000)
+
+    blank = from_named_objects(households.index, skims["dtaz"])
+    assert sorted(blank.coords) == ["HHID", "dtaz"]
+    assert blank.coords["HHID"].dims == ("HHID",)
+    assert blank.coords["dtaz"].dims == ("dtaz",)
+
+    tree = DataTree(
+        root_node_name="base",
+        base=blank,
+        hh=households,
+        odt_skims=skims.rename({"otaz": "ptaz", "dtaz": "ataz"}),
+        dot_skims=skims.rename({"otaz": "ataz", "dtaz": "ptaz"}),
+        relationships=(
+            "base.HHID @ hh.HHID",
+            "base.dtaz @ odt_skims.ataz",
+            "base.dtaz @ dot_skims.ataz",
+            "hh.otaz @ odt_skims.ptaz",
+            "hh.time5 @ odt_skims.time_period",
+            "hh.otaz @ dot_skims.ptaz",
+            "hh.time5 @ dot_skims.time_period",
+        ),
+        force_digitization=True,
+    )
+
+    i = tree.get("missingname", 123)
+    assert i.dims == ("HHID", "dtaz")
+    assert i.shape == (5000, 25)
+    assert (i == 123).all()
+
+    i = tree["income"]
+    assert isinstance(i, xr.DataArray)
+    assert i.dims == ("HHID", "dtaz")
+    assert i.shape == (5000, 25)
+    assert i.std("dtaz").max() == 0
+
+    i = tree.get(["income", "PERSONS"], broadcast=False)
+    assert isinstance(i, xr.Dataset)
+    assert "HHID" in i.coords
+    assert i.dims == {"HHID": 5000}
+
+    i = tree.get("income", broadcast=False)
+    assert "HHID" in i.coords
+    assert i.dims == ("HHID",)
+    assert i.shape == (5000,)
+
+    i = tree.get("income", broadcast=False, coords=False)
+    assert not i.coords
+    assert i.dims == ("HHID",)
+    assert i.shape == (5000,)
+
+    i = tree.get("odt_skims.DIST")
+    assert i.dims == ("HHID", "dtaz")
+    assert i.shape == (5000, 25)
+    assert (tree.get_expr("odt_skims.DIST", allow_native=False) == i.load()).all()
+
+    with raises(KeyError):
+        tree.get("xxxx.income")
+    with raises(KeyError):
+        tree.get("base.xxxx")
+    with raises(KeyError):
+        tree.get("xxxx")
+    with raises(KeyError):
+        tree.get("base.DIST")

@@ -56,15 +56,17 @@ def _require_string(x):
 
 def _iat(source, *, _names=None, _load=False, _index_name=None, **idxs):
     loaders = {}
-    if _index_name is None:
-        _index_name = "index"
+    inum = 0
+
+    def _ixname():
+        if _index_name is not None:
+            return _index_name
+        nonlocal inum
+        inum += 1
+        return f"index{inum}"
+
     for k, v in idxs.items():
-        if v.ndim == 1:
-            loaders[k] = xr.DataArray(v, dims=[_index_name])
-        else:
-            loaders[k] = xr.DataArray(
-                v, dims=[f"{_index_name}{n}" for n in range(v.ndim)]
-            )
+        loaders[k] = xr.DataArray(v, dims=[_ixname() for n in range(v.ndim)])
     if _names:
         ds = source[_names]
     else:
@@ -76,15 +78,17 @@ def _iat(source, *, _names=None, _load=False, _index_name=None, **idxs):
 
 def _at(source, *, _names=None, _load=False, _index_name=None, **idxs):
     loaders = {}
-    if _index_name is None:
-        _index_name = "index"
+    inum = 0
+
+    def _ixname():
+        if _index_name is not None:
+            return _index_name
+        nonlocal inum
+        inum += 1
+        return f"index{inum}"
+
     for k, v in idxs.items():
-        if v.ndim == 1:
-            loaders[k] = xr.DataArray(v, dims=[_index_name])
-        else:
-            loaders[k] = xr.DataArray(
-                v, dims=[f"{_index_name}{n}" for n in range(v.ndim)]
-            )
+        loaders[k] = xr.DataArray(v, dims=[_ixname() for n in range(v.ndim)])
     if _names:
         ds = source[_names]
     else:
@@ -580,18 +584,60 @@ class DataTree:
         )
 
     def __getitem__(self, item):
+        return self.get(item)
+
+    def get(self, item, default=None, broadcast=True, coords=True):
+        """
+        Access variable(s) from this tree.
+
+        Parameters
+        ----------
+        item : str or Sequence[str]
+            Each value can be just the name of the variable if that name is unique
+            within the tree, or use dotted notation ('node_name.var_name') to give
+            the node name explicitly and resolve ambiguity as necessary.
+        default
+            If provided, this default value is used for any missing item(s).
+        broadcast : bool, default True
+            Broadcast all arrays up to the dimensions of the root node in the tree.
+        coords : bool, default True
+            Attach coordinates from the root node of the tree to the result.
+
+        Returns
+        -------
+        DataArray or Dataset
+        """
         if isinstance(item, (list, tuple)):
             from .dataset import Dataset
 
-            return Dataset({k: self[k] for k in item})
+            return Dataset(
+                {
+                    k: self.get(k, default=default, broadcast=broadcast, coords=coords)
+                    for k in item
+                }
+            )
         try:
             result = self._getitem(item, dim_names_from_top=True)
         except KeyError:
-            result = self._getitem(
-                item, include_blank_dims=True, dim_names_from_top=True
-            )
-        if result.dims != self.root_dims:
-            result, _ = xr.broadcast(result, self.root_dataset)
+            try:
+                result = self._getitem(
+                    item, include_blank_dims=True, dim_names_from_top=True
+                )
+            except KeyError:
+                if default is None:
+                    raise
+                else:
+                    result = xr.DataArray(default)
+        root_dataset = self.root_dataset
+        if result.dims != self.root_dims and broadcast:
+            result, _ = xr.broadcast(result, root_dataset)
+        if coords:
+            add_coords = {}
+            for i in result.dims:
+                if i not in result.coords and i in root_dataset.coords:
+                    add_coords[i] = root_dataset.coords[i]
+            if add_coords:
+                result = result.assign_coords(add_coords)
         return result
 
     def finditem(self, item, maybe_in=None):
@@ -668,6 +714,16 @@ class DataTree:
                         if dim_names_from_top:
                             e = path[0]
                             top_dim_name = self._graph.edges[e].get("parent_name")
+                            root_dataset = self.root_dataset
+                            # deconvert digitized dim names back to native dims
+                            if (
+                                top_dim_name not in root_dataset.dims
+                                and top_dim_name in root_dataset.variables
+                            ):
+                                if root_dataset.variables[top_dim_name].ndim == 1:
+                                    top_dim_name = root_dataset.variables[
+                                        top_dim_name
+                                    ].dims[0]
                         else:
                             top_dim_name = None
                         path_dim = self._graph.edges[path[-1]].get("child_name")
@@ -723,7 +779,7 @@ class DataTree:
                         y = y.rename({y.dims[0]: result.dims[0]})
                     elif len(dims_in_result) == len(y.dims):
                         y = y.rename({_i: _j for _i, _j in zip(y.dims, result.dims)})
-                    if top_dim_names is not None:
+                    if top_dim_names:
                         y = y.rename(top_dim_names)
                     return y
             else:
