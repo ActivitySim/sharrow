@@ -1725,7 +1725,11 @@ class Flow:
                     elif dot is None:
                         runner_ = self._irunner
                         known_arg_names.update({"mask"})
-                        if dtype is not None and not np.issubdtype(dtype, np.floating):
+                        if (
+                            mask is not None
+                            and dtype is not None
+                            and not np.issubdtype(dtype, np.floating)
+                        ):
                             raise TypeError("cannot use mask unless dtype is float")
                     else:
                         runner_ = self._idotter
