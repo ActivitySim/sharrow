@@ -1596,6 +1596,7 @@ class Flow:
         self._imnl_plus1d = getattr(module, "mnl_transform_plus1d", None)
         self._inestedlogit = getattr(module, "nl_transform", None)
         self._idotter = getattr(module, "idotter", None)
+        self._linemaker = getattr(module, "linemaker", None)
         if not writing:
             self.function_names = module.function_names
             self.output_name_positions = module.output_name_positions
@@ -2507,3 +2508,84 @@ class Flow:
         bbedit_url = f"x-bbedit://open?url=file://{codefile}"
         bb_link = f'<a href="{bbedit_url}">{codefile}</a>'
         return HTML(f"<style>{css}</style><p>{bb_link}</p>{pretty}")
+
+    def init_streamer(self, source=None, dtype=None):
+        """
+        Initialize a compiled closure on the data for loading individual lines.
+
+        Parameters
+        ----------
+        source : DataTree, optional
+            This is the source of the data for this flow. If not provided, the
+            tree used to initialize this flow is used.
+        dtype : str or dtype, default float32
+            Override the default dtype for the result. May trigger re-compilation
+            of the underlying code.
+
+        Returns
+        -------
+        callable
+        """
+        if source is None:
+            source = self.tree
+        if dtype is None:
+            dtype = np.float32
+
+        named_args = inspect.getfullargspec(self._linemaker.py_func).args
+        skip_args = ["intermediate", "j0", "j1"]
+        named_args = tuple(i for i in named_args if i not in skip_args)
+
+        general_mapping = {}
+        for k, v in source.subspaces.items():
+            for i in v:
+                mangled_key = f"__{k}__{i}"
+                if mangled_key in named_args:
+                    general_mapping[mangled_key] = v[i].data
+            for i in v.indexes:
+                mangled_key = f"__{k}__{i}"
+                if mangled_key in named_args:
+                    general_mapping[mangled_key] = v[i].data
+
+        selected_args = tuple(general_mapping[k] for k in named_args)
+        len_self_raw_functions = len(self._raw_functions)
+        tree_root_dims = source.root_dataset.dims
+        argshape = tuple(
+            tree_root_dims[i]
+            for i in presorted(tree_root_dims, self.dim_order, self.dim_exclude)
+        )
+
+        if len(argshape) == 1:
+            linemaker = self._linemaker
+
+            @nb.njit
+            def streamer(c, out=None):
+                if out is None:
+                    result = np.zeros(len_self_raw_functions, dtype=dtype)
+                else:
+                    result = out
+                    assert result.ndim == 1
+                    assert result.size == len_self_raw_functions
+                linemaker(result, c, *selected_args)
+                return result
+
+        elif len(argshape) == 2:
+            n_alts = argshape[1]
+            linemaker = self._linemaker
+
+            @nb.njit
+            def streamer(c, out=None):
+                if out is None:
+                    result = np.zeros((n_alts, len_self_raw_functions), dtype=dtype)
+                else:
+                    result = out
+                    assert result.shape == (n_alts, len_self_raw_functions)
+                for i in range(n_alts):
+                    linemaker(result[i, :], c, i, *selected_args)
+                return result
+
+        else:
+            raise NotImplementedError(
+                f"root tree with {len(argshape)} dims {argshape=}"
+            )
+
+        return streamer
