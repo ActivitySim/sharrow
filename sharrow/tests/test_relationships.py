@@ -5,25 +5,31 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 from numpy.random import SeedSequence, default_rng
-from pytest import approx, mark, raises
+from pytest import approx, fixture, mark, raises
 
 import sharrow
 from sharrow import Dataset, DataTree, example_data
 from sharrow.dataset import from_named_objects
 
 
-def test_shared_data(dataframe_regression):
-
-    data = example_data.get_data()
-    skims = data["skims"]
-    households = data["hhs"]
-
+@fixture
+def households():
+    households = example_data.get_households()
     prng = default_rng(SeedSequence(42))
     households["otaz_idx"] = households["TAZ"] - 1
     households["dtaz_idx"] = prng.choice(np.arange(25), 5000)
     households["timeperiod5"] = prng.choice(np.arange(5), 5000)
     households["timeperiod3"] = np.clip(households["timeperiod5"], 1, 3) - 1
     households["rownum"] = np.arange(len(households))
+    return households
+
+
+@fixture
+def skims():
+    return example_data.get_skims()
+
+
+def test_shared_data(dataframe_regression, households, skims):
 
     tree = DataTree(
         base=households,
@@ -68,18 +74,7 @@ def test_shared_data(dataframe_regression):
     dataframe_regression.check(result2, basename="test_shared_data_2")
 
 
-def test_shared_data_reversible(dataframe_regression):
-
-    data = example_data.get_data()
-    skims = data["skims"]
-    households = data["hhs"]
-
-    prng = default_rng(SeedSequence(42))
-    households["otaz_idx"] = households["TAZ"] - 1
-    households["dtaz_idx"] = prng.choice(np.arange(25), 5000)
-    households["timeperiod5"] = prng.choice(np.arange(5), 5000)
-    households["timeperiod3"] = np.clip(households["timeperiod5"], 1, 3) - 1
-    households["rownum"] = np.arange(len(households))
+def test_shared_data_reversible(dataframe_regression, households, skims):
 
     tree = DataTree(
         base=households,
@@ -186,7 +181,6 @@ def test_with_2d_base(dataframe_regression):
     households["otaz"] = households["TAZ"]
     households["otaz_idx"] = households["TAZ"] - 1
     households["dtaz"] = prng.choice(np.arange(1, 26), 5000)
-    # households['dtaz_idx'] = prng.choice(np.arange(25), 5000)
     households["timeperiod5"] = prng.choice(np.arange(5), 5000)
     households["timeperiod3"] = np.clip(households["timeperiod5"], 1, 3) - 1
     households["rownum"] = np.arange(len(households))
@@ -246,17 +240,7 @@ def test_with_2d_base(dataframe_regression):
     np.testing.assert_array_almost_equal(check_vs, dot_result.to_numpy())
 
 
-def test_mixed_dtypes(dataframe_regression):
-    data = example_data.get_data()
-    skims = data["skims"]
-    households = data["hhs"]
-
-    prng = default_rng(SeedSequence(42))
-    households["otaz_idx"] = households["TAZ"] - 1
-    households["dtaz_idx"] = prng.choice(np.arange(25), 5000)
-    households["timeperiod5"] = prng.choice(np.arange(5), 5000)
-    households["timeperiod3"] = np.clip(households["timeperiod5"], 1, 3) - 1
-    households["rownum"] = np.arange(len(households))
+def test_mixed_dtypes(dataframe_regression, households, skims):
 
     tree = DataTree(
         base=households,
@@ -289,17 +273,7 @@ def test_mixed_dtypes(dataframe_regression):
     dataframe_regression.check(result)
 
 
-def test_tuple_slice(dataframe_regression):
-    data = example_data.get_data()
-    skims = data["skims"]
-    households = data["hhs"]
-
-    prng = default_rng(SeedSequence(42))
-    households["otaz_idx"] = households["TAZ"] - 1
-    households["dtaz_idx"] = prng.choice(np.arange(25), 5000)
-    households["timeperiod5"] = prng.choice(np.arange(5), 5000)
-    households["timeperiod3"] = np.clip(households["timeperiod5"], 1, 3) - 1
-    households["rownum"] = np.arange(len(households))
+def test_tuple_slice(dataframe_regression, households, skims):
     tree = DataTree(
         base=households,
         skims=skims,
@@ -318,17 +292,7 @@ def test_tuple_slice(dataframe_regression):
     dataframe_regression.check(result)
 
 
-def test_isin(dataframe_regression):
-    data = example_data.get_data()
-    skims = data["skims"]
-    households = data["hhs"]
-
-    prng = default_rng(SeedSequence(42))
-    households["otaz_idx"] = households["TAZ"] - 1
-    households["dtaz_idx"] = prng.choice(np.arange(25), 5000)
-    households["timeperiod5"] = prng.choice(np.arange(5), 5000)
-    households["timeperiod3"] = np.clip(households["timeperiod5"], 1, 3) - 1
-    households["rownum"] = np.arange(len(households))
+def test_isin(dataframe_regression, households, skims):
     tree = DataTree(
         base=households,
         skims=skims,
@@ -361,9 +325,8 @@ def _get_target(q, token):
 @mark.skipif(
     sys.version_info < (3, 8), reason="shared memory requires python3.8 or higher"
 )
-def test_shared_memory():
+def test_shared_memory(skims):
 
-    skims = example_data.get_skims()
     token = "skims" + secrets.token_hex(5)
 
     skims_2 = skims.shm.to_shared_memory(token)
@@ -400,17 +363,7 @@ def test_relationship_init():
     assert r.indexing == "label"
 
 
-def test_replacement_filters(dataframe_regression):
-    data = example_data.get_data()
-    skims = data["skims"]
-    households = data["hhs"]
-
-    prng = default_rng(SeedSequence(42))
-    households["otaz_idx"] = households["TAZ"] - 1
-    households["dtaz_idx"] = prng.choice(np.arange(25), 5000)
-    households["timeperiod5"] = prng.choice(np.arange(5), 5000)
-    households["timeperiod3"] = np.clip(households["timeperiod5"], 1, 3) - 1
-    households["rownum"] = np.arange(len(households))
+def test_replacement_filters(dataframe_regression, households, skims):
 
     tree = DataTree(
         base=households,
@@ -448,17 +401,7 @@ def test_replacement_filters(dataframe_regression):
     dataframe_regression.check(result, basename="test_shared_data")
 
 
-def test_name_in_wrong_subspace(dataframe_regression):
-    data = example_data.get_data()
-    skims = data["skims"]
-    households = data["hhs"]
-
-    prng = default_rng(SeedSequence(42))
-    households["otaz_idx"] = households["TAZ"] - 1
-    households["dtaz_idx"] = prng.choice(np.arange(25), 5000)
-    households["timeperiod5"] = prng.choice(np.arange(5), 5000)
-    households["timeperiod3"] = np.clip(households["timeperiod5"], 1, 3) - 1
-    households["rownum"] = np.arange(len(households))
+def test_name_in_wrong_subspace(dataframe_regression, households, skims):
 
     tree = DataTree(
         base=households,
@@ -527,18 +470,8 @@ def test_name_in_wrong_subspace(dataframe_regression):
     dataframe_regression.check(result, basename="test_shared_data")
 
 
-def test_shared_data_encoded(dataframe_regression):
+def test_shared_data_encoded(dataframe_regression, households, skims):
 
-    data = example_data.get_data()
-    skims = data["skims"]
-    households = data["hhs"]
-
-    prng = default_rng(SeedSequence(42))
-    households["otaz_idx"] = households["TAZ"] - 1
-    households["dtaz_idx"] = prng.choice(np.arange(25), 5000)
-    households["timeperiod5"] = prng.choice(np.arange(5), 5000)
-    households["timeperiod3"] = np.clip(households["timeperiod5"], 1, 3) - 1
-    households["rownum"] = np.arange(len(households))
     households = sharrow.dataset.construct(households).digital_encoding.set(
         "income",
         bitwidth=32,
@@ -567,9 +500,7 @@ def test_shared_data_encoded(dataframe_regression):
     dataframe_regression.check(result, basename="test_shared_data")
 
 
-def test_dict_encoded(dataframe_regression):
-    data = example_data.get_data()
-    skims = data["skims"]
+def test_dict_encoded(dataframe_regression, skims):
     pairs = pd.DataFrame({"orig": [0, 0, 0, 1, 1, 1], "dest": [0, 1, 2, 0, 1, 2]})
     skims1 = skims.digital_encoding.set("WLK_LOC_WLK_FAR", bitwidth=8, by_dict=True)
     tree1 = DataTree(
@@ -590,9 +521,7 @@ def test_dict_encoded(dataframe_regression):
     dataframe_regression.check(arr1)
 
 
-def test_joint_dict_encoded(dataframe_regression):
-    data = example_data.get_data()
-    skims = data["skims"]
+def test_joint_dict_encoded(dataframe_regression, skims):
     pairs = pd.DataFrame({"orig": [0, 0, 0, 1, 1, 1], "dest": [0, 1, 2, 0, 1, 2]})
     skims1 = skims.digital_encoding.set(
         "WLK_LOC_WLK_FAR",
@@ -837,17 +766,7 @@ def test_isna():
     assert result == approx(np.asarray([[0, 0, 1, 1]]).T)
 
 
-def test_get(dataframe_regression):
-    data = example_data.get_data()
-    skims = data["skims"]
-    households = data["hhs"]
-
-    prng = default_rng(SeedSequence(42))
-    households["otaz_idx"] = households["TAZ"] - 1
-    households["dtaz_idx"] = prng.choice(np.arange(25), 5000)
-    households["timeperiod5"] = prng.choice(np.arange(5), 5000)
-    households["timeperiod3"] = np.clip(households["timeperiod5"], 1, 3) - 1
-    households["rownum"] = np.arange(len(households))
+def test_get(dataframe_regression, households, skims):
 
     tree = DataTree(
         base=households,
@@ -966,3 +885,70 @@ def test_get_native():
         tree.get("xxxx")
     with raises(KeyError):
         tree.get("base.DIST")
+
+
+def test_streaming(households, skims):
+    tree = DataTree(
+        base=households,
+        skims=skims,
+        relationships=(
+            "base.otaz_idx->skims.otaz",
+            "base.dtaz_idx->skims.dtaz",
+            "base.timeperiod5->skims.time_period",
+        ),
+    )
+    ss = tree.setup_flow(
+        {
+            "income": "base.income",
+            "sov_time_by_income": "skims.SOV_TIME/base.income",
+            "sov_cost_by_income": "skims.HOV3_TIME",
+        }
+    )
+    result = ss.load(tree)
+    streamer = ss.init_streamer(tree)
+    for i in range(len(households)):
+        assert result[i] == approx(streamer(i))
+
+
+def test_streaming_2d(households, skims):
+    blank = from_named_objects(households.index, skims["dtaz"])
+    assert sorted(blank.coords) == ["HHID", "dtaz"]
+    assert blank.coords["HHID"].dims == ("HHID",)
+    assert blank.coords["dtaz"].dims == ("dtaz",)
+
+    tree = DataTree(
+        root_node_name="base",
+        base=blank,
+        hh=households,
+        odt_skims=skims.rename({"otaz": "ptaz", "dtaz": "ataz"}),
+        dot_skims=skims.rename({"otaz": "ataz", "dtaz": "ptaz"}),
+        relationships=(
+            "base.HHID @ hh.HHID",
+            "base.dtaz @ odt_skims.ataz",
+            "base.dtaz @ dot_skims.ataz",
+            "hh.otaz_idx -> odt_skims.ptaz",
+            "hh.timeperiod5 -> odt_skims.time_period",
+            "hh.otaz_idx -> dot_skims.ptaz",
+            "hh.timeperiod5 -> dot_skims.time_period",
+        ),
+        force_digitization=True,
+    )
+
+    ss = tree.setup_flow(
+        {
+            "income": "hh.income",
+            "sov_time_by_income": "odt_skims.SOV_TIME/hh.income",
+            "round_trip_hov3_time": "dot_skims.HOV3_TIME + odt_skims.HOV3_TIME",
+            "double_hov3_time": "odt_skims.HOV3_TIME * 2",
+            "a_trip_hov3_time": "dot_skims.HOV3_TIME",
+            "b_trip_hov3_time": "odt_skims.HOV3_TIME",
+        }
+    )
+    result = ss.load_dataarray(tree)
+    assert result.dims == ("HHID", "dtaz", "expressions")
+    assert result.shape == (5000, 25, 6)
+    result = result.to_numpy()
+    streamer = ss.init_streamer(tree)
+    assert streamer(0).shape == (25, 6)
+    for i in range(len(households)):
+        assert (result[i] == streamer(i)).all()

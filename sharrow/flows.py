@@ -2540,11 +2540,11 @@ class Flow:
             for i in v:
                 mangled_key = f"__{k}__{i}"
                 if mangled_key in named_args:
-                    general_mapping[mangled_key] = v[i].data
+                    general_mapping[mangled_key] = v[i].to_numpy()
             for i in v.indexes:
                 mangled_key = f"__{k}__{i}"
                 if mangled_key in named_args:
-                    general_mapping[mangled_key] = v[i].data
+                    general_mapping[mangled_key] = v[i].to_numpy()
 
         selected_args = tuple(general_mapping[k] for k in named_args)
         len_self_raw_functions = len(self._raw_functions)
