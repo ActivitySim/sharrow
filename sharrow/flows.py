@@ -25,6 +25,11 @@ from .table import Table
 
 logger = logging.getLogger("sharrow")
 
+
+class CacheMissWarning(UserWarning):
+    pass
+
+
 well_known_names = {
     "nb",
     "np",
@@ -147,7 +152,7 @@ def coerce_to_range_index(idx):
 FUNCTION_TEMPLATE = """
 
 # {init_expr}
-@nb.jit(cache=True, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath})
+@nb.jit(cache=False, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath}, nogil={nopython})
 def {fname}(
     {argtokens}
     _outputs,
@@ -159,43 +164,50 @@ def {fname}(
 
 
 IRUNNER_1D_TEMPLATE = """
-@nb.jit(cache=True, parallel=True, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath})
+@nb.jit(cache=True, parallel=True, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath}, nogil={nopython})
 def irunner(
     argshape,
     {joined_namespace_names}
     dtype=np.{dtype},
+    mask=None,
 ):
     result = np.empty((argshape[0], {len_self_raw_functions}), dtype=dtype)
-    if argshape[0] > 1000:
-        for j0 in nb.prange(argshape[0]):
-            linemaker(result[j0], j0, {joined_namespace_names})
-    else:
-        for j0 in range(argshape[0]):
-            linemaker(result[j0], j0, {joined_namespace_names})
+    if mask is not None:
+        assert mask.ndim == 1
+        assert mask.shape[0] == argshape[0]
+    for j0 in nb.prange(argshape[0]):
+        if mask is not None:
+            if not mask[j0]:
+                result[j0, :] = np.nan
+                continue
+        linemaker(result[j0], j0, {joined_namespace_names})
     return result
 """
 
 IRUNNER_2D_TEMPLATE = """
-@nb.jit(cache=True, parallel=True, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath})
+@nb.jit(cache=True, parallel=True, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath}, nogil={nopython})
 def irunner(
     argshape,
     {joined_namespace_names}
     dtype=np.{dtype},
+    mask=None,
 ):
     result = np.empty((argshape[0], argshape[1], {len_self_raw_functions}), dtype=dtype)
-    if argshape[0] * argshape[1] > 1000:
-        for j0 in nb.prange(argshape[0]):
-          for j1 in range(argshape[1]):
-            linemaker(result[j0, j1], j0, j1, {joined_namespace_names})
-    else:
-        for j0 in range(argshape[0]):
-          for j1 in range(argshape[1]):
+    if mask is not None:
+        assert mask.ndim == 2
+        assert mask.shape[0] == argshape[0]
+        assert mask.shape[1] == argshape[1]
+    for j0 in nb.prange(argshape[0]):
+        for j1 in range(argshape[1]):
+            if mask is not None:
+                if not mask[j0, j1]:
+                    result[j0, j1, :] = np.nan
             linemaker(result[j0, j1], j0, j1, {joined_namespace_names})
     return result
 """
 
 IDOTTER_1D_TEMPLATE = """
-@nb.jit(cache=True, parallel=True, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath})
+@nb.jit(cache=True, parallel=True, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath}, nogil={nopython})
 def idotter(
     argshape,
     {joined_namespace_names}
@@ -220,7 +232,7 @@ def idotter(
 """
 
 IDOTTER_2D_TEMPLATE = """
-@nb.jit(cache=True, parallel=True, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath})
+@nb.jit(cache=True, parallel=True, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath}, nogil={nopython})
 def idotter(
     argshape,
     {joined_namespace_names}
@@ -247,7 +259,7 @@ def idotter(
 """
 
 ILINER_1D_TEMPLATE = """
-@nb.jit(cache=True, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath})
+@nb.jit(cache=False, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath}, nogil={nopython})
 def linemaker(
     intermediate, j0,
     {joined_namespace_names}
@@ -257,7 +269,7 @@ def linemaker(
 """
 
 ILINER_2D_TEMPLATE = """
-@nb.jit(cache=True, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath})
+@nb.jit(cache=False, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath}, nogil={nopython})
 def linemaker(
     intermediate, j0, j1,
     {joined_namespace_names}
@@ -268,7 +280,7 @@ def linemaker(
 
 
 MNL_GENERIC_TEMPLATE = """
-@nb.jit(cache=True, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath})
+@nb.jit(cache=True, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath}, nogil={nopython})
 def _sample_choices_maker(
         prob_array,
         random_array,
@@ -318,7 +330,7 @@ def _sample_choices_maker(
 
 
 
-@nb.jit(cache=True, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath})
+@nb.jit(cache=True, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath}, nogil={nopython})
 def _sample_choices_maker_counted(
         prob_array,
         random_array,
@@ -381,8 +393,10 @@ MNL_1D_TEMPLATE = (
     MNL_GENERIC_TEMPLATE
     + """
 
-@nb.jit(cache=True, parallel=True, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath})
-def mnl_transform(
+logit_ndims = 1
+
+@nb.jit(cache=True, parallel=True, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath}, nogil={nopython})
+def mnl_transform_plus1d(
     argshape,
     {joined_namespace_names}
     dtype=np.{dtype},
@@ -390,42 +404,39 @@ def mnl_transform(
     random_draws=None,
     pick_counted=False,
     logsums=False,
+    choice_dtype=np.int32,
+    pick_count_dtype=np.int32,
+    mask=None,
 ):
     if dotarray is None:
         raise ValueError("dotarray cannot be None")
     assert dotarray.ndim == 2
-    result = np.full((argshape[0], random_draws.shape[1]), -1, dtype=np.int32)
+    if mask is not None:
+        assert mask.ndim == 1
+        assert mask.shape[0] == argshape[0]
+    result = np.full((argshape[0], random_draws.shape[1]), -1, dtype=choice_dtype)
     result_p = np.zeros((argshape[0], random_draws.shape[1]), dtype=dtype)
     if pick_counted:
-        pick_count = np.zeros((argshape[0], random_draws.shape[1]), dtype=np.int32)
+        pick_count = np.zeros((argshape[0], random_draws.shape[1]), dtype=pick_count_dtype)
     else:
-        pick_count = np.zeros((argshape[0], 0), dtype=np.int32)
+        pick_count = np.zeros((argshape[0], 0), dtype=pick_count_dtype)
     if logsums:
         _logsums = np.zeros((argshape[0], ), dtype=dtype)
     else:
         _logsums = np.zeros((0, ), dtype=dtype)
-    if argshape[0] > 1000:
-        for j0 in nb.prange(argshape[0]):
+    for j0 in nb.prange(argshape[0]):
+            if mask is not None:
+                if not mask[j0]:
+                    continue
             intermediate = np.zeros({len_self_raw_functions}, dtype=dtype)
             {meta_code_stack_dot}
-            partial = np.exp(np.dot(intermediate, dotarray))
+            dotprod = np.dot(intermediate, dotarray)
+            shifter = np.max(dotprod)
+            partial = np.exp(dotprod - shifter)
             local_sum = np.sum(partial)
             partial /= local_sum
             if logsums:
-                _logsums[j0] = np.log(local_sum)
-            if pick_counted:
-                _sample_choices_maker_counted(partial, random_draws[j0], result[j0], result_p[j0], pick_count[j0])
-            else:
-                _sample_choices_maker(partial, random_draws[j0], result[j0], result_p[j0])
-    else:
-        intermediate = np.zeros({len_self_raw_functions}, dtype=dtype)
-        for j0 in range(argshape[0]):
-            {meta_code_stack_dot}
-            partial = np.exp(np.dot(intermediate, dotarray))
-            local_sum = np.sum(partial)
-            partial /= local_sum
-            if logsums:
-                _logsums[j0] = np.log(local_sum)
+                _logsums[j0] = np.log(local_sum) + shifter
             if pick_counted:
                 _sample_choices_maker_counted(partial, random_draws[j0], result[j0], result_p[j0], pick_count[j0])
             else:
@@ -434,13 +445,56 @@ def mnl_transform(
 
 """
 )
+# @nb.jit(cache=True, parallel=True, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath})
+# def mnl_transform_plus1d(
+#     argshape,
+#     {joined_namespace_names}
+#     dtype=np.{dtype},
+#     dotarray=None,
+#     random_draws=None,
+#     pick_counted=False,
+#     logsums=False,
+#     choice_dtype=np.int32,
+#     pick_count_dtype=np.int32,
+# ):
+#     if dotarray is None:
+#         raise ValueError("dotarray cannot be None")
+#     assert dotarray.ndim == 2
+#     result = np.full((argshape[0], argshape[1], random_draws.shape[1]), -1, dtype=choice_dtype)
+#     result_p = np.zeros((argshape[0], argshape[1], random_draws.shape[1]), dtype=dtype)
+#     if pick_counted:
+#         pick_count = np.zeros((argshape[0], argshape[1], random_draws.shape[1]), dtype=pick_count_dtype)
+#     else:
+#         pick_count = np.zeros((argshape[0], argshape[1], 0), dtype=pick_count_dtype)
+#     if logsums:
+#         _logsums = np.zeros((argshape[0], argshape[1], ), dtype=dtype)
+#     else:
+#         _logsums = np.zeros((0, 0), dtype=dtype)
+#     for j0 in nb.prange(argshape[0]):
+#         for k0 in range(argshape[1]):
+#             intermediate = np.zeros({len_self_raw_functions}, dtype=dtype)
+#             {meta_code_stack_dot}
+#             dotprod = np.dot(intermediate, dotarray)
+#             shifter = np.max(dotprod)
+#             partial = np.exp(dotprod - shifter)
+#             local_sum = np.sum(partial)
+#             partial /= local_sum
+#             if logsums:
+#                 _logsums[j0,k0] = np.log(local_sum) + shifter
+#             if pick_counted:
+#                 _sample_choices_maker_counted(partial, random_draws[j0,k0], result[j0,k0], result_p[j0,k0], pick_count[j0,k0])
+#             else:
+#                 _sample_choices_maker(partial, random_draws[j0,k0], result[j0,k0], result_p[j0,k0])
+#     return result, result_p, pick_count, _logsums
 
 
 MNL_2D_TEMPLATE = (
     MNL_GENERIC_TEMPLATE
     + """
 
-@nb.jit(cache=True, parallel=True, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath})
+logit_ndims = 2
+
+@nb.jit(cache=True, parallel=True, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath}, nogil={nopython})
 def mnl_transform(
     argshape,
     {joined_namespace_names}
@@ -449,59 +503,224 @@ def mnl_transform(
     random_draws=None,
     pick_counted=False,
     logsums=False,
+    choice_dtype=np.int32,
+    pick_count_dtype=np.int32,
+    mask=None,
 ):
     if dotarray is None:
         raise ValueError("dotarray cannot be None")
     assert dotarray.ndim == 2
     assert dotarray.shape[1] == 1
+    dotarray = dotarray.reshape(-1)
     if random_draws is None:
         raise ValueError("random_draws cannot be None")
     assert random_draws.ndim == 2
     assert random_draws.shape[0] == argshape[0]
+    if mask is not None:
+        assert mask.ndim == 1
+        assert mask.shape[0] == argshape[0]
 
-    result = np.full((argshape[0], random_draws.shape[1]), -1, dtype=np.int32)
+    result = np.full((argshape[0], random_draws.shape[1]), -1, dtype=choice_dtype)
     result_p = np.zeros((argshape[0], random_draws.shape[1]), dtype=dtype)
     if pick_counted:
-        pick_count = np.zeros((argshape[0], random_draws.shape[1]), dtype=np.int32)
+        pick_count = np.zeros((argshape[0], random_draws.shape[1]), dtype=pick_count_dtype)
     else:
-        pick_count = np.zeros((argshape[0], 0), dtype=np.int32)
+        pick_count = np.zeros((argshape[0], 0), dtype=pick_count_dtype)
     if logsums:
         _logsums = np.zeros((argshape[0], ), dtype=dtype)
     else:
         _logsums = np.zeros((0, ), dtype=dtype)
-    if argshape[0] > 1000:
-        for j0 in nb.prange(argshape[0]):
-          partial = np.zeros(argshape[1], dtype=dtype)
-          for j1 in range(argshape[1]):
-            intermediate = np.zeros({len_self_raw_functions}, dtype=dtype)
-            {meta_code_stack_dot}
-            partial[j1] = np.exp(np.dot(intermediate, dotarray))[0]
-          local_sum = np.sum(partial)
-          if logsums:
-            _logsums[j0] = np.log(local_sum)
-          partial /= local_sum
-          if pick_counted:
-            _sample_choices_maker_counted(partial, random_draws[j0], result[j0], result_p[j0], pick_count[j0])
-          else:
-            _sample_choices_maker(partial, random_draws[j0], result[j0], result_p[j0])
-    else:
-        intermediate = np.zeros({len_self_raw_functions}, dtype=dtype)
+    for j0 in nb.prange(argshape[0]):
+        if mask is not None:
+            if not mask[j0]:
+                continue
         partial = np.zeros(argshape[1], dtype=dtype)
-        for j0 in range(argshape[0]):
-          for j1 in range(argshape[1]):
+        intermediate = np.zeros({len_self_raw_functions}, dtype=dtype)
+        shifter = -99999
+        for j1 in range(argshape[1]):
+            intermediate[:] = 0
             {meta_code_stack_dot}
-            partial[j1] = np.exp(np.dot(intermediate, dotarray))[0]
-          local_sum = np.sum(partial)
-          if logsums:
-            _logsums[j0] = np.log(local_sum)
-          partial /= local_sum
-          if pick_counted:
+            v = partial[j1] = np.dot(intermediate, dotarray)
+            if v > shifter:
+                shifter = v
+        for j1 in range(argshape[1]):
+            partial[j1] = np.exp(partial[j1] - shifter)
+        local_sum = np.sum(partial)
+        if logsums:
+            _logsums[j0] = np.log(local_sum) + shifter
+            if logsums == 1:
+              continue
+        partial /= local_sum
+        if pick_counted:
             _sample_choices_maker_counted(partial, random_draws[j0], result[j0], result_p[j0], pick_count[j0])
-          else:
+        else:
             _sample_choices_maker(partial, random_draws[j0], result[j0], result_p[j0])
     return result, result_p, pick_count, _logsums
+
+
+@nb.jit(cache=True, parallel=True, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath}, nogil={nopython})
+def mnl_transform_plus1d(
+    argshape,
+    {joined_namespace_names}
+    dtype=np.{dtype},
+    dotarray=None,
+    random_draws=None,
+    pick_counted=False,
+    logsums=False,
+    choice_dtype=np.int32,
+    pick_count_dtype=np.int32,
+    mask=None,
+):
+    if dotarray is None:
+        raise ValueError("dotarray cannot be None")
+    assert dotarray.ndim == 2
+    assert dotarray.shape[1] >= 1
+    if random_draws is None:
+        raise ValueError("random_draws cannot be None")
+    assert random_draws.ndim == 3
+    assert random_draws.shape[0] == argshape[0]
+    assert random_draws.shape[1] == argshape[1]
+    if mask is not None:
+        assert mask.ndim == 2
+        assert mask.shape[0] == argshape[0]
+        assert mask.shape[1] == argshape[1]
+
+    result = np.full((argshape[0], argshape[1], random_draws.shape[2]), -1, dtype=choice_dtype)
+    result_p = np.zeros((argshape[0], argshape[1], random_draws.shape[2]), dtype=dtype)
+    if pick_counted:
+        pick_count = np.zeros((argshape[0], argshape[1], random_draws.shape[2]), dtype=pick_count_dtype)
+    else:
+        pick_count = np.zeros((argshape[0], argshape[1], 0), dtype=pick_count_dtype)
+    if logsums:
+        _logsums = np.zeros((argshape[0], argshape[1], ), dtype=dtype)
+    else:
+        _logsums = np.zeros((0, 0), dtype=dtype)
+    for j0 in nb.prange(argshape[0]):
+        partial = np.zeros(dotarray.shape[1], dtype=dtype)
+        for j1 in range(argshape[1]):
+            if mask is not None:
+                if not mask[j0,j1]:
+                    continue
+            intermediate = np.zeros({len_self_raw_functions}, dtype=dtype)
+            {meta_code_stack_dot}
+            partial = np.dot(intermediate, dotarray, out=partial)
+            shifter = np.max(partial)
+            partial = np.exp(partial - shifter)
+            local_sum = np.sum(partial)
+            if logsums:
+                _logsums[j0,j1] = np.log(local_sum) + shifter
+                if logsums == 1:
+                    continue
+            partial /= local_sum
+            if pick_counted:
+                _sample_choices_maker_counted(partial, random_draws[j0,j1], result[j0,j1], result_p[j0,j1], pick_count[j0,j1])
+            else:
+                _sample_choices_maker(partial, random_draws[j0,j1], result[j0,j1], result_p[j0,j1])
+    return result, result_p, pick_count, _logsums
+
 """
 )
+
+NL_1D_TEMPLATE = """
+
+from sharrow.nested_logit import _utility_to_probability
+
+@nb.jit(cache=True, parallel=True, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath}, nogil={nopython})
+def nl_transform(
+    argshape,
+    {joined_namespace_names}
+    dtype=np.{dtype},
+    dotarray=None,
+    random_draws=None,
+    pick_counted=False,
+    logsums=False,
+    n_nodes=0,
+    n_alts=0,
+    edges_up=None,  # int input shape=[edges]
+    edges_dn=None,  # int input shape=[edges]
+    mu_params=None,  # float input shape=[nests]
+    start_slots=None,  # int input shape=[nests]
+    len_slots=None,  # int input shape=[nests]
+    choice_dtype=np.int32,
+    pick_count_dtype=np.int32,
+    mask=None,
+):
+    if dotarray is None:
+        raise ValueError("dotarray cannot be None")
+    assert dotarray.ndim == 2
+    if mask is not None:
+        assert mask.ndim == 1
+        assert mask.shape[0] == argshape[0]
+    if logsums == 1:
+        result = np.full((0, random_draws.shape[1]), -1, dtype=choice_dtype)
+        result_p = np.zeros((0, random_draws.shape[1]), dtype=dtype)
+    else:
+        result = np.full((argshape[0], random_draws.shape[1]), -1, dtype=choice_dtype)
+        result_p = np.zeros((argshape[0], random_draws.shape[1]), dtype=dtype)
+    if pick_counted:
+        pick_count = np.zeros((argshape[0], random_draws.shape[1]), dtype=pick_count_dtype)
+    else:
+        pick_count = np.zeros((argshape[0], 0), dtype=pick_count_dtype)
+    if logsums:
+        _logsums = np.zeros((argshape[0], ), dtype=dtype)
+    else:
+        _logsums = np.zeros((0, ), dtype=dtype)
+    for j0 in nb.prange(argshape[0]):
+            if mask is not None:
+                if not mask[j0]:
+                    continue
+            intermediate = np.zeros({len_self_raw_functions}, dtype=dtype)
+            {meta_code_stack_dot}
+            utility = np.zeros(n_nodes, dtype=dtype)
+            utility[:n_alts] = np.dot(intermediate, dotarray)
+            if logsums == 1:
+                logprob = np.zeros(0, dtype=dtype)
+                probability = np.zeros(0, dtype=dtype)
+            else:
+                logprob = np.zeros(n_nodes, dtype=dtype)
+                probability = np.zeros(n_nodes, dtype=dtype)
+            _utility_to_probability(
+                n_alts,
+                edges_up,  # int input shape=[edges]
+                edges_dn,  # int input shape=[edges]
+                mu_params,  # float input shape=[nests]
+                start_slots,  # int input shape=[nests]
+                len_slots,  # int input shape=[nests]
+                (logsums==1),
+                utility,  # float output shape=[nodes]
+                logprob,  # float output shape=[nodes]
+                probability,  # float output shape=[nodes]
+            )
+            if logsums:
+                _logsums[j0] = utility[-1]
+            if logsums != 1:
+                if pick_counted:
+                    _sample_choices_maker_counted(probability[:n_alts], random_draws[j0], result[j0], result_p[j0], pick_count[j0])
+                else:
+                    _sample_choices_maker(probability[:n_alts], random_draws[j0], result[j0], result_p[j0])
+    return result, result_p, pick_count, _logsums
+
+"""
+
+
+def zero_size_to_None(x):
+    if x is not None and x.size == 0:
+        return None
+    return x
+
+
+def squeeze(x, *args):
+    x = zero_size_to_None(x)
+    if x is None:
+        return None
+    try:
+        return np.squeeze(x, *args)
+    except Exception:
+        if hasattr(x, "shape"):
+            logger.error(f"failed to squeeze {args!r} from array of shape {x.shape}")
+        else:
+            logger.error(f"failed to squeeze {args!r} from array of unknown shape")
+        raise
 
 
 class Flow:
@@ -881,6 +1100,21 @@ class Flow:
                             bool_wrapping=self.bool_wrapping,
                         )
                     except KeyError as key_err:
+                        # there was an error, but lets make sure we process the
+                        # whole expression to rewrite all the things we can before
+                        # moving on to the fallback processing.
+                        expr = expression_for_numba(
+                            expr,
+                            spacename,
+                            dim_slots,
+                            dim_slots,
+                            digital_encodings=digital_encodings,
+                            extra_vars=self.tree.extra_vars,
+                            blenders=blenders,
+                            bool_wrapping=self.bool_wrapping,
+                            swallow_errors=True,
+                        )
+                        # Now for the fallback processing...
                         if ".." in key_err.args[0]:
                             topkey, attrkey = key_err.args[0].split("..")
                         else:
@@ -909,6 +1143,26 @@ class Flow:
                             else:
                                 other_way = True
                                 # at least one variable was found in a fallback
+                                break
+                        if not other_way and "get" in expr:
+                            # any remaining "get" expressions with defaults should now use them
+                            try:
+                                expr = expression_for_numba(
+                                    expr,
+                                    spacename,
+                                    dim_slots,
+                                    dim_slots,
+                                    digital_encodings=digital_encodings,
+                                    extra_vars=self.tree.extra_vars,
+                                    blenders=blenders,
+                                    bool_wrapping=self.bool_wrapping,
+                                    get_default=True,
+                                )
+                            except KeyError as err:  # noqa: F841
+                                pass
+                            else:
+                                other_way = True
+                                # at least one variable was found in a get
                                 break
                         if not other_way:
                             raise
@@ -1261,6 +1515,9 @@ class Flow:
                         mnl_template = MNL_1D_TEMPLATE.format(**locals()).format(
                             **locals()
                         )
+                        nl_template = NL_1D_TEMPLATE.format(**locals()).format(
+                            **locals()
+                        )
                     elif n_root_dims == 2:
                         meta_template = IRUNNER_2D_TEMPLATE.format(**locals()).format(
                             **locals()
@@ -1274,6 +1531,7 @@ class Flow:
                         mnl_template = MNL_2D_TEMPLATE.format(**locals()).format(
                             **locals()
                         )
+                        nl_template = ""
                     else:
                         raise ValueError(f"invalid n_root_dims {n_root_dims}")
 
@@ -1284,6 +1542,8 @@ class Flow:
                 f_code.write(blacken(textwrap.dedent(line_template)))
                 f_code.write("\n\n")
                 f_code.write(blacken(textwrap.dedent(mnl_template)))
+                f_code.write("\n\n")
+                f_code.write(blacken(textwrap.dedent(nl_template)))
                 f_code.write("\n\n")
                 f_code.write(blacken(textwrap.dedent(meta_template)))
                 f_code.write("\n\n")
@@ -1305,18 +1565,38 @@ class Flow:
                 )
                 f_code.write(f"flow_hash = {self.flow_hash!r}\n")
 
-        if str(self.cache_dir) not in sys.path:
-            logger.debug(f"inserting {self.cache_dir} into sys.path")
-            sys.path.insert(0, str(self.cache_dir))
+        abs_cache_dir = os.path.abspath(self.cache_dir)
+        if str(abs_cache_dir) not in sys.path:
+            logger.debug(f"inserting {abs_cache_dir} into sys.path")
+            sys.path.insert(0, str(abs_cache_dir))
+            added_cache_dir_to_sys_path = True
+        else:
+            added_cache_dir_to_sys_path = False
         importlib.invalidate_caches()
         logger.debug(f"importing {self.name}")
-        module = importlib.import_module(self.name)
-        sys.path = sys.path[1:]
+        try:
+            module = importlib.import_module(self.name)
+        except ModuleNotFoundError:
+            # maybe we got out in front of the file system, wait a beat and retry
+            time.sleep(2)
+            try:
+                module = importlib.import_module(self.name)
+            except ModuleNotFoundError:
+                logger.error(f"- os.getcwd: {os.getcwd()}")
+                for i in sys.path:
+                    logger.error(f"- sys.path: {i}")
+                raise
+        if added_cache_dir_to_sys_path:
+            sys.path = sys.path[1:]
         self._runner = getattr(module, "runner", None)
         self._dotter = getattr(module, "dotter", None)
         self._irunner = getattr(module, "irunner", None)
+        self._logit_ndims = getattr(module, "logit_ndims", None)
         self._imnl = getattr(module, "mnl_transform", None)
+        self._imnl_plus1d = getattr(module, "mnl_transform_plus1d", None)
+        self._inestedlogit = getattr(module, "nl_transform", None)
         self._idotter = getattr(module, "idotter", None)
+        self._linemaker = getattr(module, "linemaker", None)
         if not writing:
             self.function_names = module.function_names
             self.output_name_positions = module.output_name_positions
@@ -1393,7 +1673,7 @@ class Flow:
                 else:
                     raise err
 
-    def iload_raw(
+    def _iload_raw(
         self,
         rg,
         runner=None,
@@ -1402,6 +1682,9 @@ class Flow:
         mnl=None,
         pick_counted=False,
         logsums=False,
+        nesting=None,
+        mask=None,
+        compile_watch=False,
     ):
         assert isinstance(rg, DataTree)
         with warnings.catch_warnings():
@@ -1409,29 +1692,59 @@ class Flow:
                 "ignore", category=nb.NumbaExperimentalFeatureWarning
             )
             try:
+                known_arg_names = {
+                    "dtype",
+                    "dotarray",
+                    "argshape",
+                    "random_draws",
+                    "pick_counted",
+                    "logsums",
+                    "choice_dtype",
+                    "pick_count_dtype",
+                    "mask",
+                }
                 if runner is None:
                     if mnl is not None:
-                        runner_ = self._imnl
+                        if nesting is None:
+                            if dot.shape[1] > 1:
+                                runner_ = self._imnl_plus1d
+                            else:
+                                runner_ = self._imnl
+                        else:
+                            runner_ = self._inestedlogit
+                            known_arg_names.update(
+                                {
+                                    "n_nodes",
+                                    "n_alts",
+                                    "edges_up",
+                                    "edges_dn",
+                                    "mu_params",
+                                    "start_slots",
+                                    "len_slots",
+                                }
+                            )
                     elif dot is None:
                         runner_ = self._irunner
+                        known_arg_names.update({"mask"})
+                        if (
+                            mask is not None
+                            and dtype is not None
+                            and not np.issubdtype(dtype, np.floating)
+                        ):
+                            raise TypeError("cannot use mask unless dtype is float")
                     else:
                         runner_ = self._idotter
                 else:
                     runner_ = runner
                 try:
-                    named_args = inspect.getfullargspec(runner_.py_func).args
+                    fullargspec = inspect.getfullargspec(runner_.py_func)
                 except AttributeError:
-                    named_args = inspect.getfullargspec(runner_).args
+                    fullargspec = inspect.getfullargspec(runner_)
+                named_args = fullargspec.args
                 arguments = []
+                _arguments_names = []
                 for arg in named_args:
-                    if arg in {
-                        "dtype",
-                        "dotarray",
-                        "argshape",
-                        "random_draws",
-                        "pick_counted",
-                        "logsums",
-                    }:
+                    if arg in known_arg_names:
                         continue
                     argument = rg.get_named_array(arg)
                     # aux_vars get passed through as is, not forced to be arrays
@@ -1448,6 +1761,7 @@ class Flow:
                             arguments.append(np.asarray(argument_))
                         else:
                             arguments.append(np.asarray(argument))
+                    _arguments_names.append(arg)
                 kwargs = {}
                 if dtype is not None:
                     kwargs["dtype"] = dtype
@@ -1457,12 +1771,60 @@ class Flow:
                     kwargs["random_draws"] = mnl
                     kwargs["pick_counted"] = pick_counted
                     kwargs["logsums"] = logsums
+                if nesting is not None:
+                    nesting.pop("edges_1st", None)  # unused in simple NL
+                    nesting.pop("edges_alloc", None)  # unused in simple NL
+                    kwargs.update(nesting)
+                if mask is not None:
+                    kwargs["mask"] = mask
                 tree_root_dims = rg.root_dataset.dims
                 argshape = [
                     tree_root_dims[i]
                     for i in presorted(tree_root_dims, self.dim_order, self.dim_exclude)
                 ]
-                return runner_(np.asarray(argshape), *arguments, **kwargs)
+                if mnl is not None:
+                    if nesting is not None:
+                        n_alts = nesting["n_alts"]
+                    elif len(argshape) == 2:
+                        n_alts = argshape[1]
+                    else:
+                        n_alts = kwargs["dotarray"].shape[1]
+                    if n_alts < 128:
+                        kwargs["choice_dtype"] = np.int8
+                    elif n_alts < 32768:
+                        kwargs["choice_dtype"] = np.int16
+                if logger.isEnabledFor(logging.DEBUG):
+                    logger.debug(
+                        "========= PASSING ARGUMENT TO SHARROW LOAD =========="
+                    )
+                    logger.debug(f"{argshape=}")
+                    for _name, _info in zip(_arguments_names, arguments):
+                        try:
+                            logger.debug(f"ARG {_name}: {_info.dtype}, {_info.shape}")
+                        except AttributeError:
+                            alt_repr = repr(_info)
+                            if len(alt_repr) < 200:
+                                logger.debug(f"ARG {_name}: {alt_repr}")
+                            else:
+                                logger.debug(f"ARG {_name}: type={type(_info)}")
+                    for _name, _info in kwargs.items():
+                        try:
+                            logger.debug(f"KWARG {_name}: {_info.dtype}, {_info.shape}")
+                        except AttributeError:
+                            alt_repr = repr(_info)
+                            if len(alt_repr) < 200:
+                                logger.debug(f"KWARG {_name}: {alt_repr}")
+                            else:
+                                logger.debug(f"KWARG {_name}: type={type(_info)}")
+                    logger.debug(
+                        "========= ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ =========="
+                    )
+                result = runner_(np.asarray(argshape), *arguments, **kwargs)
+                if compile_watch:
+                    self.check_cache_misses(
+                        runner_, log_details=compile_watch != "simple"
+                    )
+                return result
             except nb.TypingError as err:
                 _raw_functions = getattr(self, "_raw_functions", {})
                 logger.error(f"nb.TypingError in {len(_raw_functions)} functions")
@@ -1478,13 +1840,84 @@ class Flow:
                     if problem:
                         raise NameError(problem.group(1)) from err
                 raise
-            except KeyError as err:
-                # raise the inner key error which is more helpful
-                context = getattr(err, "__context__", None)
-                if context:
-                    raise context
+            # except KeyError as err:
+            #     # raise the inner key error which is more helpful
+            #     context = getattr(err, "__context__", None)
+            #     if context:
+            #         raise context
+            #     else:
+            #         raise err
+
+    def check_cache_misses(self, *funcs, fresh=True, log_details=True):
+        self.compiled_recently = False
+        if not hasattr(self, "_known_cache_misses"):
+            self._known_cache_misses = {}
+        if not funcs:
+            funcs = (
+                self._imnl,
+                self._imnl_plus1d,
+                self._inestedlogit,
+                self._irunner,
+                self._idotter,
+            )
+        for f in funcs:
+            if f is None:
+                continue
+            try:
+                fullargspec = inspect.getfullargspec(f.py_func)
+            except AttributeError:
+                fullargspec = inspect.getfullargspec(f)
+            named_args = fullargspec.args
+            cache_misses = f.stats.cache_misses
+            runner_name = f.__name__
+            if cache_misses:
+                if runner_name not in self._known_cache_misses:
+                    self._known_cache_misses[runner_name] = {}
+                if fresh:
+                    known_cache_misses = self._known_cache_misses[runner_name]
                 else:
-                    raise err
+                    known_cache_misses = {}
+                for k, v in cache_misses.items():
+                    if v > known_cache_misses.get(k, 0):
+                        if log_details:
+                            warning_text = "\n".join(
+                                f" - {argname}: {sig}"
+                                for (sig, argname) in zip(k, named_args)
+                            )
+                            warning_text = f"\n{runner_name}(\n{warning_text}\n)"
+                        else:
+                            warning_text = ""
+                        timers = (
+                            f.overloads[k]
+                            .metadata["timers"]
+                            .get("compiler_lock", "N/A")
+                        )
+                        if isinstance(timers, float):
+                            if timers < 1e-3:
+                                timers = f"{timers/1e-6:.0f} µs"
+                            elif timers < 1:
+                                timers = f"{timers/1e-3:.1f} ms"
+                            else:
+                                timers = f"{timers:.2f} s"
+                        logger.warning(
+                            f"cache miss in {self.flow_hash}{warning_text}\n"
+                            f"Compile Time: {timers}"
+                        )
+                        warnings.warn(f"{self.flow_hash}", CacheMissWarning)
+                        self.compiled_recently = True
+                        self._known_cache_misses[runner_name][k] = v
+        return self.compiled_recently
+
+    @property
+    def cache_misses(self):
+        """dict[str, dict]: Numba cache misses across all defined flow methods."""
+        misses = {}
+        for k, v in self.__dict__.items():
+            from numba.core.dispatcher import Dispatcher
+
+            if isinstance(v, Dispatcher):
+                misses[k] = v.stats.cache_misses.copy()
+        return misses
 
     def _load(
         self,
@@ -1495,10 +1928,12 @@ class Flow:
         runner=None,
         dtype=None,
         dot=None,
-        mnl_draws=None,
+        logit_draws=None,
         pick_counted=False,
         compile_watch=False,
-        logsums=False,
+        logsums=0,
+        nesting=None,
+        mask=None,
     ):
         """
         Compute the flow outputs.
@@ -1526,15 +1961,19 @@ class Flow:
             dot-product of the computed expressions and this array of coefficients,
             but without ever materializing the array of computed expression values
             in memory, achiving significant performance gains.
-        mnl_draws : array-like, optional
+        logit_draws : array-like, optional
             An array of random values in the unit interval. If provided, `dot` must
             also be provided. The dot-product is treated as the utility function
             for a multinomial logit model, and these draws are used to simulate
             choices from the implied probabilities.
         compile_watch : bool, default False
             Watch for compiled code.
-        logsums : bool, default False
-            Also return logsums when making draws from MNL models.
+        logsums : int, default 0
+            Set to 1 to return only logsums instead of making draws from logit models.
+            Set to 2 to return both logsums and draws.
+        nesting : dict, optional
+            Nesting arrays
+        mask : array-like, optional
         """
         if compile_watch:
             compile_watch = time.time()
@@ -1544,32 +1983,166 @@ class Flow:
             source = self.tree
         if dtype is None and dot is not None:
             dtype = dot.dtype
-        dot_collapse = False
+
+        if logit_draws is None and logsums == 1:
+            logit_draws = np.zeros(source.shape + (0,), dtype=dtype)
+
+        use_dims = list(
+            presorted(source.root_dataset.dims, self.dim_order, self.dim_exclude)
+        )
+
+        if logit_draws is not None:
+            if dot is None:
+                raise NotImplementedError
+            if dot.ndim == 1 or (dot.ndim == 2 and dot.shape[1] == 1):
+                while logit_draws.ndim < self._logit_ndims:
+                    logit_draws = np.expand_dims(logit_draws, -1)
+            else:
+                while logit_draws.ndim < self._logit_ndims + 1:
+                    logit_draws = np.expand_dims(logit_draws, -1)
+
+        result_dims = None
+        result_squeeze = None
+        if dot is None:
+            # returning extracted raw data, with all dims plus expressions
+            result_dims = use_dims + ["expressions"]
+            result_squeeze = None
+        else:
+            if not isinstance(dot, xr.DataArray):
+                dot_trailing_dim = ["ALT_COL"]
+            else:
+                dot_trailing_dim = [dot.dims[1]]
+            if dot.ndim == 1 and logit_draws is None:
+                # returning a dot-product for idca-type data
+                result_dims = use_dims
+                result_squeeze = (-1,)
+            elif dot.ndim == 2 and logit_draws is None:
+                # returning a dot-product for idco-type data
+                result_dims = use_dims + dot_trailing_dim
+                result_squeeze = None
+            elif dot.ndim > 2 and logit_draws is None:
+                raise NotImplementedError
+            else:
+                # returning a logit model result
+                if not isinstance(logit_draws, xr.DataArray):
+                    logit_draws_trailing_dim = ["DRAW"]
+                else:
+                    logit_draws_trailing_dim = [logit_draws.dims[-1]]
+                if dot.ndim == 1 and logit_draws.ndim == len(use_dims):
+                    result_dims = use_dims[:-1] + logit_draws_trailing_dim
+                elif (
+                    dot.ndim == 2
+                    and dot.shape[1] == 1
+                    and logit_draws.ndim == len(use_dims)
+                    and logit_draws.shape[-1] == 1
+                ):
+                    result_dims = use_dims[:-1]
+                    result_squeeze = (-1,)
+                elif (
+                    dot.ndim == 2
+                    and dot.shape[1] == 1
+                    and logit_draws.ndim == len(use_dims)
+                ):
+                    result_dims = use_dims[:-1] + logit_draws_trailing_dim
+                elif dot.ndim == 2 and logit_draws.ndim == len(use_dims):
+                    result_dims = use_dims[:-1] + dot_trailing_dim
+                elif dot.ndim == 1 and logit_draws.ndim == len(use_dims) + 1:
+                    result_dims = use_dims[:-1] + logit_draws_trailing_dim
+                    if logit_draws.shape[-1] == 1:
+                        result_squeeze = (-1,)
+                elif (
+                    dot.ndim == 2
+                    and logit_draws.ndim == len(use_dims) + 1
+                    and logit_draws.shape[-1] == 1
+                    and self._logit_ndims == 1
+                ):
+                    result_dims = use_dims
+                    result_squeeze = (-1,)
+                elif (
+                    dot.ndim == 2
+                    and logit_draws.ndim == len(use_dims) + 1
+                    and logit_draws.shape[-1] > 1
+                    and self._logit_ndims == 1
+                ):
+                    result_dims = use_dims + logit_draws_trailing_dim
+                elif (
+                    dot.ndim == 2
+                    and logit_draws.ndim == len(use_dims) + 1
+                    and logit_draws.shape[-1] == 0
+                ):
+                    # logsums only
+                    result_dims = use_dims
+                    result_squeeze = (-1,)
+                elif (
+                    dot.ndim == 2
+                    and logit_draws.ndim == len(use_dims) + 1
+                    and logit_draws.shape[-1] > 1
+                    and self._logit_ndims == 2
+                ):
+                    # wide choices
+                    result_dims = use_dims + logit_draws_trailing_dim
+                elif (
+                    dot.ndim == 2
+                    and logit_draws.ndim == len(use_dims) + 1
+                    and logit_draws.shape[-1] == 1
+                    and self._logit_ndims == 2
+                ):
+                    # wide choices
+                    result_dims = use_dims
+                    result_squeeze = (-1,)
+                else:
+                    print(f"{dot.ndim=}")
+                    print(f"{logit_draws.ndim=}")
+                    print(f"{len(use_dims)=}")
+                    print(f"{self._logit_ndims=}")
+                    raise NotImplementedError()
+
+        # dot_collapse = False
         result_p = None
         pick_count = None
         out_logsum = None
         if dot is not None and dot.ndim == 1:
             dot = np.expand_dims(dot, -1)
-            dot_collapse = True
-        mnl_collapse = False
-        if mnl_draws is not None and mnl_draws.ndim == 1:
-            mnl_draws = np.expand_dims(mnl_draws, -1)
-            mnl_collapse = True
+            # dot_collapse = True
+        # mnl_collapse = False
+        # idca_collapse = False
+        # if logit_draws is not None and logit_draws.ndim == 1:
+        #     logit_draws = np.expand_dims(logit_draws, -1)
+        #     mnl_collapse = True
+        # elif (
+        #     logit_draws is not None
+        #     and logit_draws.ndim == 2
+        #     and dot.ndim == 2
+        #     and dot.shape[1] == 1
+        # ):
+        #     idca_collapse = True
         if not source.relationships_are_digitized:
             source = source.digitize_relationships()
         if source.relationships_are_digitized:
-            if mnl_draws is None:
-                result = self.iload_raw(source, runner=runner, dtype=dtype, dot=dot)
-            else:
-                result, result_p, pick_count, out_logsum = self.iload_raw(
+            if logit_draws is None:
+                result = self._iload_raw(
                     source,
                     runner=runner,
                     dtype=dtype,
                     dot=dot,
-                    mnl=mnl_draws,
+                    mask=mask,
+                    compile_watch=compile_watch,
+                )
+            else:
+                result, result_p, pick_count, out_logsum = self._iload_raw(
+                    source,
+                    runner=runner,
+                    dtype=dtype,
+                    dot=dot,
+                    mnl=logit_draws,
                     pick_counted=pick_counted,
                     logsums=logsums,
+                    nesting=nesting,
+                    mask=mask,
+                    compile_watch=compile_watch,
                 )
+                pick_count = zero_size_to_None(pick_count)
+                out_logsum = zero_size_to_None(out_logsum)
         else:
             raise RuntimeError("please digitize")
         if as_dataframe:
@@ -1582,111 +2155,85 @@ class Flow:
                 {k: result[:, n] for n, k in enumerate(self._raw_functions.keys())}
             )
         elif as_dataarray:
-            use_dims = list(
-                presorted(source.root_dataset.dims, self.dim_order, self.dim_exclude)
-            )
-            if dot is None:
+
+            if result_squeeze:
+                result = squeeze(result, result_squeeze)
+                result_p = squeeze(result_p, result_squeeze)
+                pick_count = squeeze(pick_count, result_squeeze)
+            result_coords = {
+                k: v for k, v in source.root_dataset.coords.items() if k in result_dims
+            }
+            if result is not None:
                 result = xr.DataArray(
                     result,
-                    dims=use_dims + ["expressions"],
+                    dims=result_dims,
+                    coords=result_coords,
+                )
+                if "expressions" in result_dims:
+                    result.coords["expressions"] = self.function_names
+            if result_p is not None:
+                result_p = xr.DataArray(
+                    result_p,
+                    dims=result_dims,
+                    coords=result_coords,
+                )
+            if pick_count is not None:
+                pick_count = xr.DataArray(
+                    pick_count,
+                    dims=result_dims,
+                    coords=result_coords,
+                )
+            if out_logsum is not None:
+                out_logsum = xr.DataArray(
+                    out_logsum,
+                    dims=result_dims[: out_logsum.ndim],
                     coords={
                         k: v
                         for k, v in source.root_dataset.coords.items()
-                        if k in use_dims
+                        if k in result_dims[: out_logsum.ndim]
                     },
                 )
-                result.coords["expressions"] = self.function_names
-            elif dot_collapse and mnl_draws is None:
-                result = xr.DataArray(
-                    np.squeeze(result, -1),
-                    dims=use_dims,
-                    coords=source.root_dataset.coords,
-                )
-            elif mnl_collapse:
-                if isinstance(dot, xr.DataArray):
-                    plus_dims = list(dot.dims[1:])
-                else:
-                    plus_dims = []
-                result = xr.DataArray(
-                    np.squeeze(result, -1),
-                    dims=use_dims[:-1] + plus_dims,
-                    coords=source.root_dataset.coords,
-                )
-                result_p = xr.DataArray(
-                    np.squeeze(result_p, -1),
-                    dims=use_dims[:-1] + plus_dims,
-                    coords=source.root_dataset.coords,
-                )
-                if pick_count is not None:
-                    pick_count = xr.DataArray(
-                        np.squeeze(pick_count, -1),
-                        dims=use_dims[:-1] + plus_dims,
-                        coords=source.root_dataset.coords,
-                    )
-                for plus_dim in plus_dims:
-                    if plus_dim in dot.coords:
-                        result.coords[plus_dim] = dot.coords[plus_dim]
-                        result_p.coords[plus_dim] = dot.coords[plus_dim]
-                        if pick_count is not None:
-                            pick_count.coords[plus_dim] = dot.coords[plus_dim]
-            elif isinstance(dot, xr.DataArray):
-                plus_dims = dot.dims[1:]
-                result = xr.DataArray(
-                    result,
-                    dims=use_dims + list(plus_dims),
-                    coords=source.root_dataset.coords,
-                )
-                for plus_dim in plus_dims:
-                    if plus_dim in dot.coords:
-                        result.coords[plus_dim] = dot.coords[plus_dim]
-            else:
-                dot_ = xr.DataArray(dot)
-                plus_dims = dot_.dims[1:]
-                result = xr.DataArray(
-                    result,
-                    dims=use_dims + list(plus_dims),
-                    coords=source.root_dataset.coords,
-                )
-        elif dot_collapse and mnl_draws is None:
-            result = np.squeeze(result, -1)
-        elif mnl_collapse:
-            result = np.squeeze(result, -1)
-            result_p = np.squeeze(result_p, -1)
-        if compile_watch:
-            self.compiled_recently = False
-            for i in os.walk(os.path.join(self.cache_dir, self.name)):
-                for f in i[2]:
-                    fi = os.path.join(i[0], f)
-                    try:
-                        t = os.path.getmtime(fi)
-                    except FileNotFoundError:
-                        # something is actively happening in this directory
-                        self.compiled_recently = True
-                        logger.warning(
-                            f"unidentified activity (file deletion) detected for {self.name}"
-                        )
-                        break
-                    if t > compile_watch:
-                        self.compiled_recently = True
-                        logger.warning(f"compilation activity detected for {self.name}")
-                        break
-                if self.compiled_recently:
-                    break
+
         else:
+            if result_squeeze:
+                result = squeeze(result, result_squeeze)
+                result_p = squeeze(result_p, result_squeeze)
+                pick_count = squeeze(pick_count, result_squeeze)
+
+        # if compile_watch:
+        #     self.compiled_recently = False
+        #     for i in os.walk(os.path.join(self.cache_dir, self.name)):
+        #         for f in i[2]:
+        #             fi = os.path.join(i[0], f)
+        #             try:
+        #                 t = os.path.getmtime(fi)
+        #             except FileNotFoundError:
+        #                 # something is actively happening in this directory
+        #                 self.compiled_recently = True
+        #                 logger.warning(
+        #                     f"unidentified activity (file deletion) detected for {self.name}"
+        #                 )
+        #                 break
+        #             if t > compile_watch:
+        #                 self.compiled_recently = True
+        #                 logger.warning(f"compilation activity detected for {self.name}")
+        #                 break
+        #         if self.compiled_recently:
+        #             break
+        if not compile_watch:
             try:
                 del self.compiled_recently
             except AttributeError:
                 pass
+        if out_logsum is not None:
+            return result, result_p, pick_count, out_logsum
+        if pick_count is not None:
+            return result, result_p, pick_count
         if result_p is not None:
-            if logsums:
-                return result, result_p, pick_count, out_logsum
-            if pick_counted:
-                return result, result_p, pick_count
-            else:
-                return result, result_p
+            return result, result_p
         return result
 
-    def load(self, source=None, dtype=None, compile_watch=False):
+    def load(self, source=None, dtype=None, compile_watch=False, mask=None):
         """
         Compute the flow outputs as a numpy array.
 
@@ -1701,14 +2248,18 @@ class Flow:
         compile_watch : bool, default False
             Set the `compiled_recently` flag on this flow to True if any file
             modification activity is observed in the cache directory.
+        mask : array-like, optional
+            Only compute values for items where mask is truthy.
 
         Returns
         -------
         numpy.array
         """
-        return self._load(source=source, dtype=dtype, compile_watch=compile_watch)
+        return self._load(
+            source=source, dtype=dtype, compile_watch=compile_watch, mask=mask
+        )
 
-    def load_dataframe(self, source=None, dtype=None, compile_watch=False):
+    def load_dataframe(self, source=None, dtype=None, compile_watch=False, mask=None):
         """
         Compute the flow outputs as a pandas.DataFrame.
 
@@ -1723,16 +2274,22 @@ class Flow:
         compile_watch : bool, default False
             Set the `compiled_recently` flag on this flow to True if any file
             modification activity is observed in the cache directory.
+        mask : array-like, optional
+            Only compute values for items where mask is truthy.
 
         Returns
         -------
         pandas.DataFrame
         """
         return self._load(
-            source=source, dtype=dtype, as_dataframe=True, compile_watch=compile_watch
+            source=source,
+            dtype=dtype,
+            as_dataframe=True,
+            compile_watch=compile_watch,
+            mask=mask,
         )
 
-    def load_dataarray(self, source=None, dtype=None, compile_watch=False):
+    def load_dataarray(self, source=None, dtype=None, compile_watch=False, mask=None):
         """
         Compute the flow outputs as a xarray.DataArray.
 
@@ -1747,13 +2304,19 @@ class Flow:
         compile_watch : bool, default False
             Set the `compiled_recently` flag on this flow to True if any file
             modification activity is observed in the cache directory.
+        mask : array-like, optional
+            Only compute values for items where mask is truthy.
 
         Returns
         -------
         xarray.DataArray
         """
         return self._load(
-            source=source, dtype=dtype, as_dataarray=True, compile_watch=compile_watch
+            source=source,
+            dtype=dtype,
+            as_dataarray=True,
+            compile_watch=compile_watch,
+            mask=mask,
         )
 
     def dot(self, coefficients, source=None, dtype=None, compile_watch=False):
@@ -1821,15 +2384,18 @@ class Flow:
             compile_watch=compile_watch,
         )
 
-    def mnl_draws(
+    def logit_draws(
         self,
         coefficients,
-        draws,
+        draws=None,
         source=None,
         pick_counted=False,
-        logsums=False,
+        logsums=0,
         dtype=None,
         compile_watch=False,
+        nesting=None,
+        as_dataarray=False,
+        mask=None,
     ):
         """
         Make random simulated choices for a multinomial logit model.
@@ -1852,8 +2418,9 @@ class Flow:
             tree used to initialize this flow is used.
         pick_counted : bool, default False
             Whether to tally multiple repeated choices with a pick count.
-        logsums : bool, default False
-            Whether to also return logsums.
+        logsums : int, default 0
+            Set to 1 to return only logsums instead of making draws from logit models.
+            Set to 2 to return both logsums and draws.
         dtype : str or dtype
             Override the default dtype for the probability. May trigger re-compilation
             of the underlying code.  The choices and pick counts (if included)
@@ -1861,6 +2428,11 @@ class Flow:
         compile_watch : bool, default False
             Set the `compiled_recently` flag on this flow to True if any file
             modification activity is observed in the cache directory.
+        nesting : dict, optional
+            Nesting instructions
+        as_dataarray : bool, default False
+        mask : array-like, optional
+            Only compute values for items where mask is truthy.
 
         Returns
         -------
@@ -1875,11 +2447,14 @@ class Flow:
         return self._load(
             source=source,
             dot=coefficients,
-            mnl_draws=draws,
+            logit_draws=draws,
             dtype=dtype,
             pick_counted=pick_counted,
             compile_watch=compile_watch,
-            logsums=logsums,
+            logsums=np.int8(logsums),
+            nesting=nesting,
+            as_dataarray=as_dataarray,
+            mask=mask,
         )
 
     @property
@@ -1933,3 +2508,84 @@ class Flow:
         bbedit_url = f"x-bbedit://open?url=file://{codefile}"
         bb_link = f'<a href="{bbedit_url}">{codefile}</a>'
         return HTML(f"<style>{css}</style><p>{bb_link}</p>{pretty}")
+
+    def init_streamer(self, source=None, dtype=None):
+        """
+        Initialize a compiled closure on the data for loading individual lines.
+
+        Parameters
+        ----------
+        source : DataTree, optional
+            This is the source of the data for this flow. If not provided, the
+            tree used to initialize this flow is used.
+        dtype : str or dtype, default float32
+            Override the default dtype for the result. May trigger re-compilation
+            of the underlying code.
+
+        Returns
+        -------
+        callable
+        """
+        if source is None:
+            source = self.tree
+        if dtype is None:
+            dtype = np.float32
+
+        named_args = inspect.getfullargspec(self._linemaker.py_func).args
+        skip_args = ["intermediate", "j0", "j1"]
+        named_args = tuple(i for i in named_args if i not in skip_args)
+
+        general_mapping = {}
+        for k, v in source.subspaces.items():
+            for i in v:
+                mangled_key = f"__{k}__{i}"
+                if mangled_key in named_args:
+                    general_mapping[mangled_key] = v[i].to_numpy()
+            for i in v.indexes:
+                mangled_key = f"__{k}__{i}"
+                if mangled_key in named_args:
+                    general_mapping[mangled_key] = v[i].to_numpy()
+
+        selected_args = tuple(general_mapping[k] for k in named_args)
+        len_self_raw_functions = len(self._raw_functions)
+        tree_root_dims = source.root_dataset.dims
+        argshape = tuple(
+            tree_root_dims[i]
+            for i in presorted(tree_root_dims, self.dim_order, self.dim_exclude)
+        )
+
+        if len(argshape) == 1:
+            linemaker = self._linemaker
+
+            @nb.njit
+            def streamer(c, out=None):
+                if out is None:
+                    result = np.zeros(len_self_raw_functions, dtype=dtype)
+                else:
+                    result = out
+                    assert result.ndim == 1
+                    assert result.size == len_self_raw_functions
+                linemaker(result, c, *selected_args)
+                return result
+
+        elif len(argshape) == 2:
+            n_alts = argshape[1]
+            linemaker = self._linemaker
+
+            @nb.njit
+            def streamer(c, out=None):
+                if out is None:
+                    result = np.zeros((n_alts, len_self_raw_functions), dtype=dtype)
+                else:
+                    result = out
+                    assert result.shape == (n_alts, len_self_raw_functions)
+                for i in range(n_alts):
+                    linemaker(result[i, :], c, i, *selected_args)
+                return result
+
+        else:
+            raise NotImplementedError(
+                f"root tree with {len(argshape)} dims {argshape=}"
+            )
+
+        return streamer

@@ -23,3 +23,4 @@ dependencies:
   - nbmake
   - openmatrix
   - zarr
+  - larch>=5.7.1

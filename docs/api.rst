@@ -63,7 +63,7 @@ Dot
 
 Logit
 ~~~~~~~~~
-.. automethod:: sharrow.Flow.mnl_draws
+.. automethod:: sharrow.Flow.logit_draws
 
 Convenience
 ~~~~~~~~~~~

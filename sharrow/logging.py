@@ -6,7 +6,7 @@ from contextlib import contextmanager
 LOGGER_NAME = "sharrow"
 FILE_LOG_FORMAT = "%(name)s.%(levelname)s: %(message)s"
 CONSOLE_LOG_FORMAT = "[%(asctime)s] %(name)s.%(levelname)s: %(message)s"
-DEFAULT_LOG_LEVEL = logging.DEBUG
+DEFAULT_LOG_LEVEL = logging.INFO
 
 
 def timesize_single(t):
@@ -37,19 +37,22 @@ def log_to_console(level=None):
 
     logger = logging.getLogger(LOGGER_NAME)
 
+    if level < logger.level or logger.level == logging.NOTSET:
+        logger.setLevel(level)
+
     # avoid creation of multiple stream handlers for logging to console
     for entry in logger.handlers:
         if (isinstance(entry, logging.StreamHandler)) and (
             entry.formatter._fmt == CONSOLE_LOG_FORMAT
         ):
+            if level < entry.level:
+                entry.setLevel(level)
             return logger
 
     console_handler = logging.StreamHandler(stream=sys.stderr)
     console_handler.setLevel(level)
     console_handler.setFormatter(logging.Formatter(CONSOLE_LOG_FORMAT))
     logger.addHandler(console_handler)
-    if level < logger.getEffectiveLevel():
-        logger.setLevel(level)
 
     return logger
 

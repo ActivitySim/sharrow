@@ -10,6 +10,7 @@ dependencies:
   - filelock
   - flake8
   - jupyter
+  - larch>=5.7.1
   - nbmake
   - networkx
   - notebook

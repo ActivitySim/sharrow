@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 import pyarrow as pa
 import xarray as xr
-from xarray import Dataset
+from xarray import DataArray, Dataset
 
 from .accessors import register_dataset_method
 from .aster import extract_all_name_tokens
@@ -143,7 +143,29 @@ def dataset_from_dataframe_fast(
         return Dataset.from_dataframe(dataframe, sparse)
 
     if not dataframe.columns.is_unique:
-        raise ValueError("cannot convert DataFrame with non-unique columns")
+        # if the dataframe has non-unique column names, but all the duplicate
+        # names contain the same data, we can recover safely by dropping the
+        # duplicates, otherwise throw an error.
+        cannot_fix = False
+        dupe_columns = dataframe.columns.duplicated()
+        dupe_column_names = dataframe.columns[dupe_columns]
+        for j in dupe_column_names:
+            subframe = dataframe[j]
+            ref_col = subframe.iloc[:, 0]
+            for k in range(1, len(subframe.columns)):
+                if not ref_col.equals(subframe.iloc[:, k]):
+                    cannot_fix = True
+                    break
+                if cannot_fix:
+                    break
+        dupe_column_names = [f"- {i}" for i in dupe_column_names]
+        logger.error(
+            "DataFrame has non-unique columns\n" + "\n".join(dupe_column_names)
+        )
+        if cannot_fix:
+            raise ValueError("cannot convert DataFrame with non-unique columns")
+        else:
+            dataframe = dataframe.loc[:, ~dupe_columns]
 
     if isinstance(dataframe.index, pd.CategoricalIndex):
         idx = dataframe.index.remove_unused_categories()
@@ -597,7 +619,7 @@ def from_zarr(store, *args, **kwargs):
     ----------
     http://zarr.readthedocs.io/
     """
-    return xr.Dataset(xr.open_zarr(store, *args, **kwargs))
+    return xr.open_zarr(store, *args, **kwargs)
 
 
 def from_zarr_with_attr(*args, **kwargs):
@@ -641,6 +663,67 @@ def coerce_to_range_index(idx):
 
 def is_dict_like(value: Any) -> bool:
     return hasattr(value, "keys") and hasattr(value, "__getitem__")
+
+
+@xr.register_dataset_accessor("single_dim")
+class _SingleDim:
+    """
+    Convenience accessor for single-dimension datasets.
+    """
+
+    __slots__ = ("dataset", "dim_name")
+
+    def __init__(self, dataset: "Dataset"):
+        self.dataset = dataset
+        if len(self.dataset.dims) != 1:
+            raise ValueError("single_dim implies a single dimension dataset")
+        self.dim_name = self.dataset.dims.__iter__().__next__()
+
+    @property
+    def coords(self):
+        return self.dataset.coords[self.dim_name]
+
+    @property
+    def index(self):
+        return self.dataset.indexes[self.dim_name]
+
+    @property
+    def size(self):
+        return self.dataset.dims[self.dim_name]
+
+    def to_pyarrow(self):
+        return pa.Table.from_pydict(
+            {k: pa.array(v.to_numpy()) for k, v in self.dataset.variables.items()}
+        )
+
+
+@xr.register_dataarray_accessor("single_dim")
+class _SingleDimArray:
+    """
+    Convenience accessor for single-dimension datasets.
+    """
+
+    __slots__ = ("dataarray", "dim_name")
+
+    def __init__(self, dataarray: "DataArray"):
+        self.dataarray = dataarray
+        if len(self.dataarray.dims) != 1:
+            raise ValueError("single_dim implies a single dimension dataset")
+        self.dim_name = self.dataarray.dims[0]
+
+    @property
+    def coords(self):
+        return self.dataarray.coords[self.dim_name]
+
+    @property
+    def index(self):
+        return self.dataarray.indexes[self.dim_name]
+
+    def rename(self, name: str) -> DataArray:
+        """Rename the single dimension."""
+        if self.dim_name == name:
+            return self.dataarray
+        return self.dataarray.rename({self.dim_name: name})
 
 
 @xr.register_dataset_accessor("iloc")
@@ -870,6 +953,43 @@ def to_zarr_with_attr(self, *args, **kwargs):
         attrs[aname] = avalue
     obj = obj.assign_attrs(attrs)
     return obj.to_zarr(*args, **kwargs)
+
+
+@register_dataset_method
+def to_table(self):
+    """
+    Convert dataset contents to a pyarrow Table.
+
+    This dataset must not contain more than one dimension.
+    """
+    assert isinstance(self, Dataset)
+    if len(self.dims) != 1:
+        raise ValueError("Only 1-dim datasets can be converted to tables")
+
+    import pyarrow as pa
+
+    from .relationships import sparse_array_type
+
+    def to_numpy(var):
+        """Coerces wrapped data to numpy and returns a numpy.ndarray"""
+        data = var.data
+        if hasattr(data, "chunks"):
+            data = data.compute()
+        if isinstance(data, sparse_array_type):
+            data = data.todense()
+        return np.asarray(data)
+
+    pydict = {}
+    for i in self.variables:
+        dictionary = self[i].attrs.get("DICTIONARY", None)
+        if dictionary is not None:
+            pydict[i] = pa.DictionaryArray.from_arrays(
+                to_numpy(self[i]),
+                dictionary,
+            )
+        else:
+            pydict[i] = pa.array(to_numpy(self[i]))
+    return pa.Table.from_pydict(pydict)
 
 
 @register_dataset_method

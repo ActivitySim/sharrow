@@ -10,6 +10,16 @@ import xarray as xr
 from .dataset import Dataset, construct
 
 try:
+    from dask.array import Array as dask_array_type
+except ModuleNotFoundError:
+    dask_array_type = ()
+
+try:
+    from sparse import SparseArray as sparse_array_type
+except ModuleNotFoundError:
+    sparse_array_type = ()
+
+try:
     from ast import unparse
 except ImportError:
     from astunparse import unparse as _unparse
@@ -46,15 +56,17 @@ def _require_string(x):
 
 def _iat(source, *, _names=None, _load=False, _index_name=None, **idxs):
     loaders = {}
-    if _index_name is None:
-        _index_name = "index"
+    inum = 0
+
+    def _ixname():
+        if _index_name is not None:
+            return _index_name
+        nonlocal inum
+        inum += 1
+        return f"index{inum}"
+
     for k, v in idxs.items():
-        if v.ndim == 1:
-            loaders[k] = xr.DataArray(v, dims=[_index_name])
-        else:
-            loaders[k] = xr.DataArray(
-                v, dims=[f"{_index_name}{n}" for n in range(v.ndim)]
-            )
+        loaders[k] = xr.DataArray(v, dims=[_ixname() for n in range(v.ndim)])
     if _names:
         ds = source[_names]
     else:
@@ -66,15 +78,17 @@ def _iat(source, *, _names=None, _load=False, _index_name=None, **idxs):
 
 def _at(source, *, _names=None, _load=False, _index_name=None, **idxs):
     loaders = {}
-    if _index_name is None:
-        _index_name = "index"
+    inum = 0
+
+    def _ixname():
+        if _index_name is not None:
+            return _index_name
+        nonlocal inum
+        inum += 1
+        return f"index{inum}"
+
     for k, v in idxs.items():
-        if v.ndim == 1:
-            loaders[k] = xr.DataArray(v, dims=[_index_name])
-        else:
-            loaders[k] = xr.DataArray(
-                v, dims=[f"{_index_name}{n}" for n in range(v.ndim)]
-            )
+        loaders[k] = xr.DataArray(v, dims=[_ixname() for n in range(v.ndim)])
     if _names:
         ds = source[_names]
     else:
@@ -134,6 +148,17 @@ def xgather(source, positions, indexes):
         return gather(source, indexes)
     else:
         return gather(igather(source, positions), indexes)
+
+
+def _dataarray_to_numpy(self) -> np.ndarray:
+    """Coerces wrapped data to numpy and returns a numpy.ndarray"""
+    data = self.data
+    if isinstance(data, dask_array_type):
+        data = data.compute()
+    if isinstance(data, sparse_array_type):
+        data = data.todense()
+    data = np.asarray(data)
+    return data
 
 
 class Relationship:
@@ -205,9 +230,11 @@ class Relationship:
         if "->" in s:
             parent, child = s.split("->", 1)
             i = "position"
-        elif "@":
+        elif "@" in s:
             parent, child = s.split("@", 1)
             i = "label"
+        else:
+            raise ValueError(f"cannot interpret relationship {s!r}")
         p1, p2 = parent.split(".", 1)
         c1, c2 = child.split(".", 1)
         p1 = p1.strip()
@@ -335,6 +362,12 @@ class DataTree:
             self.root_dataset.dims[i] for i in dim_order if i not in self.dim_exclude
         )
 
+    @property
+    def root_dims(self):
+        from .flows import presorted
+
+        return tuple(presorted(self.root_dataset, self.dim_order, self.dim_exclude))
+
     def __shallow_copy_extras(self):
         return dict(
             extra_funcs=self.extra_funcs,
@@ -342,6 +375,7 @@ class DataTree:
             aux_vars=self.aux_vars,
             cache_dir=self.cache_dir,
             force_digitization=self.force_digitization,
+            dim_order=self.dim_order,
         )
 
     def __repr__(self):
@@ -365,6 +399,11 @@ class DataTree:
         else:
             s += "\n relationships: none"
         return s
+
+    def view_relationships(self, fontname="Arial", fontsize=9):
+        from .viz import display_svg, make_graph
+
+        return display_svg(make_graph(self, fontname=fontname, fontsize=fontsize))
 
     def _hash_features(self):
         h = []
@@ -432,9 +471,11 @@ class DataTree:
             if "->" in s:
                 parent, child = s.split("->", 1)
                 i = "position"
-            elif "@":
+            elif "@" in s:
                 parent, child = s.split("@", 1)
                 i = "label"
+            else:
+                raise ValueError(f"cannot interpret relationship {s!r}")
             p1, p2 = parent.split(".", 1)
             c1, c2 = child.split(".", 1)
             p1 = p1.strip()
@@ -543,14 +584,61 @@ class DataTree:
         )
 
     def __getitem__(self, item):
+        return self.get(item)
+
+    def get(self, item, default=None, broadcast=True, coords=True):
+        """
+        Access variable(s) from this tree.
+
+        Parameters
+        ----------
+        item : str or Sequence[str]
+            Each value can be just the name of the variable if that name is unique
+            within the tree, or use dotted notation ('node_name.var_name') to give
+            the node name explicitly and resolve ambiguity as necessary.
+        default
+            If provided, this default value is used for any missing item(s).
+        broadcast : bool, default True
+            Broadcast all arrays up to the dimensions of the root node in the tree.
+        coords : bool, default True
+            Attach coordinates from the root node of the tree to the result.
+
+        Returns
+        -------
+        DataArray or Dataset
+        """
         if isinstance(item, (list, tuple)):
             from .dataset import Dataset
 
-            return Dataset({k: self[k] for k in item})
+            return Dataset(
+                {
+                    k: self.get(k, default=default, broadcast=broadcast, coords=coords)
+                    for k in item
+                }
+            )
         try:
-            return self._getitem(item)
+            result = self._getitem(item, dim_names_from_top=True)
         except KeyError:
-            return self._getitem(item, include_blank_dims=True)
+            try:
+                result = self._getitem(
+                    item, include_blank_dims=True, dim_names_from_top=True
+                )
+            except KeyError:
+                if default is None:
+                    raise
+                else:
+                    result = xr.DataArray(default)
+        root_dataset = self.root_dataset
+        if result.dims != self.root_dims and broadcast:
+            result, _ = xr.broadcast(result, root_dataset)
+        if coords:
+            add_coords = {}
+            for i in result.dims:
+                if i not in result.coords and i in root_dataset.coords:
+                    add_coords[i] = root_dataset.coords[i]
+            if add_coords:
+                result = result.assign_coords(add_coords)
+        return result
 
     def finditem(self, item, maybe_in=None):
         if maybe_in is not None and maybe_in in self._graph.nodes:
@@ -560,7 +648,12 @@ class DataTree:
         return self._getitem(item, just_node_name=True)
 
     def _getitem(
-        self, item, include_blank_dims=False, only_dims=False, just_node_name=False
+        self,
+        item,
+        include_blank_dims=False,
+        only_dims=False,
+        just_node_name=False,
+        dim_names_from_top=False,
     ):
 
         if isinstance(item, (list, tuple)):
@@ -614,9 +707,25 @@ class DataTree:
                     else:
                         result = dataset[item]
                     dims_in_result = set(result.dims)
+                    top_dim_names = {}
                     for path in nx.algorithms.simple_paths.all_simple_edge_paths(
                         self._graph, self.root_node_name, current_node
                     ):
+                        if dim_names_from_top:
+                            e = path[0]
+                            top_dim_name = self._graph.edges[e].get("parent_name")
+                            root_dataset = self.root_dataset
+                            # deconvert digitized dim names back to native dims
+                            if (
+                                top_dim_name not in root_dataset.dims
+                                and top_dim_name in root_dataset.variables
+                            ):
+                                if root_dataset.variables[top_dim_name].ndim == 1:
+                                    top_dim_name = root_dataset.variables[
+                                        top_dim_name
+                                    ].dims[0]
+                        else:
+                            top_dim_name = None
                         path_dim = self._graph.edges[path[-1]].get("child_name")
                         if path_dim not in dims_in_result:
                             continue
@@ -633,11 +742,19 @@ class DataTree:
                             ]
                             if r.indexing == "label":
                                 t1 = t2.sel(
-                                    {r.child_name: t1[r.parent_name].to_numpy()}
+                                    {
+                                        r.child_name: _dataarray_to_numpy(
+                                            t1[r.parent_name]
+                                        )
+                                    }
                                 )
                             else:  # by position
                                 t1 = t2.isel(
-                                    {r.child_name: t1[r.parent_name].to_numpy()}
+                                    {
+                                        r.child_name: _dataarray_to_numpy(
+                                            t1[r.parent_name]
+                                        )
+                                    }
                                 )
                         # final node in path
                         e = path[-1]
@@ -647,18 +764,23 @@ class DataTree:
                         if t1 is None:
                             t1 = self._graph.nodes[r.parent_data].get("dataset")
                         if r.indexing == "label":
-                            _labels[r.child_name] = t1[r.parent_name].to_numpy()
+                            _labels[r.child_name] = _dataarray_to_numpy(
+                                t1[r.parent_name]
+                            )
                         else:  # by position
-                            _idx = t1[r.parent_name].to_numpy()
+                            _idx = _dataarray_to_numpy(t1[r.parent_name])
                             if not np.issubdtype(_idx.dtype, np.integer):
                                 _idx = _idx.astype(np.int64)
                             _positions[r.child_name] = _idx
-
+                        if top_dim_name is not None:
+                            top_dim_names[r.child_name] = top_dim_name
                     y = xgather(result, _positions, _labels)
                     if len(result.dims) == 1 and len(y.dims) == 1:
                         y = y.rename({y.dims[0]: result.dims[0]})
                     elif len(dims_in_result) == len(y.dims):
                         y = y.rename({_i: _j for _i, _j in zip(y.dims, result.dims)})
+                    if top_dim_names:
+                        y = y.rename(top_dim_names)
                     return y
             else:
                 examined.add(current_node)
@@ -868,7 +990,7 @@ class DataTree:
             result[k] = result_k
 
         if as_dict:
-            result = {k: v.to_numpy() for k, v in result.items()}
+            result = {k: _dataarray_to_numpy(v) for k, v in result.items()}
         else:
             result = Dataset(result)
         if use_cache:
@@ -1065,7 +1187,12 @@ class DataTree:
                 return dataset[name2[:-8]].data.indptr
             elif name2.endswith("__indices"):
                 return dataset[name2[:-9]].data.indices
-        return dataset[name2].to_numpy()
+        try:
+            _d = dataset[name2]
+        except KeyError as err:
+            raise KeyError(f"{name1}.{name2}") from err
+        else:
+            return _dataarray_to_numpy(_d)
 
     _BY_OFFSET = "digitizedOffset"
 
@@ -1107,8 +1234,11 @@ class DataTree:
                 downstream = c_dataset[r.child_name]
 
                 # vectorize version
-                mapper = {i: j for (j, i) in enumerate(downstream.to_numpy())}
-                offsets = xr.apply_ufunc(np.vectorize(mapper.get), upstream)
+                mapper = {i: j for (j, i) in enumerate(_dataarray_to_numpy(downstream))}
+                if upstream.size:
+                    offsets = xr.apply_ufunc(np.vectorize(mapper.get), upstream)
+                else:
+                    offsets = xr.DataArray([], dims=["index"])
                 if offsets.dtype.kind != "i":
                     warnings.warn(
                         f"detected missing values in digitizing {r.parent_data}.{r.parent_name}",
@@ -1222,7 +1352,11 @@ class DataTree:
                     upside = ", ".join(unparse(t) for t in upside_ast)
                 except:  # noqa: E722
                     for t in upside_ast:
-                        print(f"t:{t}")
+                        str_t = str(t)
+                        if len(str_t) < 2000:
+                            print(f"t:{str_t}")
+                        else:
+                            print(f"t:{str_t[:200]}...")
                     raise
 
                 # check for redirection target
@@ -1268,3 +1402,51 @@ class DataTree:
         return type(self)(
             self._graph.copy(), self.root_node_name, **self.__shallow_copy_extras()
         )
+
+    def all_var_names(self, uniquify=False, _duplicated_names=None):
+        ordered_names = []
+        require_unique = _duplicated_names is None and not uniquify
+        need_second_pass = _duplicated_names is None and uniquify
+        print(f"{require_unique=}")
+        discovered_names = set()
+        duplicated_names = _duplicated_names or set()
+        for spacename, space in self.subspaces_iter():
+            for name in space.variables:
+                if name in duplicated_names:
+                    if require_unique:
+                        raise ValueError(f"duplicate name {name}")
+                    elif uniquify:
+                        ordered_names.append(f"{spacename}.{name}")
+                    else:
+                        ordered_names.append(name)
+                elif name in discovered_names:
+                    duplicated_names.add(name)
+                    if require_unique:
+                        raise ValueError(f"duplicate name {name}")
+                    else:
+                        ordered_names.append(name)
+                else:
+                    discovered_names.add(name)
+                    ordered_names.append(name)
+        if need_second_pass:
+            return self.all_var_names(uniquify=True, _duplicated_names=duplicated_names)
+        return ordered_names
+
+    def merged_dataset(self, columns=None, uniquify=False):
+        if columns is None:
+            columns = self.all_var_names(uniquify=uniquify)
+        if len(self.root_dataset.dims) > 1:
+            raise NotImplementedError("only single dim root datasets")
+        dim_name = self.root_dataset.single_dim.dim_name
+        vx = []
+        coords = {}
+        for k in columns:
+            v = self._getitem(k).single_dim.rename(dim_name)
+            if v.name == v.dims[0]:
+                coords[v.name] = v
+            else:
+                vx.append(v)
+        result = xr.merge(vx, compat="override", join="override")
+        if coords:
+            result.assign_coords(coords)
+        return result
