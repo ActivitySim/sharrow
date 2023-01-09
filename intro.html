@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
-    <title>Getting Started &#8212; v2.4.0</title>
+    <title>Getting Started &#8212; v2.5.0</title>
     
   <!-- Loaded before other Sphinx assets -->
   <link href="_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -102,7 +102,7 @@ const thebe_selector_output = ".output, .cell_output"
       <img src="_static/logo.png" class="logo" alt="logo">
       
       
-      <h1 class="site-logo" id="site-title">v2.4.0</h1>
+      <h1 class="site-logo" id="site-title">v2.5.0</h1>
       
     </a>
 </div><form class="bd-search d-flex align-items-center" action="search.html" method="get">
@@ -404,25 +404,25 @@ optimized, runnable code.</p>
 <section id="installation">
 <h2>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">#</a></h2>
 <p>Sharrow will soon be available through conda-forge.</p>
-<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>conda install sharrow -c conda-forge
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>conda<span class="w"> </span>install<span class="w"> </span>sharrow<span class="w"> </span>-c<span class="w"> </span>conda-forge
 </pre></div>
 </div>
 <p>You can also install from the source code using setuptools and pip.  A number of
 the dependencies are not pure Python packages, and so it’s highly recommended that
 you create an environment containing all those dependencies first, and then install
 sharrow itself.  To do so with conda, you can run:</p>
-<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>conda install -c conda-forge numpy pandas xarray numba pyarrow numexpr filelock
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>conda<span class="w"> </span>install<span class="w"> </span>-c<span class="w"> </span>conda-forge<span class="w"> </span>numpy<span class="w"> </span>pandas<span class="w"> </span>xarray<span class="w"> </span>numba<span class="w"> </span>pyarrow<span class="w"> </span>numexpr<span class="w"> </span>filelock
 </pre></div>
 </div>
 <p>Then clone the <a class="reference external" href="https://github.com/camsys/sharrow">repository</a>, and then from
 the root directory run</p>
-<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>pip install -e .
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span>.
 </pre></div>
 </div>
 <p>Alternatively, you can install sharrow plus all the dependencies (including
 additional optional dependencies for development and testing) in a conda environment,
 using the <code class="docutils literal notranslate"><span class="pre">envs/development.yml</span></code> environment to create a <code class="docutils literal notranslate"><span class="pre">sh-dev</span></code> environment:</p>
-<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>conda env create -f envs/development.yml
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>conda<span class="w"> </span>env<span class="w"> </span>create<span class="w"> </span>-f<span class="w"> </span>envs/development.yml
 </pre></div>
 </div>
 </section>
@@ -446,7 +446,7 @@ to the GitHub repository without bulky outputs included.</p></li>
 <p>We highly recommend that you setup <a class="reference external" href="https://pre-commit.com/">pre-commit hooks</a>
 to automatically run all the above tools every time you make a git commit. This
 can be done by running:</p>
-<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>pre-commit install
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>pre-commit<span class="w"> </span>install
 </pre></div>
 </div>
 <p>from the root of the sharrow repository. You can skip the pre-commit checks
@@ -456,15 +456,15 @@ with <code class="docutils literal notranslate"><span class="pre">git</span> <sp
 <h2>Building the Documentation<a class="headerlink" href="#building-the-documentation" title="Permalink to this headline">#</a></h2>
 <p>The docs for sharrow are built using <a class="reference external" href="https://jupyterbook.org">Jupyter Book</a>.
 You can install Jupyter Book <a class="reference external" href="https://pip.pypa.io/en/stable/">via <code class="docutils literal notranslate"><span class="pre">pip</span></code></a>:</p>
-<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>pip install -U jupyter-book
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>-U<span class="w"> </span>jupyter-book
 </pre></div>
 </div>
 <p>or via <a class="reference external" href="https://conda-forge.org/"><code class="docutils literal notranslate"><span class="pre">conda-forge</span></code></a>:</p>
-<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>conda install -c conda-forge jupyter-book
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>conda<span class="w"> </span>install<span class="w"> </span>-c<span class="w"> </span>conda-forge<span class="w"> </span>jupyter-book
 </pre></div>
 </div>
 <p>Then to build the docs, in the root directory of the sharrow repository run</p>
-<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>jb build docs
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>jb<span class="w"> </span>build<span class="w"> </span>docs
 </pre></div>
 </div>
 </section>

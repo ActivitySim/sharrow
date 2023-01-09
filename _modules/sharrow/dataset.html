@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>sharrow.dataset &#8212; v2.4.0</title>
+    <title>sharrow.dataset &#8212; v2.5.0</title>
     
   <!-- Loaded before other Sphinx assets -->
   <link href="../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -99,7 +99,7 @@ const thebe_selector_output = ".output, .cell_output"
       <img src="../../_static/logo.png" class="logo" alt="logo">
       
       
-      <h1 class="site-logo" id="site-title">v2.4.0</h1>
+      <h1 class="site-logo" id="site-title">v2.5.0</h1>
       
     </a>
 </div><form class="bd-search d-flex align-items-center" action="../../search.html" method="get">
@@ -291,7 +291,7 @@ title="Open an issue"
 <span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
 <span class="kn">import</span> <span class="nn">pyarrow</span> <span class="k">as</span> <span class="nn">pa</span>
 <span class="kn">import</span> <span class="nn">xarray</span> <span class="k">as</span> <span class="nn">xr</span>
-<span class="kn">from</span> <span class="nn">xarray</span> <span class="kn">import</span> <span class="n">Dataset</span>
+<span class="kn">from</span> <span class="nn">xarray</span> <span class="kn">import</span> <span class="n">DataArray</span><span class="p">,</span> <span class="n">Dataset</span>
 
 <span class="kn">from</span> <span class="nn">.accessors</span> <span class="kn">import</span> <span class="n">register_dataset_method</span>
 <span class="kn">from</span> <span class="nn">.aster</span> <span class="kn">import</span> <span class="n">extract_all_name_tokens</span>
@@ -327,7 +327,7 @@ title="Open an issue"
 
 
 <span class="k">def</span> <span class="nf">clean</span><span class="p">(</span><span class="n">s</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Convert any string into a similar python identifier.</span>
 
 <span class="sd">    If any modification of the string is made, or if the string</span>
@@ -356,7 +356,7 @@ title="Open an issue"
 
 
 <div class="viewcode-block" id="construct"><a class="viewcode-back" href="../../api.html#sharrow.dataset.construct">[docs]</a><span class="k">def</span> <span class="nf">construct</span><span class="p">(</span><span class="n">source</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    A generic constructor for creating Datasets from various similar objects.</span>
 
 <span class="sd">    Parameters</span>
@@ -389,7 +389,7 @@ title="Open an issue"
 <span class="k">def</span> <span class="nf">dataset_from_dataframe_fast</span><span class="p">(</span>
     <span class="n">dataframe</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">sparse</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;Dataset&quot;</span><span class="p">:</span>
-    <span class="sd">&quot;&quot;&quot;Convert a pandas.DataFrame into an xarray.Dataset</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Convert a pandas.DataFrame into an xarray.Dataset</span>
 
 <span class="sd">    Each column will be converted into an independent variable in the</span>
 <span class="sd">    Dataset. If the dataframe&#39;s index is a MultiIndex, it will be expanded</span>
@@ -425,7 +425,29 @@ title="Open an issue"
         <span class="k">return</span> <span class="n">Dataset</span><span class="o">.</span><span class="n">from_dataframe</span><span class="p">(</span><span class="n">dataframe</span><span class="p">,</span> <span class="n">sparse</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="ow">not</span> <span class="n">dataframe</span><span class="o">.</span><span class="n">columns</span><span class="o">.</span><span class="n">is_unique</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;cannot convert DataFrame with non-unique columns&quot;</span><span class="p">)</span>
+        <span class="c1"># if the dataframe has non-unique column names, but all the duplicate</span>
+        <span class="c1"># names contain the same data, we can recover safely by dropping the</span>
+        <span class="c1"># duplicates, otherwise throw an error.</span>
+        <span class="n">cannot_fix</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="n">dupe_columns</span> <span class="o">=</span> <span class="n">dataframe</span><span class="o">.</span><span class="n">columns</span><span class="o">.</span><span class="n">duplicated</span><span class="p">()</span>
+        <span class="n">dupe_column_names</span> <span class="o">=</span> <span class="n">dataframe</span><span class="o">.</span><span class="n">columns</span><span class="p">[</span><span class="n">dupe_columns</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">dupe_column_names</span><span class="p">:</span>
+            <span class="n">subframe</span> <span class="o">=</span> <span class="n">dataframe</span><span class="p">[</span><span class="n">j</span><span class="p">]</span>
+            <span class="n">ref_col</span> <span class="o">=</span> <span class="n">subframe</span><span class="o">.</span><span class="n">iloc</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">subframe</span><span class="o">.</span><span class="n">columns</span><span class="p">)):</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">ref_col</span><span class="o">.</span><span class="n">equals</span><span class="p">(</span><span class="n">subframe</span><span class="o">.</span><span class="n">iloc</span><span class="p">[:,</span> <span class="n">k</span><span class="p">]):</span>
+                    <span class="n">cannot_fix</span> <span class="o">=</span> <span class="kc">True</span>
+                    <span class="k">break</span>
+                <span class="k">if</span> <span class="n">cannot_fix</span><span class="p">:</span>
+                    <span class="k">break</span>
+        <span class="n">dupe_column_names</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;- </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">dupe_column_names</span><span class="p">]</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span>
+            <span class="s2">&quot;DataFrame has non-unique columns</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dupe_column_names</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">cannot_fix</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;cannot convert DataFrame with non-unique columns&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">dataframe</span> <span class="o">=</span> <span class="n">dataframe</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="o">~</span><span class="n">dupe_columns</span><span class="p">]</span>
 
     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">dataframe</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">CategoricalIndex</span><span class="p">):</span>
         <span class="n">idx</span> <span class="o">=</span> <span class="n">dataframe</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">remove_unused_categories</span><span class="p">()</span>
@@ -448,7 +470,7 @@ title="Open an issue"
     <span class="n">index_name</span><span class="o">=</span><span class="s2">&quot;index&quot;</span><span class="p">,</span>
     <span class="n">index</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
 <span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Convert a pyarrow.Table into an xarray.Dataset</span>
 
 <span class="sd">    Parameters</span>
@@ -505,7 +527,7 @@ title="Open an issue"
     <span class="n">indexes</span><span class="o">=</span><span class="s2">&quot;one-based&quot;</span><span class="p">,</span>
     <span class="n">renames</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
 <span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Create a Dataset from an OMX file.</span>
 
 <span class="sd">    Parameters</span>
@@ -612,7 +634,7 @@ title="Open an issue"
     <span class="n">time_period_sep</span><span class="o">=</span><span class="s2">&quot;__&quot;</span><span class="p">,</span>
     <span class="n">max_float_precision</span><span class="o">=</span><span class="mi">32</span><span class="p">,</span>
 <span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Create a Dataset from an OMX file with an implicit third dimension.</span>
 
 <span class="sd">    Parameters</span>
@@ -793,7 +815,7 @@ title="Open an issue"
 
 
 <div class="viewcode-block" id="from_zarr"><a class="viewcode-back" href="../../api.html#sharrow.dataset.from_zarr">[docs]</a><span class="k">def</span> <span class="nf">from_zarr</span><span class="p">(</span><span class="n">store</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Load and decode a dataset from a Zarr store.</span>
 
 <span class="sd">    The `store` object should be a valid store for a Zarr group. `store`</span>
@@ -879,7 +901,7 @@ title="Open an issue"
 <span class="sd">    ----------</span>
 <span class="sd">    http://zarr.readthedocs.io/</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">return</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="p">(</span><span class="n">xr</span><span class="o">.</span><span class="n">open_zarr</span><span class="p">(</span><span class="n">store</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">))</span></div>
+    <span class="k">return</span> <span class="n">xr</span><span class="o">.</span><span class="n">open_zarr</span><span class="p">(</span><span class="n">store</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
 
 
 <span class="k">def</span> <span class="nf">from_zarr_with_attr</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
@@ -925,9 +947,70 @@ title="Open an issue"
     <span class="k">return</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="s2">&quot;keys&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="s2">&quot;__getitem__&quot;</span><span class="p">)</span>
 
 
+<span class="nd">@xr</span><span class="o">.</span><span class="n">register_dataset_accessor</span><span class="p">(</span><span class="s2">&quot;single_dim&quot;</span><span class="p">)</span>
+<span class="k">class</span> <span class="nc">_SingleDim</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Convenience accessor for single-dimension datasets.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="vm">__slots__</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;dataset&quot;</span><span class="p">,</span> <span class="s2">&quot;dim_name&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">:</span> <span class="s2">&quot;Dataset&quot;</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span> <span class="o">=</span> <span class="n">dataset</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">dims</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;single_dim implies a single dimension dataset&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dim_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="fm">__iter__</span><span class="p">()</span><span class="o">.</span><span class="fm">__next__</span><span class="p">()</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">coords</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">coords</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">dim_name</span><span class="p">]</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">index</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">indexes</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">dim_name</span><span class="p">]</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">size</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">dims</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">dim_name</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">to_pyarrow</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">pa</span><span class="o">.</span><span class="n">Table</span><span class="o">.</span><span class="n">from_pydict</span><span class="p">(</span>
+            <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">pa</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">v</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">())</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">variables</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+        <span class="p">)</span>
+
+
+<span class="nd">@xr</span><span class="o">.</span><span class="n">register_dataarray_accessor</span><span class="p">(</span><span class="s2">&quot;single_dim&quot;</span><span class="p">)</span>
+<span class="k">class</span> <span class="nc">_SingleDimArray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Convenience accessor for single-dimension datasets.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="vm">__slots__</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;dataarray&quot;</span><span class="p">,</span> <span class="s2">&quot;dim_name&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataarray</span><span class="p">:</span> <span class="s2">&quot;DataArray&quot;</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dataarray</span> <span class="o">=</span> <span class="n">dataarray</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dataarray</span><span class="o">.</span><span class="n">dims</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;single_dim implies a single dimension dataset&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dim_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataarray</span><span class="o">.</span><span class="n">dims</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">coords</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataarray</span><span class="o">.</span><span class="n">coords</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">dim_name</span><span class="p">]</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">index</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataarray</span><span class="o">.</span><span class="n">indexes</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">dim_name</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">rename</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DataArray</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Rename the single dimension.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim_name</span> <span class="o">==</span> <span class="n">name</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataarray</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataarray</span><span class="o">.</span><span class="n">rename</span><span class="p">({</span><span class="bp">self</span><span class="o">.</span><span class="n">dim_name</span><span class="p">:</span> <span class="n">name</span><span class="p">})</span>
+
+
 <span class="nd">@xr</span><span class="o">.</span><span class="n">register_dataset_accessor</span><span class="p">(</span><span class="s2">&quot;iloc&quot;</span><span class="p">)</span>
 <span class="k">class</span> <span class="nc">_iLocIndexer</span><span class="p">:</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Purely integer-location based indexing for selection by position on 1-d Datasets.</span>
 
 <span class="sd">    In many ways, a dataset with a single dimensions is like a pandas DataFrame,</span>
@@ -973,7 +1056,7 @@ title="Open an issue"
 
 <span class="nd">@register_dataset_method</span>
 <span class="k">def</span> <span class="nf">to_zarr_zip</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Write dataset contents to a zarr group.</span>
 
 <span class="sd">    Parameters</span>
@@ -1059,7 +1142,7 @@ title="Open an issue"
 
 <span class="nd">@register_dataset_method</span>
 <span class="k">def</span> <span class="nf">to_zarr_with_attr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Write dataset contents to a zarr group.</span>
 
 <span class="sd">    Parameters</span>
@@ -1155,8 +1238,45 @@ title="Open an issue"
 
 
 <span class="nd">@register_dataset_method</span>
+<span class="k">def</span> <span class="nf">to_table</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Convert dataset contents to a pyarrow Table.</span>
+
+<span class="sd">    This dataset must not contain more than one dimension.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">Dataset</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Only 1-dim datasets can be converted to tables&quot;</span><span class="p">)</span>
+
+    <span class="kn">import</span> <span class="nn">pyarrow</span> <span class="k">as</span> <span class="nn">pa</span>
+
+    <span class="kn">from</span> <span class="nn">.relationships</span> <span class="kn">import</span> <span class="n">sparse_array_type</span>
+
+    <span class="k">def</span> <span class="nf">to_numpy</span><span class="p">(</span><span class="n">var</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Coerces wrapped data to numpy and returns a numpy.ndarray&quot;&quot;&quot;</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">var</span><span class="o">.</span><span class="n">data</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="s2">&quot;chunks&quot;</span><span class="p">):</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">compute</span><span class="p">()</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">sparse_array_type</span><span class="p">):</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">todense</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+
+    <span class="n">pydict</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">variables</span><span class="p">:</span>
+        <span class="n">dictionary</span> <span class="o">=</span> <span class="bp">self</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">attrs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;DICTIONARY&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">dictionary</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">pydict</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">DictionaryArray</span><span class="o">.</span><span class="n">from_arrays</span><span class="p">(</span>
+                <span class="n">to_numpy</span><span class="p">(</span><span class="bp">self</span><span class="p">[</span><span class="n">i</span><span class="p">]),</span>
+                <span class="n">dictionary</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">pydict</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">to_numpy</span><span class="p">(</span><span class="bp">self</span><span class="p">[</span><span class="n">i</span><span class="p">]))</span>
+    <span class="k">return</span> <span class="n">pa</span><span class="o">.</span><span class="n">Table</span><span class="o">.</span><span class="n">from_pydict</span><span class="p">(</span><span class="n">pydict</span><span class="p">)</span>
+
+
+<span class="nd">@register_dataset_method</span>
 <span class="k">def</span> <span class="nf">select_and_rename</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name_dict</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">names</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Select and rename variables from this Dataset</span>
 
 <span class="sd">    Parameters</span>
@@ -1179,7 +1299,7 @@ title="Open an issue"
 
 <span class="nd">@register_dataset_method</span>
 <span class="k">def</span> <span class="nf">max_float_precision</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="mi">32</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Set the maximum precision for floating point values.</span>
 
 <span class="sd">    This modifies the Dataset in-place.</span>
@@ -1202,7 +1322,7 @@ title="Open an issue"
 
 <span class="nd">@register_dataset_method</span>
 <span class="k">def</span> <span class="nf">interchange_dims</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dim1</span><span class="p">,</span> <span class="n">dim2</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Rename a pair of dimensions by swapping their names.</span>
 
 <span class="sd">    Parameters</span>
@@ -1230,7 +1350,7 @@ title="Open an issue"
 
 
 <div class="viewcode-block" id="from_named_objects"><a class="viewcode-back" href="../../api.html#sharrow.dataset.from_named_objects">[docs]</a><span class="k">def</span> <span class="nf">from_named_objects</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Create a Dataset by populating it with named objects.</span>
 
 <span class="sd">    A mapping of names to values is first created, and then that mapping is</span>
@@ -1259,7 +1379,7 @@ title="Open an issue"
 
 <span class="nd">@register_dataset_method</span>
 <span class="k">def</span> <span class="nf">ensure_integer</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="n">names</span><span class="p">,</span> <span class="n">bitwidth</span><span class="o">=</span><span class="mi">32</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Convert dataset variables to integers, if they are not already integers.</span>
 
 <span class="sd">    Parameters</span>
