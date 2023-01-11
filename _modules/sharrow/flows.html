@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>sharrow.flows &#8212; v2.5.0</title>
+    <title>sharrow.flows &#8212; v2.5.1</title>
     
   <!-- Loaded before other Sphinx assets -->
   <link href="../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -99,7 +99,7 @@ const thebe_selector_output = ".output, .cell_output"
       <img src="../../_static/logo.png" class="logo" alt="logo">
       
       
-      <h1 class="site-logo" id="site-title">v2.5.0</h1>
+      <h1 class="site-logo" id="site-title">v2.5.1</h1>
       
     </a>
 </div><form class="bd-search d-flex align-items-center" action="../../search.html" method="get">
@@ -328,6 +328,7 @@ title="Open an issue"
     <span class="s2">&quot;hard_sigmoid&quot;</span><span class="p">,</span>
     <span class="s2">&quot;transpose_leading&quot;</span><span class="p">,</span>
     <span class="s2">&quot;clip&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;get&quot;</span><span class="p">,</span>
 <span class="p">}</span>
 
 
@@ -420,6 +421,56 @@ title="Open an issue"
     <span class="k">if</span> <span class="n">matchable_names</span><span class="p">:</span>
         <span class="n">name_tokens</span> <span class="o">&amp;=</span> <span class="n">matchable_names</span>
     <span class="k">return</span> <span class="n">name_tokens</span><span class="p">,</span> <span class="n">arg_tokens</span>
+
+
+<span class="k">class</span> <span class="nc">ExtractOptionalGetTokens</span><span class="p">(</span><span class="n">ast</span><span class="o">.</span><span class="n">NodeTransformer</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">from_names</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">optional_get_tokens</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">required_get_tokens</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">from_names</span> <span class="o">=</span> <span class="n">from_names</span>
+
+    <span class="k">def</span> <span class="nf">visit_Call</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">func</span><span class="p">,</span> <span class="n">ast</span><span class="o">.</span><span class="n">Attribute</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">node</span><span class="o">.</span><span class="n">func</span><span class="o">.</span><span class="n">attr</span> <span class="o">==</span> <span class="s2">&quot;get&quot;</span><span class="p">:</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">func</span><span class="o">.</span><span class="n">value</span><span class="p">,</span> <span class="n">ast</span><span class="o">.</span><span class="n">Name</span><span class="p">):</span>
+                    <span class="k">if</span> <span class="n">node</span><span class="o">.</span><span class="n">func</span><span class="o">.</span><span class="n">value</span><span class="o">.</span><span class="n">id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">from_names</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">args</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">ast</span><span class="o">.</span><span class="n">Constant</span><span class="p">):</span>
+                                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">keywords</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                                    <span class="bp">self</span><span class="o">.</span><span class="n">required_get_tokens</span><span class="o">.</span><span class="n">add</span><span class="p">(</span>
+                                        <span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">func</span><span class="o">.</span><span class="n">value</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">node</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">value</span><span class="p">)</span>
+                                    <span class="p">)</span>
+                                <span class="k">elif</span> <span class="p">(</span>
+                                    <span class="nb">len</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">keywords</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span>
+                                    <span class="ow">and</span> <span class="n">node</span><span class="o">.</span><span class="n">keywords</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">arg</span> <span class="o">==</span> <span class="s2">&quot;default&quot;</span>
+                                <span class="p">):</span>
+                                    <span class="bp">self</span><span class="o">.</span><span class="n">optional_get_tokens</span><span class="o">.</span><span class="n">add</span><span class="p">(</span>
+                                        <span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">func</span><span class="o">.</span><span class="n">value</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">node</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">value</span><span class="p">)</span>
+                                    <span class="p">)</span>
+                                <span class="k">else</span><span class="p">:</span>
+                                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                                        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">node</span><span class="o">.</span><span class="n">func</span><span class="o">.</span><span class="n">value</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">.get with unexpected keyword arguments&quot;</span>
+                                    <span class="p">)</span>
+                        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">args</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+                            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">ast</span><span class="o">.</span><span class="n">Constant</span><span class="p">):</span>
+                                <span class="bp">self</span><span class="o">.</span><span class="n">optional_get_tokens</span><span class="o">.</span><span class="n">add</span><span class="p">(</span>
+                                    <span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">func</span><span class="o">.</span><span class="n">value</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">node</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">value</span><span class="p">)</span>
+                                <span class="p">)</span>
+                        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">args</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">:</span>
+                            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">node</span><span class="o">.</span><span class="n">func</span><span class="o">.</span><span class="n">value</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">.get with more than 2 positional arguments&quot;</span>
+                            <span class="p">)</span>
+        <span class="k">return</span> <span class="n">node</span>
+
+    <span class="k">def</span> <span class="nf">check</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="n">node</span> <span class="o">=</span> <span class="n">ast</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">ast</span><span class="o">.</span><span class="n">AST</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">visit</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">node</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">check</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">optional_get_tokens</span>
 
 
 <span class="k">def</span> <span class="nf">coerce_to_range_index</span><span class="p">(</span><span class="n">idx</span><span class="p">):</span>
@@ -1198,6 +1249,37 @@ title="Open an issue"
             <span class="k">if</span> <span class="n">aux_var</span> <span class="ow">in</span> <span class="n">all_raw_names</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_used_aux_vars</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">aux_var</span><span class="p">)</span>
 
+        <span class="n">subspace_names</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="k">for</span> <span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">_</span><span class="p">)</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">tree</span><span class="o">.</span><span class="n">subspaces_iter</span><span class="p">():</span>
+            <span class="n">subspace_names</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">k</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">tree</span><span class="o">.</span><span class="n">subspace_fallbacks</span><span class="p">:</span>
+            <span class="n">subspace_names</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">k</span><span class="p">)</span>
+        <span class="n">optional_get_tokens</span> <span class="o">=</span> <span class="n">ExtractOptionalGetTokens</span><span class="p">(</span><span class="n">from_names</span><span class="o">=</span><span class="n">subspace_names</span><span class="p">)</span><span class="o">.</span><span class="n">check</span><span class="p">(</span>
+            <span class="n">defs</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_optional_get_tokens</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="n">optional_get_tokens</span><span class="p">:</span>
+            <span class="k">for</span> <span class="p">(</span><span class="n">_spacename</span><span class="p">,</span> <span class="n">_varname</span><span class="p">)</span> <span class="ow">in</span> <span class="n">optional_get_tokens</span><span class="p">:</span>
+                <span class="n">found</span> <span class="o">=</span> <span class="kc">False</span>
+                <span class="k">if</span> <span class="p">(</span>
+                    <span class="n">_spacename</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">tree</span><span class="o">.</span><span class="n">subspaces</span>
+                    <span class="ow">and</span> <span class="n">_varname</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">tree</span><span class="o">.</span><span class="n">subspaces</span><span class="p">[</span><span class="n">_spacename</span><span class="p">]</span>
+                <span class="p">):</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_optional_get_tokens</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;__</span><span class="si">{</span><span class="n">_spacename</span><span class="si">}</span><span class="s2">__</span><span class="si">{</span><span class="n">_varname</span><span class="si">}</span><span class="s2">:True&quot;</span><span class="p">)</span>
+                    <span class="n">found</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="k">elif</span> <span class="n">_spacename</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">tree</span><span class="o">.</span><span class="n">subspace_fallbacks</span><span class="p">:</span>
+                    <span class="k">for</span> <span class="n">_subspacename</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">tree</span><span class="o">.</span><span class="n">subspace_fallbacks</span><span class="p">[</span><span class="n">_spacename</span><span class="p">]:</span>
+                        <span class="k">if</span> <span class="n">_varname</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">tree</span><span class="o">.</span><span class="n">subspaces</span><span class="p">[</span><span class="n">_subspacename</span><span class="p">]:</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">_optional_get_tokens</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                                <span class="sa">f</span><span class="s2">&quot;__</span><span class="si">{</span><span class="n">_subspacename</span><span class="si">}</span><span class="s2">__</span><span class="si">{</span><span class="n">_varname</span><span class="si">}</span><span class="s2">:__</span><span class="si">{</span><span class="n">_spacename</span><span class="si">}</span><span class="s2">__</span><span class="si">{</span><span class="n">_varname</span><span class="si">}</span><span class="s2">&quot;</span>
+                            <span class="p">)</span>
+                            <span class="n">found</span> <span class="o">=</span> <span class="kc">True</span>
+                            <span class="k">break</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">found</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_optional_get_tokens</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">&quot;__</span><span class="si">{</span><span class="n">_spacename</span><span class="si">}</span><span class="s2">__</span><span class="si">{</span><span class="n">_varname</span><span class="si">}</span><span class="s2">:False&quot;</span>
+                    <span class="p">)</span>
+
         <span class="bp">self</span><span class="o">.</span><span class="n">_hashing_level</span> <span class="o">=</span> <span class="n">hashing_level</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_hashing_level</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
             <span class="n">func_code</span><span class="p">,</span> <span class="n">all_name_tokens</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">init_sub_funcs</span><span class="p">(</span>
@@ -1238,6 +1320,8 @@ title="Open an issue"
             <span class="n">_flow_hash_push</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;aux_var:</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_used_extra_funcs</span><span class="p">):</span>
             <span class="n">_flow_hash_push</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;func:</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_optional_get_tokens</span><span class="p">):</span>
+            <span class="n">_flow_hash_push</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;OPTIONAL:</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="n">_flow_hash_push</span><span class="p">(</span><span class="s2">&quot;---DataTree---&quot;</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">arg_names</span><span class="p">:</span>
             <span class="n">_flow_hash_push</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;arg:</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
@@ -1446,6 +1530,32 @@ title="Open an issue"
                                 <span class="n">other_way</span> <span class="o">=</span> <span class="kc">True</span>
                                 <span class="c1"># at least one variable was found in a get</span>
                                 <span class="k">break</span>
+                            <span class="c1"># check if we can resolve this &quot;get&quot; on any other subspace</span>
+                            <span class="k">for</span> <span class="n">other_spacename</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">tree</span><span class="o">.</span><span class="n">subspace_fallbacks</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+                                <span class="n">topkey</span><span class="p">,</span> <span class="p">[]</span>
+                            <span class="p">):</span>
+                                <span class="n">dim_slots</span><span class="p">,</span> <span class="n">digital_encodings</span><span class="p">,</span> <span class="n">blenders</span> <span class="o">=</span> <span class="n">meta_data</span><span class="p">[</span>
+                                    <span class="n">other_spacename</span>
+                                <span class="p">]</span>
+                                <span class="k">try</span><span class="p">:</span>
+                                    <span class="n">expr</span> <span class="o">=</span> <span class="n">expression_for_numba</span><span class="p">(</span>
+                                        <span class="n">expr</span><span class="p">,</span>
+                                        <span class="n">spacename</span><span class="p">,</span>
+                                        <span class="n">dim_slots</span><span class="p">,</span>
+                                        <span class="n">dim_slots</span><span class="p">,</span>
+                                        <span class="n">digital_encodings</span><span class="o">=</span><span class="n">digital_encodings</span><span class="p">,</span>
+                                        <span class="n">prefer_name</span><span class="o">=</span><span class="n">other_spacename</span><span class="p">,</span>
+                                        <span class="n">extra_vars</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">tree</span><span class="o">.</span><span class="n">extra_vars</span><span class="p">,</span>
+                                        <span class="n">blenders</span><span class="o">=</span><span class="n">blenders</span><span class="p">,</span>
+                                        <span class="n">bool_wrapping</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">bool_wrapping</span><span class="p">,</span>
+                                        <span class="n">get_default</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                    <span class="p">)</span>
+                                <span class="k">except</span> <span class="ne">KeyError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>  <span class="c1"># noqa: F841</span>
+                                    <span class="k">pass</span>
+                                <span class="k">else</span><span class="p">:</span>
+                                    <span class="n">other_way</span> <span class="o">=</span> <span class="kc">True</span>
+                                    <span class="c1"># at least one variable was found in a fallback</span>
+                                    <span class="k">break</span>
                         <span class="k">if</span> <span class="ow">not</span> <span class="n">other_way</span><span class="p">:</span>
                             <span class="k">raise</span>
                 <span class="k">if</span> <span class="n">prior_expr</span> <span class="o">==</span> <span class="n">expr</span><span class="p">:</span>
@@ -1455,6 +1565,49 @@ title="Open an issue"
                     <span class="c1"># something was changed, run the loop again to confirm</span>
                     <span class="c1"># nothing else needs to change</span>
                     <span class="n">prior_expr</span> <span class="o">=</span> <span class="n">expr</span>
+
+            <span class="c1"># now process for subspace fallbacks</span>
+            <span class="k">for</span> <span class="n">gd</span> <span class="ow">in</span> <span class="p">[</span><span class="kc">False</span><span class="p">,</span> <span class="kc">True</span><span class="p">]:</span>
+                <span class="c1"># first run all these with get_default off, nothing drops to defaults</span>
+                <span class="c1"># if we might find it later.  Then do a second pass with get_default on.</span>
+                <span class="k">for</span> <span class="p">(</span>
+                    <span class="n">alias_spacename</span><span class="p">,</span>
+                    <span class="n">actual_spacenames</span><span class="p">,</span>
+                <span class="p">)</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">tree</span><span class="o">.</span><span class="n">subspace_fallbacks</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                    <span class="k">for</span> <span class="n">actual_spacename</span> <span class="ow">in</span> <span class="n">actual_spacenames</span><span class="p">:</span>
+                        <span class="n">dim_slots</span><span class="p">,</span> <span class="n">digital_encodings</span><span class="p">,</span> <span class="n">blenders</span> <span class="o">=</span> <span class="n">meta_data</span><span class="p">[</span>
+                            <span class="n">actual_spacename</span>
+                        <span class="p">]</span>
+                        <span class="k">try</span><span class="p">:</span>
+                            <span class="n">expr</span> <span class="o">=</span> <span class="n">expression_for_numba</span><span class="p">(</span>
+                                <span class="n">expr</span><span class="p">,</span>
+                                <span class="n">alias_spacename</span><span class="p">,</span>
+                                <span class="n">dim_slots</span><span class="p">,</span>
+                                <span class="n">dim_slots</span><span class="p">,</span>
+                                <span class="n">digital_encodings</span><span class="o">=</span><span class="n">digital_encodings</span><span class="p">,</span>
+                                <span class="n">prefer_name</span><span class="o">=</span><span class="n">actual_spacename</span><span class="p">,</span>
+                                <span class="n">extra_vars</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">tree</span><span class="o">.</span><span class="n">extra_vars</span><span class="p">,</span>
+                                <span class="n">blenders</span><span class="o">=</span><span class="n">blenders</span><span class="p">,</span>
+                                <span class="n">bool_wrapping</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">bool_wrapping</span><span class="p">,</span>
+                                <span class="n">get_default</span><span class="o">=</span><span class="n">gd</span><span class="p">,</span>
+                            <span class="p">)</span>
+                        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+                            <span class="c1"># there was an error, but lets make sure we process the</span>
+                            <span class="c1"># whole expression to rewrite all the things we can before</span>
+                            <span class="c1"># moving on to the fallback processing.</span>
+                            <span class="n">expr</span> <span class="o">=</span> <span class="n">expression_for_numba</span><span class="p">(</span>
+                                <span class="n">expr</span><span class="p">,</span>
+                                <span class="n">alias_spacename</span><span class="p">,</span>
+                                <span class="n">dim_slots</span><span class="p">,</span>
+                                <span class="n">dim_slots</span><span class="p">,</span>
+                                <span class="n">digital_encodings</span><span class="o">=</span><span class="n">digital_encodings</span><span class="p">,</span>
+                                <span class="n">prefer_name</span><span class="o">=</span><span class="n">actual_spacename</span><span class="p">,</span>
+                                <span class="n">extra_vars</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">tree</span><span class="o">.</span><span class="n">extra_vars</span><span class="p">,</span>
+                                <span class="n">blenders</span><span class="o">=</span><span class="n">blenders</span><span class="p">,</span>
+                                <span class="n">bool_wrapping</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">bool_wrapping</span><span class="p">,</span>
+                                <span class="n">swallow_errors</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                <span class="n">get_default</span><span class="o">=</span><span class="n">gd</span><span class="p">,</span>
+                            <span class="p">)</span>
 
             <span class="c1"># now find instances where an identifier is previously created in this flow.</span>
             <span class="n">expr</span> <span class="o">=</span> <span class="n">expression_for_numba</span><span class="p">(</span>
@@ -2738,6 +2891,10 @@ title="Open an issue"
             <span class="n">as_dataarray</span><span class="o">=</span><span class="n">as_dataarray</span><span class="p">,</span>
             <span class="n">mask</span><span class="o">=</span><span class="n">mask</span><span class="p">,</span>
         <span class="p">)</span></div>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">defs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_raw_functions</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">function_names</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
