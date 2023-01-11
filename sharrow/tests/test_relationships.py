@@ -74,6 +74,52 @@ def test_shared_data(dataframe_regression, households, skims):
     dataframe_regression.check(result2, basename="test_shared_data_2")
 
 
+def test_subspace_fallbacks(dataframe_regression, households, skims):
+
+    tree = DataTree(
+        base=households,
+        skims=skims,
+        relationships=(
+            "base.otaz_idx->skims.otaz",
+            "base.dtaz_idx->skims.dtaz",
+            "base.timeperiod5->skims.time_period",
+        ),
+    )
+    tree.subspace_fallbacks["df"] = ["base", "skims"]
+
+    flow1 = tree.setup_flow(
+        {
+            "income": "df['income']",
+            "sov_time_by_income": "df['SOV_TIME']/df['income']",
+            "sov_cost_by_income": "df['HOV3_TIME']",
+        }
+    )
+    result1 = flow1._load(tree, as_dataframe=True)
+    dataframe_regression.check(result1, basename="test_shared_data")
+
+    flow2 = tree.setup_flow(
+        {
+            "income": "income",
+            "sov_time_by_income": "SOV_TIME/income",
+            "sov_cost_by_income": "HOV3_TIME",
+        }
+    )
+    result2 = flow2._load(tree, as_dataframe=True)
+    dataframe_regression.check(result2, basename="test_shared_data")
+
+    # names that are not valid Python identifiers
+    flow3 = tree.setup_flow(
+        {
+            "income > 10k": "df.income > 10_000",
+            "income [up to 10k]": "df.income <= 10_000",
+            "sov_time / income": "df.SOV_TIME/df.income",
+            "log1p(sov_cost_by_income)": "log1p(df.HOV3_TIME)",
+        }
+    )
+    result3 = flow3._load(tree, as_dataframe=True)
+    dataframe_regression.check(result3, basename="test_shared_data_2")
+
+
 def test_shared_data_reversible(dataframe_regression, households, skims):
 
     tree = DataTree(
@@ -778,9 +824,9 @@ def test_get(dataframe_regression, households, skims):
         ),
     )
 
-    ss = tree.setup_flow(
+    flow1 = tree.setup_flow(
         {
-            "income": "base.get('income', 0)",
+            "income": "base.get('income', 0) + base.get('missing_one', 0)",
             "sov_time_by_income": "skims.SOV_TIME/base.get('income', 0)",
             "missing_data": "base.get('missing_data', -1)",
             "missing_skim": "skims.get('missing_core', -2)",
@@ -788,12 +834,40 @@ def test_get(dataframe_regression, households, skims):
             "sov_cost_by_income_2": "skims.get('HOV3_TIME', 999)",
         },
     )
-    result = ss._load(tree, as_dataframe=True)
+    result = flow1._load(tree, as_dataframe=True)
     dataframe_regression.check(result)
 
-    s2 = tree.setup_flow(
+    tree_plus = DataTree(
+        base=households.assign(missing_one=1.0),
+        skims=skims,
+        relationships=(
+            "base.otaz_idx->skims.otaz",
+            "base.dtaz_idx->skims.dtaz",
+            "base.timeperiod5->skims.time_period",
+        ),
+    )
+    flow2 = tree_plus.setup_flow(flow1.defs)
+    result = flow2._load(tree_plus, as_dataframe=True)
+    dataframe_regression.check(result.eval("income = income-1"))
+    assert flow2.flow_hash != flow1.flow_hash
+
+    tree.subspace_fallbacks["df"] = ["base"]
+    flow3 = tree.setup_flow(
         {
-            "income": "base.get('income', default=0)",
+            "income": "base.get('income', 0)",
+            "sov_time_by_income": "skims.SOV_TIME/df.get('income', 0)",
+            "missing_data": "df.get('missing_data', -1)",
+            "missing_skim": "skims.get('missing_core', -2)",
+            "sov_time_by_income_2": "skims.get('SOV_TIME')/df.income",
+            "sov_cost_by_income_2": "skims.get('HOV3_TIME', 999)",
+        },
+    )
+    result = flow3._load(tree, as_dataframe=True)
+    dataframe_regression.check(result)
+
+    flow4 = tree.setup_flow(
+        {
+            "income": "base.get('income', default=0) + df.get('missing_one', 0)",
             "sov_time_by_income": "skims.SOV_TIME/base.get('income', default=0)",
             "missing_data": "base.get('missing_data', default=-1)",
             "missing_skim": "skims.get('missing_core', default=-2)",
@@ -801,10 +875,8 @@ def test_get(dataframe_regression, households, skims):
             "sov_cost_by_income_2": "skims.get('HOV3_TIME', default=999)",
         },
     )
-    result = s2._load(tree, as_dataframe=True)
-
-    assert s2.flow_hash != ss.flow_hash
-
+    result = flow4._load(tree, as_dataframe=True)
+    assert flow4.flow_hash != flow1.flow_hash
     dataframe_regression.check(result)
 
 

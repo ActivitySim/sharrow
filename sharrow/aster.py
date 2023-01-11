@@ -398,7 +398,9 @@ class RewriteForNumba(ast.NodeTransformer):
 
         if self.spacevars is not None:
             if attr not in self.spacevars:
-                if topname == pref_topname and not self.swallow_errors:
+                if self.get_default or (
+                    topname == pref_topname and not self.swallow_errors
+                ):
                     raise KeyError(f"{topname}..{attr}")
                 # we originally raised a KeyError here regardless, but what if we just
                 # give back the original node, and see if other spaces,
@@ -649,8 +651,10 @@ class RewriteForNumba(ast.NodeTransformer):
 
     def visit_Attribute(self, node):
         if isinstance(node.value, ast.Name):
+            # for XXX.YYY, XXX is a space name and YYY is a literal value: skims.DIST
             if node.value.id == self.spacename:
                 return self._replacement(node.attr, node.ctx, node)
+            # for ____.YYY, handles unadorned values in the top level
             if node.value.id == self.rawalias and node.attr in self.spacevars:
                 result = ast.Subscript(
                     value=ast.Name(id=self.rawname, ctx=ast.Load()),
@@ -659,6 +663,7 @@ class RewriteForNumba(ast.NodeTransformer):
                 )
                 self.log_event(f"visit_Attribute(Raw {node.attr})", node, result)
                 return result
+            # for YYY.ZZZ, where YYY is a variable in the root and ZZZ is anything
             if self.spacename == "" and node.value.id in self.spacevars:
                 result = ast.Attribute(
                     value=self.visit(node.value),
@@ -669,6 +674,7 @@ class RewriteForNumba(ast.NodeTransformer):
                 return result
             return node
         else:
+            # pass through
             result = ast.Attribute(
                 value=self.visit(node.value),
                 attr=node.attr,
@@ -912,7 +918,7 @@ class RewriteForNumba(ast.NodeTransformer):
                 keywords=[],
             )
 
-        # implement x.get("y",z)
+        # implement x.get("y",z) where x is the spacename
         if (
             isinstance(node.func, ast.Attribute)
             and node.func.attr == "get"
