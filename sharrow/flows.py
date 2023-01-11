@@ -46,6 +46,7 @@ well_known_names = {
     "hard_sigmoid",
     "transpose_leading",
     "clip",
+    "get",
 }
 
 
@@ -138,6 +139,56 @@ def filter_name_tokens(expr, matchable_names=None):
     if matchable_names:
         name_tokens &= matchable_names
     return name_tokens, arg_tokens
+
+
+class ExtractOptionalGetTokens(ast.NodeTransformer):
+    def __init__(self, from_names):
+        self.optional_get_tokens = set()
+        self.required_get_tokens = set()
+        self.from_names = from_names
+
+    def visit_Call(self, node):
+        if isinstance(node.func, ast.Attribute):
+            if node.func.attr == "get":
+                if isinstance(node.func.value, ast.Name):
+                    if node.func.value.id in self.from_names:
+                        if len(node.args) == 1:
+                            if isinstance(node.args[0], ast.Constant):
+                                if len(node.keywords) == 0:
+                                    self.required_get_tokens.add(
+                                        (node.func.value.id, node.args[0].value)
+                                    )
+                                elif (
+                                    len(node.keywords) == 1
+                                    and node.keywords[0].arg == "default"
+                                ):
+                                    self.optional_get_tokens.add(
+                                        (node.func.value.id, node.args[0].value)
+                                    )
+                                else:
+                                    raise ValueError(
+                                        f"{node.func.value.id}.get with unexpected keyword arguments"
+                                    )
+                        if len(node.args) == 2:
+                            if isinstance(node.args[0], ast.Constant):
+                                self.optional_get_tokens.add(
+                                    (node.func.value.id, node.args[0].value)
+                                )
+                        if len(node.args) > 2:
+                            raise ValueError(
+                                f"{node.func.value.id}.get with more than 2 positional arguments"
+                            )
+        return node
+
+    def check(self, node):
+        if isinstance(node, str):
+            node = ast.parse(node)
+        if isinstance(node, ast.AST):
+            self.visit(node)
+        else:
+            for i in node:
+                self.check(i)
+        return self.optional_get_tokens
 
 
 def coerce_to_range_index(idx):
@@ -916,6 +967,37 @@ class Flow:
             if aux_var in all_raw_names:
                 self._used_aux_vars.append(aux_var)
 
+        subspace_names = set()
+        for (k, _) in self.tree.subspaces_iter():
+            subspace_names.add(k)
+        for k in self.tree.subspace_fallbacks:
+            subspace_names.add(k)
+        optional_get_tokens = ExtractOptionalGetTokens(from_names=subspace_names).check(
+            defs.values()
+        )
+        self._optional_get_tokens = []
+        if optional_get_tokens:
+            for (_spacename, _varname) in optional_get_tokens:
+                found = False
+                if (
+                    _spacename in self.tree.subspaces
+                    and _varname in self.tree.subspaces[_spacename]
+                ):
+                    self._optional_get_tokens.append(f"__{_spacename}__{_varname}:True")
+                    found = True
+                elif _spacename in self.tree.subspace_fallbacks:
+                    for _subspacename in self.tree.subspace_fallbacks[_spacename]:
+                        if _varname in self.tree.subspaces[_subspacename]:
+                            self._optional_get_tokens.append(
+                                f"__{_subspacename}__{_varname}:__{_spacename}__{_varname}"
+                            )
+                            found = True
+                            break
+                if not found:
+                    self._optional_get_tokens.append(
+                        f"__{_spacename}__{_varname}:False"
+                    )
+
         self._hashing_level = hashing_level
         if self._hashing_level > 1:
             func_code, all_name_tokens = self.init_sub_funcs(
@@ -956,6 +1038,8 @@ class Flow:
             _flow_hash_push(f"aux_var:{k}")
         for k in sorted(self._used_extra_funcs):
             _flow_hash_push(f"func:{k}")
+        for k in sorted(self._optional_get_tokens):
+            _flow_hash_push(f"OPTIONAL:{k}")
         _flow_hash_push("---DataTree---")
         for k in self.arg_names:
             _flow_hash_push(f"arg:{k}")
@@ -1164,6 +1248,32 @@ class Flow:
                                 other_way = True
                                 # at least one variable was found in a get
                                 break
+                            # check if we can resolve this "get" on any other subspace
+                            for other_spacename in self.tree.subspace_fallbacks.get(
+                                topkey, []
+                            ):
+                                dim_slots, digital_encodings, blenders = meta_data[
+                                    other_spacename
+                                ]
+                                try:
+                                    expr = expression_for_numba(
+                                        expr,
+                                        spacename,
+                                        dim_slots,
+                                        dim_slots,
+                                        digital_encodings=digital_encodings,
+                                        prefer_name=other_spacename,
+                                        extra_vars=self.tree.extra_vars,
+                                        blenders=blenders,
+                                        bool_wrapping=self.bool_wrapping,
+                                        get_default=True,
+                                    )
+                                except KeyError as err:  # noqa: F841
+                                    pass
+                                else:
+                                    other_way = True
+                                    # at least one variable was found in a fallback
+                                    break
                         if not other_way:
                             raise
                 if prior_expr == expr:
@@ -1173,6 +1283,49 @@ class Flow:
                     # something was changed, run the loop again to confirm
                     # nothing else needs to change
                     prior_expr = expr
+
+            # now process for subspace fallbacks
+            for gd in [False, True]:
+                # first run all these with get_default off, nothing drops to defaults
+                # if we might find it later.  Then do a second pass with get_default on.
+                for (
+                    alias_spacename,
+                    actual_spacenames,
+                ) in self.tree.subspace_fallbacks.items():
+                    for actual_spacename in actual_spacenames:
+                        dim_slots, digital_encodings, blenders = meta_data[
+                            actual_spacename
+                        ]
+                        try:
+                            expr = expression_for_numba(
+                                expr,
+                                alias_spacename,
+                                dim_slots,
+                                dim_slots,
+                                digital_encodings=digital_encodings,
+                                prefer_name=actual_spacename,
+                                extra_vars=self.tree.extra_vars,
+                                blenders=blenders,
+                                bool_wrapping=self.bool_wrapping,
+                                get_default=gd,
+                            )
+                        except KeyError:
+                            # there was an error, but lets make sure we process the
+                            # whole expression to rewrite all the things we can before
+                            # moving on to the fallback processing.
+                            expr = expression_for_numba(
+                                expr,
+                                alias_spacename,
+                                dim_slots,
+                                dim_slots,
+                                digital_encodings=digital_encodings,
+                                prefer_name=actual_spacename,
+                                extra_vars=self.tree.extra_vars,
+                                blenders=blenders,
+                                bool_wrapping=self.bool_wrapping,
+                                swallow_errors=True,
+                                get_default=gd,
+                            )
 
             # now find instances where an identifier is previously created in this flow.
             expr = expression_for_numba(
@@ -2456,6 +2609,10 @@ class Flow:
             as_dataarray=as_dataarray,
             mask=mask,
         )
+
+    @property
+    def defs(self):
+        return {k: v[0] for (k, v) in self._raw_functions.items()}
 
     @property
     def function_names(self):
