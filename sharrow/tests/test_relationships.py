@@ -879,6 +879,23 @@ def test_get(dataframe_regression, households, skims):
     assert flow4.flow_hash != flow1.flow_hash
     dataframe_regression.check(result)
 
+    # test get when inside another function
+    flow5 = tree.setup_flow(
+        {
+            "income": "np.power(base.get('income', default=0) + df.get('missing_one', 0), 1)",
+            "sov_time_by_income": "skims.SOV_TIME/np.power(base.get('income', default=0), 1)",
+            "missing_data": "np.where(np.isnan(df.get('missing_data', default=1)), 0, df.get('missing_data', default=-1))",
+            "missing_skim": "(np.where(np.isnan(df.get('num_escortees', np.nan)), -2 , df.get('num_escortees', np.nan)))",
+            "sov_time_by_income_2": "skims.get('SOV_TIME', default=0)/base.income",
+            "sov_cost_by_income_2": "skims.get('HOV3_TIME', default=999)",
+        },
+    )
+    result = flow5._load(tree, as_dataframe=True)
+    assert "__skims__HOV3_TIME:True" in flow5._optional_get_tokens
+    assert "__df__missing_data:False" in flow5._optional_get_tokens
+    assert "__df__num_escortees:False" in flow5._optional_get_tokens
+    dataframe_regression.check(result)
+
 
 def test_get_native():
     data = example_data.get_data()
