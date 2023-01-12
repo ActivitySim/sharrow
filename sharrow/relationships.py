@@ -366,7 +366,9 @@ class DataTree:
     def root_dims(self):
         from .flows import presorted
 
-        return tuple(presorted(self.root_dataset, self.dim_order, self.dim_exclude))
+        return tuple(
+            presorted(self.root_dataset.dims, self.dim_order, self.dim_exclude)
+        )
 
     def __shallow_copy_extras(self):
         return dict(
