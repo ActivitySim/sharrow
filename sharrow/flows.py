@@ -141,7 +141,7 @@ def filter_name_tokens(expr, matchable_names=None):
     return name_tokens, arg_tokens
 
 
-class ExtractOptionalGetTokens(ast.NodeTransformer):
+class ExtractOptionalGetTokens(ast.NodeVisitor):
     def __init__(self, from_names):
         self.optional_get_tokens = set()
         self.required_get_tokens = set()
@@ -178,7 +178,7 @@ class ExtractOptionalGetTokens(ast.NodeTransformer):
                             raise ValueError(
                                 f"{node.func.value.id}.get with more than 2 positional arguments"
                             )
-        return node
+        self.generic_visit(node)
 
     def check(self, node):
         if isinstance(node, str):
