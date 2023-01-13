@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>sharrow.flows &#8212; v2.5.1</title>
+    <title>sharrow.flows &#8212; v2.5.2</title>
     
   <!-- Loaded before other Sphinx assets -->
   <link href="../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -99,7 +99,7 @@ const thebe_selector_output = ".output, .cell_output"
       <img src="../../_static/logo.png" class="logo" alt="logo">
       
       
-      <h1 class="site-logo" id="site-title">v2.5.1</h1>
+      <h1 class="site-logo" id="site-title">v2.5.2</h1>
       
     </a>
 </div><form class="bd-search d-flex align-items-center" action="../../search.html" method="get">
@@ -423,7 +423,7 @@ title="Open an issue"
     <span class="k">return</span> <span class="n">name_tokens</span><span class="p">,</span> <span class="n">arg_tokens</span>
 
 
-<span class="k">class</span> <span class="nc">ExtractOptionalGetTokens</span><span class="p">(</span><span class="n">ast</span><span class="o">.</span><span class="n">NodeTransformer</span><span class="p">):</span>
+<span class="k">class</span> <span class="nc">ExtractOptionalGetTokens</span><span class="p">(</span><span class="n">ast</span><span class="o">.</span><span class="n">NodeVisitor</span><span class="p">):</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">from_names</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">optional_get_tokens</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">required_get_tokens</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
@@ -460,7 +460,7 @@ title="Open an issue"
                             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
                                 <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">node</span><span class="o">.</span><span class="n">func</span><span class="o">.</span><span class="n">value</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">.get with more than 2 positional arguments&quot;</span>
                             <span class="p">)</span>
-        <span class="k">return</span> <span class="n">node</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">generic_visit</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">check</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">):</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
