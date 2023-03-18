@@ -186,8 +186,13 @@ class ExtractOptionalGetTokens(ast.NodeVisitor):
         if isinstance(node, ast.AST):
             self.visit(node)
         else:
-            for i in node:
-                self.check(i)
+            try:
+                node_iter = iter(node)
+            except TypeError:
+                pass
+            else:
+                for i in node_iter:
+                    self.check(i)
         return self.optional_get_tokens
 
 
@@ -853,6 +858,7 @@ class Flow:
         dim_order=None,
         dim_exclude=None,
         bool_wrapping=False,
+        with_root_node_name=None,
     ):
         assert isinstance(tree, DataTree)
         tree.digitize_relationships(inplace=True)
@@ -895,9 +901,11 @@ class Flow:
             parallel=parallel,
             extra_hash_data=extra_hash_data,
             write_hash_audit=write_hash_audit,
+            with_root_node_name=with_root_node_name,
         )
         if flow_library is not None:
             flow_library[self.flow_hash] = self
+        self.with_root_node_name = with_root_node_name
         return self
 
     def __initialize_1(
@@ -1068,15 +1076,19 @@ class Flow:
                         digital_encoding = self.tree.subspaces[parts[1]][
                             "__".join(parts[2:])
                         ].attrs["digital_encoding"]
-                    except (AttributeError, KeyError):
+                    except (AttributeError, KeyError) as err:
                         pass
+                        print(f"$$$$/ndigital_encoding=ERR\n{err}\n\n\n$$$")
+
                     else:
+                        print(f"$$$$/n{digital_encoding=}\n\n\n$$$")
                         if digital_encoding:
                             for de_k in sorted(digital_encoding.keys()):
                                 de_v = digital_encoding[de_k]
                                 if de_k == "dictionary":
                                     self.encoding_dictionaries[k] = de_v
                                 _flow_hash_push((k, "digital_encoding", de_k, de_v))
+
         for k in extra_hash_data:
             _flow_hash_push(k)
 
@@ -1401,6 +1413,7 @@ class Flow:
         parallel=True,
         extra_hash_data=(),
         write_hash_audit=True,
+        with_root_node_name=None,
     ):
         """
 
@@ -1609,9 +1622,12 @@ class Flow:
 
                 if self.tree.relationships_are_digitized:
 
+                    if with_root_node_name is None:
+                        with_root_node_name = self.tree.root_node_name
+
                     root_dims = list(
                         presorted(
-                            self.tree.root_dataset.dims,
+                            self.tree._graph.nodes[with_root_node_name]["dataset"].dims,
                             self.dim_order,
                             self.dim_exclude,
                         )
@@ -1930,7 +1946,13 @@ class Flow:
                     kwargs.update(nesting)
                 if mask is not None:
                     kwargs["mask"] = mask
-                tree_root_dims = rg.root_dataset.dims
+
+                if self.with_root_node_name is None:
+                    tree_root_dims = rg.root_dataset.dims
+                else:
+                    tree_root_dims = rg._graph.nodes[self.with_root_node_name][
+                        "dataset"
+                    ].dims
                 argshape = [
                     tree_root_dims[i]
                     for i in presorted(tree_root_dims, self.dim_order, self.dim_exclude)
@@ -2140,9 +2162,18 @@ class Flow:
         if logit_draws is None and logsums == 1:
             logit_draws = np.zeros(source.shape + (0,), dtype=dtype)
 
-        use_dims = list(
-            presorted(source.root_dataset.dims, self.dim_order, self.dim_exclude)
-        )
+        if self.with_root_node_name is None:
+            use_dims = list(
+                presorted(source.root_dataset.dims, self.dim_order, self.dim_exclude)
+            )
+        else:
+            use_dims = list(
+                presorted(
+                    source._graph.nodes[self.with_root_node_name]["dataset"].dims,
+                    self.dim_order,
+                    self.dim_exclude,
+                )
+            )
 
         if logit_draws is not None:
             if dot is None:
@@ -2313,9 +2344,20 @@ class Flow:
                 result = squeeze(result, result_squeeze)
                 result_p = squeeze(result_p, result_squeeze)
                 pick_count = squeeze(pick_count, result_squeeze)
-            result_coords = {
-                k: v for k, v in source.root_dataset.coords.items() if k in result_dims
-            }
+            if self.with_root_node_name is None:
+                result_coords = {
+                    k: v
+                    for k, v in source.root_dataset.coords.items()
+                    if k in result_dims
+                }
+            else:
+                result_coords = {
+                    k: v
+                    for k, v in source._graph.nodes[self.with_root_node_name][
+                        "dataset"
+                    ].coords.items()
+                    if k in result_dims
+                }
             if result is not None:
                 result = xr.DataArray(
                     result,
