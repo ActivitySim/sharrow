@@ -5,7 +5,8 @@ import base64
 import hashlib
 import logging
 import re
-from typing import Any, Hashable, Mapping, Sequence
+from collections.abc import Hashable, Mapping, Sequence
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -109,7 +110,7 @@ def dataset_from_dataframe_fast(
     dataframe: pd.DataFrame,
     sparse: bool = False,
     preserve_cat: bool = True,
-) -> "Dataset":
+) -> Dataset:
     """Convert a pandas.DataFrame into an xarray.Dataset
 
     Each column will be converted into an independent variable in the
@@ -693,7 +694,7 @@ class _SingleDim:
 
     __slots__ = ("dataset", "dim_name")
 
-    def __init__(self, dataset: "Dataset"):
+    def __init__(self, dataset: Dataset):
         self.dataset = dataset
         if len(self.dataset.dims) != 1:
             raise ValueError("single_dim implies a single dimension dataset")
@@ -837,7 +838,7 @@ class _SingleDimArray:
 
     __slots__ = ("dataarray", "dim_name")
 
-    def __init__(self, dataarray: "DataArray"):
+    def __init__(self, dataarray: DataArray):
         self.dataarray = dataarray
         if len(self.dataarray.dims) != 1:
             raise ValueError("single_dim implies a single dimension dataset")
@@ -907,10 +908,10 @@ class _iLocIndexer:
 
     __slots__ = ("dataset",)
 
-    def __init__(self, dataset: "Dataset"):
+    def __init__(self, dataset: Dataset):
         self.dataset = dataset
 
-    def __getitem__(self, key: Mapping[Hashable, Any]) -> "Dataset":
+    def __getitem__(self, key: Mapping[Hashable, Any]) -> Dataset:
         if not is_dict_like(key):
             if len(self.dataset.dims) == 1:
                 dim_name = self.dataset.dims.__iter__().__next__()

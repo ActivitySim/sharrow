@@ -385,7 +385,7 @@ class DataStore:
             Read only these checkpoints.  If not provided, only the latest
             checkpoint metadata is read. Set to "*" to read all.
         """
-        with open(self.directory.joinpath(self.metadata_filename), "r") as f:
+        with open(self.directory.joinpath(self.metadata_filename)) as f:
             metadata = yaml.safe_load(f)
         datastore_format_version = metadata.get("datastore_format_version", "missing")
         if datastore_format_version == 1:
@@ -401,7 +401,7 @@ class DataStore:
                 checkpoints = [checkpoints]
         for c in checkpoints:
             with open(
-                self.directory.joinpath(self.checkpoint_subdir, f"{c}.yaml"), "r"
+                self.directory.joinpath(self.checkpoint_subdir, f"{c}.yaml")
             ) as f:
                 self._checkpoints[c] = yaml.safe_load(f)
 

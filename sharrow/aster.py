@@ -1,7 +1,6 @@
 import ast
 import io
 import logging
-import sys
 import tokenize
 
 try:
@@ -25,37 +24,21 @@ def unparse_(*args):
         raise
 
 
-if sys.version_info >= (3, 8):
-    ast_Constant_Type = ast.Constant
+ast_Constant_Type = ast.Constant
 
-    def ast_String_value(x):
-        return x.value if isinstance(x, ast.Str) else x
 
-    ast_TupleIndex_Type = ast.Tuple
+def ast_String_value(x):
+    return x.value if isinstance(x, ast.Str) else x
 
-    def ast_Index_Value(x):
-        return x
 
-    ast_Constant = ast.Constant
-else:
-    ast_Constant_Type = (ast.Index, ast.Constant, ast.Str, ast.Num)
+ast_TupleIndex_Type = ast.Tuple
 
-    def ast_String_value(x):
-        return (
-            x.s
-            if isinstance(x, ast.Str)
-            else ast_String_value(x.value)
-            if isinstance(x, ast.Index)
-            else x
-        )
 
-    ast_TupleIndex_Type = (ast.Index, ast.Tuple)
+def ast_Index_Value(x):
+    return x
 
-    def ast_Index_Value(x):
-        return x.value if isinstance(x, ast.Index) else x
 
-    def ast_Constant(x):
-        return ast.Constant(x, kind=None)
+ast_Constant = ast.Constant
 
 
 def _isNone(c):
@@ -467,16 +450,9 @@ class RewriteForNumba(ast.NodeTransformer):
                     if isinstance(n, int):
                         elts.append(ast.Name(id=f"_arg{n:02}", ctx=ast.Load()))
                     elif isinstance(n, dict):
-                        if sys.version_info >= (3, 8):
-                            elts.append(
-                                ast.Constant(n=n[missing_dim_value], ctx=ast.Load())
-                            )
-                        else:
-                            elts.append(
-                                ast.Constant(
-                                    n[missing_dim_value], kind=None, ctx=ast.Load()
-                                )
-                            )
+                        elts.append(
+                            ast.Constant(n=n[missing_dim_value], ctx=ast.Load())
+                        )
                     else:
                         elts.append(n)
                     logger.debug(f"ELT {unparse_(elts[-1])}")

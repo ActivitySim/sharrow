@@ -1575,7 +1575,7 @@ class Flow:
         # if an existing __init__ file matches the hash, just use it
         init_file = os.path.join(self.cache_dir, self.name, "__init__.py")
         if os.path.isfile(init_file):
-            with open(init_file, "rt") as f:
+            with open(init_file) as f:
                 content = f.read()
             s = re.search("""flow_hash = ['"](.*)['"]""", content)
         else:
@@ -2802,7 +2802,7 @@ class Flow:
         from pygments.lexers.python import PythonLexer
 
         codefile = os.path.join(self.cache_dir, self.name, "__init__.py")
-        with open(codefile, "rt") as f_code:
+        with open(codefile) as f_code:
             code = f_code.read()
         pretty = highlight(code, PythonLexer(), HtmlFormatter(linenos=linenos))
         css = HtmlFormatter().get_style_defs(".highlight")
