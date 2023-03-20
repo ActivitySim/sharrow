@@ -204,7 +204,7 @@ class DataStore:
         for table_name, table_data in self._tree.subspaces_iter():
             # any data elements that were created without a
             # last_checkpoint attr get one now
-            for k, v in table_data.variables.items():
+            for _k, v in table_data.variables.items():
                 if "last_checkpoint" not in v.attrs:
                     v.attrs["last_checkpoint"] = None
             # collect everything not checkpointed
@@ -350,7 +350,7 @@ class DataStore:
             try:
                 self.read_metadata(checkpoint_name)
             except FileNotFoundError:
-                raise KeyError(checkpoint_name)
+                raise KeyError(checkpoint_name) from None
         checkpoint = self._checkpoints[checkpoint_name]
         self._tree = DataTree(root_node_name=False)
         for table_name, table_def in checkpoint["tables"].items():

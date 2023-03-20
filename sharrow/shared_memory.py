@@ -99,7 +99,7 @@ def create_shared_memory_array(key, size):
                 size=size,
             )
         except FileExistsError:
-            raise FileExistsError(f"sharrow_shared_memory_array:{key}")
+            raise FileExistsError(f"sharrow_shared_memory_array:{key}") from None
         __GLOBAL_MEMORY_ARRAYS[key] = result
         return result
 
@@ -138,7 +138,7 @@ def open_shared_memory_array(key, mode="r+"):
                 create=False,
             )
         except FileNotFoundError:
-            raise FileNotFoundError(f"sharrow_shared_memory_array:{key}")
+            raise FileNotFoundError(f"sharrow_shared_memory_array:{key}") from None
         else:
             logger.info(
                 f"shared memory array from ephemeral memory, {si_units(result.size)}"
@@ -175,7 +175,7 @@ def create_shared_list(content, key):
                 name=h,
             )
         except FileExistsError:
-            raise FileExistsError(f"sharrow_shared_memory_list:{key}")
+            raise FileExistsError(f"sharrow_shared_memory_list:{key}") from None
         __GLOBAL_MEMORY_LISTS[key] = result
         return result
 
@@ -190,7 +190,7 @@ def read_shared_list(key):
         try:
             sl = ShareableList(name=_hexhash(f"sharrow__list__{key}"))
         except FileNotFoundError:
-            raise FileNotFoundError(f"sharrow_shared_memory_list:{key}")
+            raise FileNotFoundError(f"sharrow_shared_memory_list:{key}") from None
         else:
             return sl
 
@@ -202,7 +202,7 @@ def get_shared_list_nbytes(key):
     try:
         shm = SharedMemory(name=h, create=False)
     except FileNotFoundError:
-        raise FileNotFoundError(f"sharrow_shared_memory_list:{key}")
+        raise FileNotFoundError(f"sharrow_shared_memory_list:{key}") from None
     else:
         return shm.size
 
@@ -397,7 +397,7 @@ class SharedMemDatasetAccessor:
         try:
             return self._shared_memory_key_
         except AttributeError:
-            raise ValueError("this dataset is not in shared memory")
+            raise ValueError("this dataset is not in shared memory") from None
 
     @classmethod
     def from_shared_memory(cls, key, own_data=False, mode="r+"):
@@ -431,7 +431,7 @@ class SharedMemDatasetAccessor:
             # for memmap, list is loaded from pickle, not shared ram
             pass
 
-        if own_data and not (own_data is True):
+        if own_data and own_data is not True:
             mem = own_data
             own_data = True
         else:
@@ -513,7 +513,7 @@ class SharedMemDatasetAccessor:
         try:
             return sum(i.size for i in self._shared_memory_objs_)
         except AttributeError:
-            raise ValueError("this dataset is not in shared memory")
+            raise ValueError("this dataset is not in shared memory") from None
 
     @property
     def is_shared_memory(self):

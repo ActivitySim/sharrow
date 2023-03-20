@@ -208,7 +208,13 @@ def coerce_to_range_index(idx):
 FUNCTION_TEMPLATE = """
 
 # {init_expr}
-@nb.jit(cache=False, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath}, nogil={nopython})
+@nb.jit(
+    cache=False,
+    error_model='{error_model}',
+    boundscheck={boundscheck},
+    nopython={nopython},
+    fastmath={fastmath},
+    nogil={nopython})
 def {fname}(
     {argtokens}
     _outputs,
@@ -220,7 +226,14 @@ def {fname}(
 
 
 IRUNNER_1D_TEMPLATE = """
-@nb.jit(cache=True, parallel=True, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath}, nogil={nopython})
+@nb.jit(
+    cache=True,
+    parallel=True,
+    error_model='{error_model}',
+    boundscheck={boundscheck},
+    nopython={nopython},
+    fastmath={fastmath},
+    nogil={nopython})
 def irunner(
     argshape,
     {joined_namespace_names}
@@ -241,7 +254,14 @@ def irunner(
 """
 
 IRUNNER_2D_TEMPLATE = """
-@nb.jit(cache=True, parallel=True, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath}, nogil={nopython})
+@nb.jit(
+    cache=True,
+    parallel=True,
+    error_model='{error_model}',
+    boundscheck={boundscheck},
+    nopython={nopython},
+    fastmath={fastmath},
+    nogil={nopython})
 def irunner(
     argshape,
     {joined_namespace_names}
@@ -263,7 +283,14 @@ def irunner(
 """
 
 IDOTTER_1D_TEMPLATE = """
-@nb.jit(cache=True, parallel=True, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath}, nogil={nopython})
+@nb.jit(
+    cache=True,
+    parallel=True,
+    error_model='{error_model}',
+    boundscheck={boundscheck},
+    nopython={nopython},
+    fastmath={fastmath},
+    nogil={nopython})
 def idotter(
     argshape,
     {joined_namespace_names}
@@ -288,7 +315,14 @@ def idotter(
 """
 
 IDOTTER_2D_TEMPLATE = """
-@nb.jit(cache=True, parallel=True, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath}, nogil={nopython})
+@nb.jit(
+    cache=True,
+    parallel=True,
+    error_model='{error_model}',
+    boundscheck={boundscheck},
+    nopython={nopython},
+    fastmath={fastmath},
+    nogil={nopython})
 def idotter(
     argshape,
     {joined_namespace_names}
@@ -315,7 +349,13 @@ def idotter(
 """
 
 ILINER_1D_TEMPLATE = """
-@nb.jit(cache=False, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath}, nogil={nopython})
+@nb.jit(
+    cache=False,
+    error_model='{error_model}',
+    boundscheck={boundscheck},
+    nopython={nopython},
+    fastmath={fastmath},
+    nogil={nopython})
 def linemaker(
     intermediate, j0,
     {joined_namespace_names}
@@ -325,7 +365,13 @@ def linemaker(
 """
 
 ILINER_2D_TEMPLATE = """
-@nb.jit(cache=False, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath}, nogil={nopython})
+@nb.jit(
+    cache=False,
+    error_model='{error_model}',
+    boundscheck={boundscheck},
+    nopython={nopython},
+    fastmath={fastmath},
+    nogil={nopython})
 def linemaker(
     intermediate, j0, j1,
     {joined_namespace_names}
@@ -336,7 +382,13 @@ def linemaker(
 
 
 MNL_GENERIC_TEMPLATE = """
-@nb.jit(cache=True, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath}, nogil={nopython})
+@nb.jit(
+    cache=True,
+    error_model='{error_model}',
+    boundscheck={boundscheck},
+    nopython={nopython},
+    fastmath={fastmath},
+    nogil={nopython})
 def _sample_choices_maker(
         prob_array,
         random_array,
@@ -386,7 +438,13 @@ def _sample_choices_maker(
 
 
 
-@nb.jit(cache=True, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath}, nogil={nopython})
+@nb.jit(
+    cache=True,
+    error_model='{error_model}',
+    boundscheck={boundscheck},
+    nopython={nopython},
+    fastmath={fastmath},
+    nogil={nopython})
 def _sample_choices_maker_counted(
         prob_array,
         random_array,
@@ -451,7 +509,14 @@ MNL_1D_TEMPLATE = (
 
 logit_ndims = 1
 
-@nb.jit(cache=True, parallel=True, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath}, nogil={nopython})
+@nb.jit(
+    cache=True,
+    parallel=True,
+    error_model='{error_model}',
+    boundscheck={boundscheck},
+    nopython={nopython},
+    fastmath={fastmath},
+    nogil={nopython})
 def mnl_transform_plus1d(
     argshape,
     {joined_namespace_names}
@@ -501,7 +566,13 @@ def mnl_transform_plus1d(
 
 """
 )
-# @nb.jit(cache=True, parallel=True, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath})
+# @nb.jit(
+#     cache=True,
+#     parallel=True,
+#     error_model='{error_model}',
+#     boundscheck={boundscheck},
+#     nopython={nopython},
+#     fastmath={fastmath})
 # def mnl_transform_plus1d(
 #     argshape,
 #     {joined_namespace_names}
@@ -538,7 +609,9 @@ def mnl_transform_plus1d(
 #             if logsums:
 #                 _logsums[j0,k0] = np.log(local_sum) + shifter
 #             if pick_counted:
-#                 _sample_choices_maker_counted(partial, random_draws[j0,k0], result[j0,k0], result_p[j0,k0], pick_count[j0,k0])
+#                 _sample_choices_maker_counted(
+#                   partial, random_draws[j0,k0], result[j0,k0], result_p[j0,k0], pick_count[j0,k0]
+#                 )
 #             else:
 #                 _sample_choices_maker(partial, random_draws[j0,k0], result[j0,k0], result_p[j0,k0])
 #     return result, result_p, pick_count, _logsums
@@ -550,7 +623,14 @@ MNL_2D_TEMPLATE = (
 
 logit_ndims = 2
 
-@nb.jit(cache=True, parallel=True, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath}, nogil={nopython})
+@nb.jit(
+    cache=True,
+    parallel=True,
+    error_model='{error_model}',
+    boundscheck={boundscheck},
+    nopython={nopython},
+    fastmath={fastmath},
+    nogil={nopython})
 def mnl_transform(
     argshape,
     {joined_namespace_names}
@@ -614,7 +694,14 @@ def mnl_transform(
     return result, result_p, pick_count, _logsums
 
 
-@nb.jit(cache=True, parallel=True, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath}, nogil={nopython})
+@nb.jit(
+    cache=True,
+    parallel=True,
+    error_model='{error_model}',
+    boundscheck={boundscheck},
+    nopython={nopython},
+    fastmath={fastmath},
+    nogil={nopython})
 def mnl_transform_plus1d(
     argshape,
     {joined_namespace_names}
@@ -669,7 +756,9 @@ def mnl_transform_plus1d(
                     continue
             partial /= local_sum
             if pick_counted:
-                _sample_choices_maker_counted(partial, random_draws[j0,j1], result[j0,j1], result_p[j0,j1], pick_count[j0,j1])
+                _sample_choices_maker_counted(
+                    partial, random_draws[j0,j1], result[j0,j1], result_p[j0,j1], pick_count[j0,j1]
+                )
             else:
                 _sample_choices_maker(partial, random_draws[j0,j1], result[j0,j1], result_p[j0,j1])
     return result, result_p, pick_count, _logsums
@@ -681,7 +770,14 @@ NL_1D_TEMPLATE = """
 
 from sharrow.nested_logit import _utility_to_probability
 
-@nb.jit(cache=True, parallel=True, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath}, nogil={nopython})
+@nb.jit(
+    cache=True,
+    parallel=True,
+    error_model='{error_model}',
+    boundscheck={boundscheck},
+    nopython={nopython},
+    fastmath={fastmath},
+    nogil={nopython})
 def nl_transform(
     argshape,
     {joined_namespace_names}
@@ -751,7 +847,9 @@ def nl_transform(
                 _logsums[j0] = utility[-1]
             if logsums != 1:
                 if pick_counted:
-                    _sample_choices_maker_counted(probability[:n_alts], random_draws[j0], result[j0], result_p[j0], pick_count[j0])
+                    _sample_choices_maker_counted(
+                        probability[:n_alts], random_draws[j0], result[j0], result_p[j0], pick_count[j0]
+                    )
                 else:
                     _sample_choices_maker(probability[:n_alts], random_draws[j0], result[j0], result_p[j0])
     return result, result_p, pick_count, _logsums
@@ -945,7 +1043,7 @@ class Flow:
 
         all_raw_names = set()
         all_name_tokens = set()
-        for k, expr in defs.items():
+        for _k, expr in defs.items():
             plain_names, attribute_pairs, subscript_pairs = extract_names_2(expr)
             all_raw_names |= plain_names
             if self.tree.root_node_name:
@@ -1182,7 +1280,7 @@ class Flow:
                 other_way = False
                 # if other_way is triggered, there may be residual other terms
                 # that were not addressed, so this loop should be applied again.
-                for spacename, spacearrays in self.tree.subspaces.items():
+                for spacename in self.tree.subspaces.keys():
                     dim_slots, digital_encodings, blenders = meta_data[spacename]
                     try:
                         expr = expression_for_numba(
@@ -1779,7 +1877,9 @@ class Flow:
             assembled_args = [args.get(k) for k in self.arg_name_positions.keys()]
             for aa in assembled_args:
                 if aa.dtype.kind != "i":
-                    warnings.warn("position arguments are not all integers")
+                    warnings.warn(
+                        "position arguments are not all integers", stacklevel=2
+                    )
             try:
                 if runner is None:
                     if dot is None:
@@ -2078,7 +2178,9 @@ class Flow:
                             f"cache miss in {self.flow_hash}{warning_text}\n"
                             f"Compile Time: {timers}"
                         )
-                        warnings.warn(f"{self.flow_hash}", CacheMissWarning)
+                        warnings.warn(
+                            f"{self.flow_hash}", CacheMissWarning, stacklevel=1
+                        )
                         self.compiled_recently = True
                         self._known_cache_misses[runner_name][k] = v
         return self.compiled_recently

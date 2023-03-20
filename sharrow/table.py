@@ -259,7 +259,7 @@ class Table:
                 qlog = os.path.join(path, "quilt.log")
                 with open(qlog, "rt") as logreader:
                     existing_info = yaml.safe_load(logreader)
-                for stopper, block in enumerate(existing_info):
+                for _stopper, block in enumerate(existing_info):
                     if block.get("name", None) == blockname:
                         break
                 else:
@@ -267,8 +267,13 @@ class Table:
         else:
             stopper = 1e99
         n = 0
-        rowfile = lambda n: os.path.join(path, f"block.{n:03d}.rows")
-        colfile = lambda n: os.path.join(path, f"block.{n:03d}.cols")
+
+        def rowfile(n):
+            return os.path.join(path, f"block.{n:03d}.rows")
+
+        def colfile(n):
+            return os.path.join(path, f"block.{n:03d}.cols")
+
         builder = None
         look = True
         while look and n <= stopper:

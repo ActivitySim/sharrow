@@ -24,7 +24,8 @@ try:
 except ImportError:
     from astunparse import unparse as _unparse
 
-    unparse = lambda *args: _unparse(*args).strip("\n")
+    def unparse(*args):
+        return _unparse(*args).strip("\n")
 
 
 logger = logging.getLogger("sharrow")
@@ -200,17 +201,29 @@ class Relationship:
     def __eq__(self, other):
         if isinstance(other, self.__class__):
             if self.analog:
-                left = f"<Relationship by label: {self.parent_data}[{self.analog!r}] -> {self.child_data}[{self.child_name!r}]>"
+                left = (
+                    f"<Relationship by label: "
+                    f"{self.parent_data}[{self.analog!r}] -> "
+                    f"{self.child_data}[{self.child_name!r}]>"
+                )
             else:
                 left = repr(self)
             if other.analog:
-                right = f"<Relationship by label: {other.parent_data}[{other.analog!r}] -> {other.child_data}[{other.child_name!r}]>"
+                right = (
+                    f"<Relationship by label: "
+                    f"{other.parent_data}[{other.analog!r}] -> "
+                    f"{other.child_data}[{other.child_name!r}]>"
+                )
             else:
                 right = repr(other)
             return left == right
 
     def __repr__(self):
-        return f"<Relationship by {self.indexing}: {self.parent_data}[{self.parent_name!r}] -> {self.child_data}[{self.child_name!r}]>"
+        return (
+            f"<Relationship by {self.indexing}: "
+            f"{self.parent_data}[{self.parent_name!r}] -> "
+            f"{self.child_data}[{self.child_name!r}]>"
+        )
 
     def attrs(self):
         return dict(
@@ -872,7 +885,7 @@ class DataTree:
                     pd.eval(expression, resolvers=[self], engine="numexpr"),
                 )
             else:
-                raise ValueError(f"unknown engine {engine}")
+                raise ValueError(f"unknown engine {engine}") from None
         return result
 
     @property
@@ -930,9 +943,9 @@ class DataTree:
     def namespace_names(self):
         namespace = set()
         for spacename, spacearrays in self.subspaces_iter():
-            for k, arr in spacearrays.coords.items():
+            for k, _arr in spacearrays.coords.items():
                 namespace.add(f"__{spacename or 'base'}__{k}")
-            for k, arr in spacearrays.items():
+            for k, _arr in spacearrays.items():
                 if k.startswith("_s_"):
                     namespace.add(f"__{spacename or 'base'}__{k}__indptr")
                     namespace.add(f"__{spacename or 'base'}__{k}__indices")
@@ -947,7 +960,7 @@ class DataTree:
         Mapping from dimension names to lengths across all dataset nodes.
         """
         dims = {}
-        for k, v in self.subspaces_iter():
+        for _k, v in self.subspaces_iter():
             for name, length in v.dims.items():
                 if name in dims:
                     if dims[name] != length:
@@ -1011,7 +1024,7 @@ class DataTree:
         # remove subspaces that rely on dropped dim
         boot_queue = set()
         booted = set()
-        for (up, dn, n), e in obj._graph.edges.items():
+        for (up, dn, _n), e in obj._graph.edges.items():
             if up == obj.root_node_name:
                 _analog = e.get("analog", "<missing>")
                 if _analog in dims:
@@ -1026,7 +1039,7 @@ class DataTree:
         while boot_queue:
             b = boot_queue.pop()
             booted.add(b)
-            for (up, dn, n), e in obj._graph.edges.items():
+            for (up, dn, _n) in obj._graph.edges.keys():
                 if up == b:
                     boot_queue.add(dn)
 
@@ -1068,7 +1081,8 @@ class DataTree:
             if result_shape != result_k.shape:
                 if check_shapes:
                     raise ValueError(
-                        f"inconsistent index shapes {result_k.shape} v {result_shape} (probably an error on {k} or {sorted(dims)[0]})"
+                        f"inconsistent index shapes {result_k.shape} v {result_shape} "
+                        f"(probably an error on {k} or {sorted(dims)[0]})"
                     )
             result[k] = result_k
 
@@ -1320,7 +1334,10 @@ class DataTree:
 
                 # vectorize version
                 mapper = {i: j for (j, i) in enumerate(_dataarray_to_numpy(downstream))}
-                mapper_get = lambda x: mapper.get(x, 0)
+
+                def mapper_get(x, mapper=mapper):
+                    return mapper.get(x, 0)
+
                 if upstream.size:
                     offsets = xr.apply_ufunc(np.vectorize(mapper_get), upstream)
                 else:
@@ -1328,6 +1345,7 @@ class DataTree:
                 if offsets.dtype.kind != "i":
                     warnings.warn(
                         f"detected missing values in digitizing {r.parent_data}.{r.parent_name}",
+                        stacklevel=2,
                     )
 
                 # candidate name for write back
@@ -1491,7 +1509,7 @@ class DataTree:
         return self.root_dataset.coords
 
     def get_index(self, dim):
-        for spacename, subspace in self.subspaces.items():
+        for _spacename, subspace in self.subspaces.items():
             if dim in subspace.coords:
                 return subspace.indexes[dim]
 

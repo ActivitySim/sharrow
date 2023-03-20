@@ -1303,7 +1303,7 @@ def from_named_objects(*args):
         try:
             name = a.name
         except AttributeError:
-            raise ValueError(f"argument {n} has no name")
+            raise ValueError(f"argument {n} has no name") from None
         if name is None:
             raise ValueError(f"the name for argument {n} is None")
         objs[name] = a

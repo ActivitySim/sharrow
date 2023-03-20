@@ -3,8 +3,10 @@ from __future__ import annotations
 import numpy as np
 import xarray as xr
 
+
 class ArrayIsNotCategoricalError(TypeError):
     """The array is not an encoded categorical array."""
+
 
 @xr.register_dataarray_accessor("cat")
 class _Categorical:
@@ -12,7 +14,7 @@ class _Categorical:
     Accessor for pseudo-categorical arrays.
     """
 
-    __slots__ = ("dataarray", )
+    __slots__ = ("dataarray",)
 
     def __init__(self, dataarray: xr.DataArray):
         self.dataarray = dataarray
@@ -22,7 +24,7 @@ class _Categorical:
         try:
             return self.dataarray.attrs["digital_encoding"]["dictionary"]
         except KeyError:
-            raise ArrayIsNotCategoricalError()
+            raise ArrayIsNotCategoricalError() from None
 
     @property
     def ordered(self):

@@ -8,3 +8,24 @@ from .digital_encoding import array_decode, array_encode
 from .flows import CacheMissWarning, Flow
 from .relationships import DataTree, Relationship
 from .table import Table, concat_tables
+
+__all__ = [
+    "__version__",
+    "__version_tuple__",
+    "DataArray",
+    "Dataset",
+    "DataStore",
+    "DataTree",
+    "Relationship",
+    "Table",
+    "CacheMissWarning",
+    "Flow",
+    "example_data",
+    "array_decode",
+    "array_encode",
+    "concat_tables",
+    "dataset",
+    "selectors",
+    "shared_memory",
+    "sparse",
+]

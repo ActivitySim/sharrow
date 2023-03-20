@@ -30,7 +30,6 @@ def skims():
 
 
 def test_shared_data(dataframe_regression, households, skims):
-
     tree = DataTree(
         base=households,
         skims=skims,
@@ -75,7 +74,6 @@ def test_shared_data(dataframe_regression, households, skims):
 
 
 def test_subspace_fallbacks(dataframe_regression, households, skims):
-
     tree = DataTree(
         base=households,
         skims=skims,
@@ -121,7 +119,6 @@ def test_subspace_fallbacks(dataframe_regression, households, skims):
 
 
 def test_shared_data_reversible(dataframe_regression, households, skims):
-
     tree = DataTree(
         base=households,
         odt_skims=skims,
@@ -287,7 +284,6 @@ def test_with_2d_base(dataframe_regression):
 
 
 def test_mixed_dtypes(dataframe_regression, households, skims):
-
     tree = DataTree(
         base=households,
         skims=skims,
@@ -372,7 +368,6 @@ def _get_target(q, token):
     sys.version_info < (3, 8), reason="shared memory requires python3.8 or higher"
 )
 def test_shared_memory(skims):
-
     token = "skims" + secrets.token_hex(5)
 
     skims_2 = skims.shm.to_shared_memory(token)
@@ -410,7 +405,6 @@ def test_relationship_init():
 
 
 def test_replacement_filters(dataframe_regression, households, skims):
-
     tree = DataTree(
         base=households,
         skims=skims,
@@ -448,7 +442,6 @@ def test_replacement_filters(dataframe_regression, households, skims):
 
 
 def test_name_in_wrong_subspace(dataframe_regression, households, skims):
-
     tree = DataTree(
         base=households,
         skims=skims,
@@ -517,7 +510,6 @@ def test_name_in_wrong_subspace(dataframe_regression, households, skims):
 
 
 def test_shared_data_encoded(dataframe_regression, households, skims):
-
     households = sharrow.dataset.construct(households).digital_encoding.set(
         "income",
         bitwidth=32,
@@ -608,7 +600,6 @@ def test_joint_dict_encoded(dataframe_regression, skims):
 
 
 def test_isin_and_between(dataframe_regression):
-
     data = example_data.get_data()
     persons = data["persons"]
 
@@ -691,7 +682,6 @@ def test_isin_and_between(dataframe_regression):
 
 
 def test_nested_where(dataframe_regression):
-
     data = example_data.get_data()
     base = persons = data["persons"]
 
@@ -813,7 +803,6 @@ def test_isna():
 
 
 def test_get(dataframe_regression, households, skims):
-
     tree = DataTree(
         base=households,
         skims=skims,
@@ -884,8 +873,8 @@ def test_get(dataframe_regression, households, skims):
         {
             "income": "np.power(base.get('income', default=0) + df.get('missing_one', 0), 1)",
             "sov_time_by_income": "skims.SOV_TIME/np.power(base.get('income', default=0), 1)",
-            "missing_data": "np.where(np.isnan(df.get('missing_data', default=1)), 0, df.get('missing_data', default=-1))",
-            "missing_skim": "(np.where(np.isnan(df.get('num_escortees', np.nan)), -2 , df.get('num_escortees', np.nan)))",
+            "missing_data": "np.where(np.isnan(df.get('missing_data', default=1)), 0, df.get('missing_data', default=-1))",  # noqa: E501
+            "missing_skim": "(np.where(np.isnan(df.get('num_escortees', np.nan)), -2 , df.get('num_escortees', np.nan)))",  # noqa: E501
             "sov_time_by_income_2": "skims.get('SOV_TIME', default=0)/base.income",
             "sov_cost_by_income_2": "skims.get('HOV3_TIME', default=999)",
         },
