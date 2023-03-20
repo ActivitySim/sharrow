@@ -80,11 +80,11 @@ class DataStore:
 
     def clone(self, mode="a"):
         """
-        Create a clone of this dataset manager.
+        Create a clone of this DataStore.
 
         The clone has the same active datasets as the original (and the data
         shares the same memory) but it does not retain the checkpoint metadata
-        and is not connected to the checkpoint store.
+        and is not connected to the same checkpoint store.
 
         Returns
         -------
@@ -173,7 +173,20 @@ class DataStore:
         name: str,
         obj: xr.Dataset | xr.DataArray,
         last_checkpoint: str = None,
-    ):
+    ) -> None:
+        """
+        Make a partial update of an existing named dataset.
+
+        Parameters
+        ----------
+        name : str
+        obj : Dataset or DataArray
+        last_checkpoint : str or None
+            Set the "last_checkpoint" attribute on all updated variables to this
+            value.  Users should typically leave this as "None", which flags the
+            checkpointing algorithm to write this data to disk the next time a
+            checkpoint is written.
+        """
         if isinstance(obj, xr.Dataset):
             self._update_dataset(name, obj, last_checkpoint=last_checkpoint)
         elif isinstance(obj, xr.DataArray):
@@ -181,7 +194,23 @@ class DataStore:
         else:
             raise TypeError(type(obj))
 
-    def set_data(self, name: str, data: xr.Dataset, relationships=None):
+    def set_data(
+        self,
+        name: str,
+        data: xr.Dataset | pd.DataFrame,
+        relationships: str | Relationship | Collection[str | Relationship] = None,
+    ) -> None:
+        """
+        Set the content of a named dataset.
+
+        This completely overwrites any existing data with the same name.
+
+        Parameters
+        ----------
+        name : str
+        data : Dataset or DataFrame
+        relationships : str or Relationship or list thereof
+        """
         self.__setitem__(name, data)
         if relationships is not None:
             if isinstance(relationships, (str, Relationship)):
@@ -190,12 +219,32 @@ class DataStore:
                 self._tree.add_relationship(r)
 
     def get_dataset(self, name: str, columns: Collection[str] = None) -> xr.Dataset:
+        """
+        Retrieve some or all of a named dataset.
+
+        Parameters
+        ----------
+        name : str
+        columns : Collection[str], optional
+            Get only these variables of the dataset.
+        """
         if columns is None:
             return self._tree.get_subspace(name)
         else:
             return xr.Dataset({c: self._tree[f"{name}.{c}"] for c in columns})
 
     def get_dataframe(self, name: str, columns: Collection[str] = None) -> pd.DataFrame:
+        """
+        Retrieve some or all of a named dataset, as a pandas DataFrame.
+
+        This completely overwrites any existing data with the same name.
+
+        Parameters
+        ----------
+        name : str
+        columns : Collection[str], optional
+            Get only these variables of the dataset.
+        """
         dataset = self.get_dataset(name, columns)
         return dataset.single_dim.to_pandas()
 
@@ -221,7 +270,18 @@ class DataStore:
             ".parquet"
         )
 
-    def make_checkpoint(self, checkpoint_name: str, overwrite=True):
+    def make_checkpoint(self, checkpoint_name: str, overwrite: bool = True):
+        """
+        Write data to disk.
+
+        Only new data (since the last time a checkpoint was made) is actually
+        written out.
+
+        Parameters
+        ----------
+        checkpoint_name : str
+        overwrite : bool, default True
+        """
         if self._mode == "r":
             raise ReadOnlyError
         to_be_checkpointed = self._to_be_checkpointed()
