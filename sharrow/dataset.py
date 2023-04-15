@@ -1,9 +1,12 @@
+from __future__ import annotations
+
 import ast
 import base64
 import hashlib
 import logging
 import re
-from typing import Any, Hashable, Mapping, Sequence
+from collections.abc import Hashable, Mapping, Sequence
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -13,6 +16,7 @@ from xarray import DataArray, Dataset
 
 from .accessors import register_dataset_method
 from .aster import extract_all_name_tokens
+from .categorical import _Categorical  # noqa
 from .table import Table
 
 logger = logging.getLogger("sharrow")
@@ -92,21 +96,21 @@ def construct(source):
     if isinstance(source, pd.DataFrame):
         source = dataset_from_dataframe_fast(source)  # xarray default can be slow
     elif isinstance(source, (Table, pa.Table)):
-        source = xr.Dataset.from_table(source)
-    elif isinstance(source, (pa.Table)):
-        source = xr.Dataset.from_table(source)
+        source = from_table(source)
     elif isinstance(source, xr.Dataset):
         pass  # don't do the superclass things
     elif isinstance(source, Sequence) and all(isinstance(i, str) for i in source):
-        source = xr.Dataset.from_table(pa.table({i: [] for i in source}))
+        source = from_table(pa.table({i: [] for i in source}))
     else:
         source = xr.Dataset(source)
     return source
 
 
 def dataset_from_dataframe_fast(
-    dataframe: pd.DataFrame, sparse: bool = False
-) -> "Dataset":
+    dataframe: pd.DataFrame,
+    sparse: bool = False,
+    preserve_cat: bool = True,
+) -> Dataset:
     """Convert a pandas.DataFrame into an xarray.Dataset
 
     Each column will be converted into an independent variable in the
@@ -175,11 +179,26 @@ def dataset_from_dataframe_fast(
     index_name = idx.name if idx.name is not None else "index"
     # Cast to a NumPy array first, in case the Series is a pandas Extension
     # array (which doesn't have a valid NumPy dtype)
-    arrays = {
-        name: ([index_name], np.asarray(dataframe[name].values))
-        for name in dataframe.columns
-        if name != index_name
-    }
+    arrays = {}
+    for name in dataframe.columns:
+        if name != index_name:
+            if dataframe[name].dtype == "category" and preserve_cat:
+                cat = dataframe[name].cat
+                categories = np.asarray(cat.categories)
+                if categories.dtype.kind == "O":
+                    categories = categories.astype(str)
+                arrays[name] = (
+                    [index_name],
+                    np.asarray(cat.codes),
+                    {
+                        "digital_encoding": {
+                            "dictionary": categories,
+                            "ordered": cat.ordered,
+                        }
+                    },
+                )
+            else:
+                arrays[name] = ([index_name], np.asarray(dataframe[name].values))
     return Dataset(arrays, coords={index_name: (index_name, dataframe.index.values)})
 
 
@@ -197,7 +216,8 @@ def from_table(
         Table from which to use data and indices.
     index_name : str, default 'index'
         This name will be given to the default dimension index, if
-        none is given.  Ignored if `index` is given explicitly.
+        none is given.  Ignored if `index` is given explicitly and
+        it already has a name.
     index : Index-like, optional
         Use this index instead of a default RangeIndex.
 
@@ -218,10 +238,21 @@ def from_table(
         raise ValueError(
             "cannot attach a non-unique MultiIndex and convert into xarray"
         )
-    arrays = [
-        (tbl.column_names[n], np.asarray(tbl.column(n)))
-        for n in range(len(tbl.column_names))
-    ]
+    arrays = []
+    metadata = {}
+    for n in range(len(tbl.column_names)):
+        c = tbl.column(n)
+        if isinstance(c.type, pa.DictionaryType):
+            cc = c.combine_chunks()
+            arrays.append((tbl.column_names[n], np.asarray(cc.indices)))
+            metadata[tbl.column_names[n]] = {
+                "digital_encoding": {
+                    "dictionary": cc.dictionary,
+                    "ordered": cc.type.ordered,
+                }
+            }
+        else:
+            arrays.append((tbl.column_names[n], np.asarray(c)))
     result = xr.Dataset()
     if isinstance(index, pd.MultiIndex):
         dims = tuple(
@@ -231,11 +262,17 @@ def from_table(
         for dim, lev in zip(dims, index.levels):
             result[dim] = (dim, lev)
     else:
-        index_name = index.name if index.name is not None else "index"
+        try:
+            if index.name is not None:
+                index_name = index.name
+        except AttributeError:
+            pass
         dims = (index_name,)
         result[index_name] = (dims, index)
 
     result._set_numpy_data_from_dataframe(index, arrays, dims)
+    for k, v in metadata.items():
+        result[k].attrs.update(v)
     return result
 
 
@@ -627,27 +664,11 @@ def from_zarr_with_attr(*args, **kwargs):
     for k in obj:
         attrs = {}
         for aname, avalue in obj[k].attrs.items():
-            if (
-                isinstance(avalue, str)
-                and avalue.startswith(" {")
-                and avalue.endswith("} ")
-            ):
-                avalue = ast.literal_eval(avalue[1:-1])
-            if isinstance(avalue, str) and avalue == " < None > ":
-                avalue = None
-            attrs[aname] = avalue
+            attrs[aname] = _from_evalable_string(avalue)
         obj[k] = obj[k].assign_attrs(attrs)
     attrs = {}
     for aname, avalue in obj.attrs.items():
-        if (
-            isinstance(avalue, str)
-            and avalue.startswith(" {")
-            and avalue.endswith("} ")
-        ):
-            avalue = ast.literal_eval(avalue[1:-1])
-        if isinstance(avalue, str) and avalue == " < None > ":
-            avalue = None
-        attrs[aname] = avalue
+        attrs[aname] = _from_evalable_string(avalue)
     obj = obj.assign_attrs(attrs)
     return obj
 
@@ -673,7 +694,7 @@ class _SingleDim:
 
     __slots__ = ("dataset", "dim_name")
 
-    def __init__(self, dataset: "Dataset"):
+    def __init__(self, dataset: Dataset):
         self.dataset = dataset
         if len(self.dataset.dims) != 1:
             raise ValueError("single_dim implies a single dimension dataset")
@@ -691,10 +712,122 @@ class _SingleDim:
     def size(self):
         return self.dataset.dims[self.dim_name]
 
-    def to_pyarrow(self):
-        return pa.Table.from_pydict(
-            {k: pa.array(v.to_numpy()) for k, v in self.dataset.variables.items()}
+    def _to_pydict(self):
+        columns = [k for k in self.dataset.variables if k != self.dim_name]
+        data = []
+        for k in columns:
+            a = self.dataset._variables[k]
+            if (
+                "digital_encoding" in a.attrs
+                and "dictionary" in a.attrs["digital_encoding"]
+            ):
+                de = a.attrs["digital_encoding"]
+                data.append(
+                    pd.Categorical.from_codes(
+                        a.values,
+                        de["dictionary"],
+                        de.get("ordered"),
+                    )
+                )
+            else:
+                data.append(a.values)
+        return dict(zip(columns, data))
+
+    def to_pyarrow(self) -> pa.Table:
+        columns = [k for k in self.dataset.variables if k != self.dim_name]
+        data = []
+        for k in columns:
+            a = self.dataset._variables[k]
+            if (
+                "digital_encoding" in a.attrs
+                and "dictionary" in a.attrs["digital_encoding"]
+            ):
+                de = a.attrs["digital_encoding"]
+                data.append(
+                    pa.DictionaryArray.from_arrays(
+                        a.values,
+                        de["dictionary"],
+                        ordered=de.get("ordered", False),
+                    )
+                )
+            else:
+                data.append(pa.array(a.values))
+        content = dict(zip(columns, data))
+        content[self.dim_name] = self.index
+        return pa.Table.from_pydict(content)
+
+    def to_parquet(self, filename):
+        import pyarrow.parquet as pq
+
+        t = self.to_pyarrow()
+        pq.write_table(t, filename)
+
+    def to_pandas(self) -> pd.DataFrame:
+        """
+        Convert this dataset into a pandas DataFrame.
+
+        The resulting DataFrame is always a copy of the data in the dataset.
+
+        Returns
+        -------
+        pandas.DataFrame
+        """
+        return pd.DataFrame(self._to_pydict(), index=self.index, copy=True)
+
+    def eval(
+        self,
+        expr: str,
+        parser: str = "pandas",
+        engine: str | None = None,
+        local_dict=None,
+        global_dict=None,
+    ):
+        """
+        Evaluate a Python expression as a string using various backends.
+
+        Parameters
+        ----------
+        expr : str
+            The expression to evaluate. This string cannot contain any Python
+            `statements
+            <https://docs.python.org/3/reference/simple_stmts.html#simple-statements>`__,
+            only Python `expressions
+            <https://docs.python.org/3/reference/simple_stmts.html#expression-statements>`__.
+        parser : {'pandas', 'python'}, default 'pandas'
+            The parser to use to construct the syntax tree from the expression. The
+            default of ``'pandas'`` parses code slightly different than standard
+            Python. Alternatively, you can parse an expression using the
+            ``'python'`` parser to retain strict Python semantics.  See the
+            :ref:`enhancing performance <enhancingperf.eval>` documentation for
+            more details.
+        engine : {'python', 'numexpr'}, default 'numexpr'
+            The engine used to evaluate the expression. Supported engines are
+            - None : tries to use ``numexpr``, falls back to ``python``
+            - ``'numexpr'`` : This default engine evaluates pandas objects using
+              numexpr for large speed ups in complex expressions with large frames.
+            - ``'python'`` : Performs operations as if you had ``eval``'d in top
+              level python. This engine is generally not that useful.
+        local_dict : dict or None, optional
+            A dictionary of local variables, taken from locals() by default.
+        global_dict : dict or None, optional
+            A dictionary of global variables, taken from globals() by default.
+
+        Returns
+        -------
+        DataArray or numeric scalar
+        """
+        result = pd.eval(
+            expr,
+            parser=parser,
+            engine=engine,
+            local_dict=local_dict,
+            global_dict=global_dict,
+            resolvers=[self.dataset],
         )
+        if result.size == self.size:
+            return DataArray(np.asarray(result), coords=self.dataset.coords)
+        else:
+            return result
 
 
 @xr.register_dataarray_accessor("single_dim")
@@ -705,7 +838,7 @@ class _SingleDimArray:
 
     __slots__ = ("dataarray", "dim_name")
 
-    def __init__(self, dataarray: "DataArray"):
+    def __init__(self, dataarray: DataArray):
         self.dataarray = dataarray
         if len(self.dataarray.dims) != 1:
             raise ValueError("single_dim implies a single dimension dataset")
@@ -725,6 +858,39 @@ class _SingleDimArray:
             return self.dataarray
         return self.dataarray.rename({self.dim_name: name})
 
+    def to_pandas(self) -> pd.Series:
+        """
+        Convert this array into a pandas Series.
+
+        If this array is categorical (i.e. with a simple dictionary-based
+        digital encoding) then the result will be a Series with categorical dtype.
+
+        The DataArray's `name` attribute is preserved in the result.
+        """
+        if self.dataarray.cat.is_categorical():
+            return pd.Series(
+                pd.Categorical.from_codes(
+                    self.dataarray,
+                    self.dataarray.cat.categories,
+                    self.dataarray.cat.ordered,
+                ),
+                index=self.index,
+                name=self.dataarray.name,
+            )
+        else:
+            result = self.dataarray.to_pandas()
+            if self.dataarray.name:
+                result = result.rename(self.dataarray.name)
+            return result
+
+    def to_pyarrow(self):
+        if self.dataarray.cat.is_categorical():
+            return pa.DictionaryArray.from_arrays(
+                self.dataarray.data, self.dataarray.cat.categories
+            )
+        else:
+            return pa.array(self.dataarray.data)
+
 
 @xr.register_dataset_accessor("iloc")
 class _iLocIndexer:
@@ -742,10 +908,10 @@ class _iLocIndexer:
 
     __slots__ = ("dataset",)
 
-    def __init__(self, dataset: "Dataset"):
+    def __init__(self, dataset: Dataset):
         self.dataset = dataset
 
-    def __getitem__(self, key: Mapping[Hashable, Any]) -> "Dataset":
+    def __getitem__(self, key: Mapping[Hashable, Any]) -> Dataset:
         if not is_dict_like(key):
             if len(self.dataset.dims) == 1:
                 dim_name = self.dataset.dims.__iter__().__next__()
@@ -858,6 +1024,58 @@ def to_zarr_zip(self, *args, **kwargs):
     return super().to_zarr(*args, **kwargs)
 
 
+def _to_ast_literal(x):
+    if isinstance(x, dict):
+        return (
+            "{"
+            + ", ".join(
+                f"{_to_ast_literal(k)}: {_to_ast_literal(v)}" for k, v in x.items()
+            )
+            + "}"
+        )
+    elif isinstance(x, list):
+        return "[" + ", ".join(_to_ast_literal(i) for i in x) + "]"
+    elif isinstance(x, tuple):
+        return "(" + ", ".join(_to_ast_literal(i) for i in x) + ")"
+    elif isinstance(x, pd.Index):
+        return _to_ast_literal(x.to_list())
+    elif isinstance(x, np.ndarray):
+        return _to_ast_literal(list(x))
+    else:
+        return repr(x)
+
+
+def _to_evalable_string(x):
+    if x is None:
+        return " < None > "
+    elif x is True:
+        return " < True > "
+    elif x is False:
+        return " < False > "
+    else:
+        return f" {_to_ast_literal(x)} "
+
+
+def _from_evalable_string(x):
+    if isinstance(x, str):
+        # if x.startswith(" {") and x.endswith("} "):
+        #     return ast.literal_eval(x[1:-1])
+        if x == " < None > ":
+            return None
+        if x == " < True > ":
+            return True
+        if x == " < False > ":
+            return False
+        if x.startswith(" ") and x.endswith(" "):
+            try:
+                return ast.literal_eval(x.strip(" "))
+            except Exception:
+                print(x)
+                raise
+    else:
+        return x
+
+
 @register_dataset_method
 def to_zarr_with_attr(self, *args, **kwargs):
     """
@@ -938,19 +1156,17 @@ def to_zarr_with_attr(self, *args, **kwargs):
     for k in self:
         attrs = {}
         for aname, avalue in self[k].attrs.items():
-            if isinstance(avalue, dict):
-                avalue = f" {avalue!r} "
-            if avalue is None:
-                avalue = " < None > "
-            attrs[aname] = avalue
+            attrs[aname] = _to_evalable_string(avalue)
         obj[k] = self[k].assign_attrs(attrs)
+    if hasattr(self, "coords"):
+        for k in self.coords:
+            attrs = {}
+            for aname, avalue in self.coords[k].attrs.items():
+                attrs[aname] = _to_evalable_string(avalue)
+            obj.coords[k] = self.coords[k].assign_attrs(attrs)
     attrs = {}
     for aname, avalue in self.attrs.items():
-        if isinstance(avalue, dict):
-            avalue = f" {avalue!r} "
-        if avalue is None:
-            avalue = " < None > "
-        attrs[aname] = avalue
+        attrs[aname] = _to_evalable_string(avalue)
     obj = obj.assign_attrs(attrs)
     return obj.to_zarr(*args, **kwargs)
 
@@ -1088,7 +1304,7 @@ def from_named_objects(*args):
         try:
             name = a.name
         except AttributeError:
-            raise ValueError(f"argument {n} has no name")
+            raise ValueError(f"argument {n} has no name") from None
         if name is None:
             raise ValueError(f"the name for argument {n} is None")
         objs[name] = a

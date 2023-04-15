@@ -1,7 +1,6 @@
 import ast
 import io
 import logging
-import sys
 import tokenize
 
 try:
@@ -9,7 +8,9 @@ try:
 except ImportError:
     from astunparse import unparse as _unparse
 
-    unparse = lambda *args: _unparse(*args).strip("\n")
+    def unparse(*args):
+        return _unparse(*args).strip("\n")
+
 
 logger = logging.getLogger("sharrow.aster")
 
@@ -23,22 +24,21 @@ def unparse_(*args):
         raise
 
 
-if sys.version_info >= (3, 8):
-    ast_Constant_Type = ast.Constant
-    ast_String_value = lambda x: x.value if isinstance(x, ast.Str) else x
-    ast_TupleIndex_Type = ast.Tuple
-    ast_Index_Value = lambda x: x
-    ast_Constant = ast.Constant
-else:
-    ast_Constant_Type = (ast.Index, ast.Constant, ast.Str, ast.Num)
-    ast_String_value = (
-        lambda x: x.s
-        if isinstance(x, ast.Str)
-        else (ast_String_value(x.value) if isinstance(x, ast.Index) else x)
-    )
-    ast_TupleIndex_Type = (ast.Index, ast.Tuple)
-    ast_Index_Value = lambda x: x.value if isinstance(x, ast.Index) else x
-    ast_Constant = lambda x: ast.Constant(x, kind=None)
+ast_Constant_Type = ast.Constant
+
+
+def ast_String_value(x):
+    return x.value if isinstance(x, ast.Str) else x
+
+
+ast_TupleIndex_Type = ast.Tuple
+
+
+def ast_Index_Value(x):
+    return x
+
+
+ast_Constant = ast.Constant
 
 
 def _isNone(c):
@@ -69,7 +69,6 @@ def extract_names(command):
 
 
 def extract_names_2(command):
-
     if not isinstance(command, str):
         return set(), dict(), dict()
 
@@ -364,7 +363,8 @@ class RewriteForNumba(ast.NodeTransformer):
                 except:  # noqa: E722
                     unparsed = f"{type(node1)} not unparseable"
                 logger.debug(
-                    f"RewriteForNumba({self.spacename}|{self.rawalias}).{tag} [{type(node1).__name__}]= {unparsed}",
+                    f"RewriteForNumba({self.spacename}|{self.rawalias}).{tag} "
+                    f"[{type(node1).__name__}]= {unparsed}",
                 )
             else:
                 try:
@@ -376,7 +376,9 @@ class RewriteForNumba(ast.NodeTransformer):
                 except:  # noqa: E722
                     unparsed2 = f"{type(node2).__name__} not unparseable"
                 logger.debug(
-                    f"RewriteForNumba({self.spacename}|{self.rawalias}).{tag} [{type(node1).__name__},{type(node2).__name__}]= {unparsed1} => {unparsed2}",
+                    f"RewriteForNumba({self.spacename}|{self.rawalias}).{tag} "
+                    f"[{type(node1).__name__},{type(node2).__name__}]= "
+                    f"{unparsed1} => {unparsed2}",
                 )
 
     def generic_visit(self, node):
@@ -402,8 +404,8 @@ class RewriteForNumba(ast.NodeTransformer):
                     topname == pref_topname and not self.swallow_errors
                 ):
                     raise KeyError(f"{topname}..{attr}")
-                # we originally raised a KeyError here regardless, but what if we just
-                # give back the original node, and see if other spaces,
+                # we originally raised a KeyError here regardless, but what if
+                # we just give back the original node, and see if other spaces,
                 # possibly fallback spaces, might work?  If nothing works then
                 # it will still eventually error out when compiling?
                 # The swallow errors option allows us to continue processing
@@ -448,16 +450,9 @@ class RewriteForNumba(ast.NodeTransformer):
                     if isinstance(n, int):
                         elts.append(ast.Name(id=f"_arg{n:02}", ctx=ast.Load()))
                     elif isinstance(n, dict):
-                        if sys.version_info >= (3, 8):
-                            elts.append(
-                                ast.Constant(n=n[missing_dim_value], ctx=ast.Load())
-                            )
-                        else:
-                            elts.append(
-                                ast.Constant(
-                                    n[missing_dim_value], kind=None, ctx=ast.Load()
-                                )
-                            )
+                        elts.append(
+                            ast.Constant(n=n[missing_dim_value], ctx=ast.Load())
+                        )
                     else:
                         elts.append(n)
                     logger.debug(f"ELT {unparse_(elts[-1])}")
@@ -489,7 +484,6 @@ class RewriteForNumba(ast.NodeTransformer):
 
         digital_encoding = self.digital_encodings.get(attr, None)
         if digital_encoding is not None:
-
             dictionary = digital_encoding.get("dictionary", None)
             offset_source = digital_encoding.get("offset_source", None)
             if dictionary is not None:
@@ -606,7 +600,8 @@ class RewriteForNumba(ast.NodeTransformer):
                     result,
                 )
                 return result
-            # for XXX[YYY,ZZZ], XXX is a space name and YYY is a literal value and ZZZ is a literal value: skims['SOV_TIME','MD']
+            # for XXX[YYY,ZZZ], XXX is a space name and YYY is a literal value and
+            # ZZZ is a literal value: skims['SOV_TIME','MD']
             if (
                 node.value.id == self.spacename
                 and isinstance(ast_Index_Value(node.slice), ast.Tuple)
@@ -726,7 +721,6 @@ class RewriteForNumba(ast.NodeTransformer):
         if self.bool_wrapping and isinstance(
             node.op, (ast.BitAnd, ast.BitOr, ast.BitXor)
         ):
-
             result = ast.BinOp(
                 left=bool_wrap(left),
                 op=node.op,
@@ -743,7 +737,6 @@ class RewriteForNumba(ast.NodeTransformer):
         return result
 
     def visit_Call(self, node):
-
         result = None
         # implement ActivitySim's "reverse" skims
         if (

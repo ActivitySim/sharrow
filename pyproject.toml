@@ -17,6 +17,15 @@ float_to_top = true
 default_section = "THIRDPARTY"
 known_first_party = "sharrow"
 
+[tool.ruff]
+# Enable flake8-bugbear (`B`) and pyupgrade ('UP') rules.
+select = ["E", "F", "B", "UP"]
+fix = true
+ignore-init-module-imports = true
+line-length = 120
+ignore = ["B905"]
+target-version = "py39"
+
 [tool.pytest.ini_options]
 minversion = "6.0"
 addopts = "-v --nbmake --disable-warnings"

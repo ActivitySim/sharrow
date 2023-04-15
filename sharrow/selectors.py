@@ -127,9 +127,16 @@ class _Df_Accessor:
             ds = self._obj
         if _load:
             ds = ds.load()
+        if _func == "isel":
+            # remove coordinates, we don't need them for isel
+            ds_ = ds.drop_vars(ds.coords)
+        else:
+            ds_ = ds
+
         if _names:
+
             result = (
-                getattr(ds, _func)(**loaders)
+                getattr(ds_, _func)(**loaders)
                 .digital_encoding.strip(_names)
                 .drop_vars(_baggage)
             )
@@ -149,7 +156,7 @@ class _Df_Accessor:
                 result = result[_name]
             return result
         else:
-            result = getattr(ds, _func)(**loaders)
+            result = getattr(ds_, _func)(**loaders)
             names = list(result.keys())
             for n in names:
                 if self._obj.redirection.is_blended(n):
@@ -202,17 +209,34 @@ class _Iat_Accessor(_Df_Accessor):
     ):
         modified_idxs = {}
         raw_idxs = {}
+
+        keep_raw_idxs = False
+        is_it_blended = []
+        if isinstance(_name, str):
+            is_it_blended = [_name]
+        elif _names is not None:
+            is_it_blended = _names
+        for n in is_it_blended:
+            try:
+                if self._obj.redirection.is_blended(n):
+                    keep_raw_idxs = True
+            except AttributeError:
+                keep_raw_idxs = True
+
         for k, v in idxs.items():
             target = self._obj.redirection.target(k)
             if target is None:
-                raw_idxs[k] = modified_idxs[k] = v
+                modified_idxs[k] = v
+                if keep_raw_idxs:
+                    raw_idxs[k] = v
             else:
                 v_ = np.asarray(v)
                 modified_idxs[target] = self._obj[f"_digitized_{target}_of_{k}"][
                     v_
                 ].to_numpy()
-                raw_idxs[target] = v_  # self._obj[k][v_].to_numpy()
-        return self._filter(
+                if keep_raw_idxs:
+                    raw_idxs[target] = v_  # self._obj[k][v_].to_numpy()
+        out = self._filter(
             _name=_name,
             _names=_names,
             _load=_load,
@@ -221,6 +245,7 @@ class _Iat_Accessor(_Df_Accessor):
             _raw_idxs=raw_idxs,
             **modified_idxs,
         )
+        return out
 
 
 @xr.register_dataset_accessor("at")
