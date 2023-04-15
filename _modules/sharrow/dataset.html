@@ -1,35 +1,46 @@
 
+
 <!DOCTYPE html>
 
-<html>
+
+<html >
+
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>sharrow.dataset &#8212; v2.5.2</title>
-    
+    <title>sharrow.dataset &#8212; v2.6.0</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "light";
+  </script>
+  
   <!-- Loaded before other Sphinx assets -->
-  <link href="../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
-<link href="../../_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+  <link href="../../_static/styles/theme.css?digest=e353d410970836974a52" rel="stylesheet" />
+<link href="../../_static/styles/bootstrap.css?digest=e353d410970836974a52" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=e353d410970836974a52" rel="stylesheet" />
 
-    
-  <link rel="stylesheet"
-    href="../../_static/vendor/fontawesome/5.13.0/css/all.min.css">
-  <link rel="preload" as="font" type="font/woff2" crossorigin
-    href="../../_static/vendor/fontawesome/5.13.0/webfonts/fa-solid-900.woff2">
-  <link rel="preload" as="font" type="font/woff2" crossorigin
-    href="../../_static/vendor/fontawesome/5.13.0/webfonts/fa-brands-400.woff2">
+  
+  <link href="../../_static/vendor/fontawesome/6.1.2/css/all.min.css?digest=e353d410970836974a52" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.1.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.1.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.1.2/webfonts/fa-regular-400.woff2" />
 
     <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
-    <link rel="stylesheet" href="../../_static/styles/sphinx-book-theme.css?digest=5115cc725059bd94278eecd172e13a965bf8f5a9" type="text/css" />
+    <link rel="stylesheet" href="../../_static/styles/sphinx-book-theme.css?digest=14f4ca6b54d191a8c7657f6c759bf11a5fb86285" type="text/css" />
     <link rel="stylesheet" type="text/css" href="../../_static/togglebutton.css" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css" />
-    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css" />
     <link rel="stylesheet" type="text/css" href="../../_static/sphinx-thebe.css" />
     <link rel="stylesheet" type="text/css" href="../../_static/sharrow-docs.css" />
-    <link rel="stylesheet" type="text/css" href="../../_static/design-style.b7bb847fb20b106c3d81b95245e65545.min.css" />
-    
+    <link rel="stylesheet" type="text/css" href="../../_static/design-style.4045f2051d55cab465a707391d5b2007.min.css" />
+    <link rel="icon" sizes="32x32" type="image/png" href="../../_static/favicon.png" />
+  
   <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf">
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=e353d410970836974a52" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=e353d410970836974a52" />
 
     <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
     <script src="../../_static/jquery.js"></script>
@@ -37,12 +48,12 @@
     <script src="../../_static/doctools.js"></script>
     <script src="../../_static/clipboard.min.js"></script>
     <script src="../../_static/copybutton.js"></script>
-    <script src="../../_static/scripts/sphinx-book-theme.js?digest=9c920249402e914e316237a7dbc6769907cce411"></script>
+    <script src="../../_static/scripts/sphinx-book-theme.js?digest=5a5c038af52cf7bc1a1ec88eea08e6366ee68824"></script>
     <script>let toggleHintShow = 'Click to show';</script>
     <script>let toggleHintHide = 'Click to hide';</script>
     <script>let toggleOpenOnPrint = 'true';</script>
     <script src="../../_static/togglebutton.js"></script>
-    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown, .tag_hide_input div.cell_input, .tag_hide-input div.cell_input, .tag_hide_output div.cell_output, .tag_hide-output div.cell_output, .tag_hide_cell.cell, .tag_hide-cell.cell';</script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
     <script src="../../_static/design-tabs.js"></script>
     <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"
 const thebe_selector = ".thebe,.cell"
@@ -50,242 +61,259 @@ const thebe_selector_input = "pre"
 const thebe_selector_output = ".output, .cell_output"
 </script>
     <script async="async" src="../../_static/sphinx-thebe.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/sharrow/dataset';</script>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="docsearch:language" content="None">
-    
-      
-      <link rel="icon" sizes="32x32" href="../../_static/favicon.png">
-      
-    
-
-    <!-- Google Analytics -->
-    
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="None"/>
   </head>
-  <body data-spy="scroll" data-target="#bd-toc-nav" data-offset="60">
-<!-- Checkboxes to toggle the left sidebar -->
-<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle navigation sidebar">
-<label class="overlay overlay-navbar" for="__navigation">
-    <div class="visually-hidden">Toggle navigation sidebar</div>
-</label>
-<!-- Checkboxes to toggle the in-page toc -->
-<input type="checkbox" class="sidebar-toggle" name="__page-toc" id="__page-toc" aria-label="Toggle in-page Table of Contents">
-<label class="overlay overlay-pagetoc" for="__page-toc">
-    <div class="visually-hidden">Toggle in-page Table of Contents</div>
-</label>
-<!-- Headers at the top -->
-<div class="announcement header-item noprint"></div>
-<div class="header header-item noprint"></div>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
 
-    
-    <div class="container-fluid" id="banner"></div>
-
-    
-
-    <div class="container-xl">
-      <div class="row">
-          
-<!-- Sidebar -->
-<div class="bd-sidebar noprint" id="site-navigation">
-    <div class="bd-sidebar__content">
-        <div class="bd-sidebar__top"><div class="navbar-brand-box">
-    <a class="navbar-brand text-wrap" href="../../index.html">
+  
+  
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          name="__primary"
+          id="__primary"/>
+  <label class="overlay overlay-primary" for="__primary"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          name="__secondary"
+          id="__secondary"/>
+  <label class="overlay overlay-secondary" for="__secondary"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search these docs..."
+         aria-label="Search these docs..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+  
+    <nav class="bd-header navbar navbar-expand-lg bd-navbar">
+    </nav>
+  
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
       
-        <!-- `logo` is deprecated in Sphinx 4.0, so remove this when we stop supporting 3 -->
+      <div class="bd-sidebar-primary bd-sidebar">
         
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+    
+    
       
-      
-      <img src="../../_static/logo.png" class="logo" alt="logo">
-      
-      
-      <h1 class="site-logo" id="site-title">v2.5.2</h1>
-      
-    </a>
-</div><form class="bd-search d-flex align-items-center" action="../../search.html" method="get">
-  <i class="icon fas fa-search"></i>
-  <input type="search" class="form-control" name="q" id="search-input" placeholder="Search these docs..." aria-label="Search these docs..." autocomplete="off" >
-</form><nav class="bd-links" id="bd-docs-nav" aria-label="Main">
-    <div class="bd-toc-item active">
+    
+    
+    <img src="../../_static/logo.png" class="logo__image only-light" alt="Logo image"/>
+    <script>document.write(`<img src="../../_static/logo.png" class="logo__image only-dark" alt="Logo image"/>`);</script>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item"><nav class="bd-links" id="bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
         <ul class="nav bd-sidenav">
- <li class="toctree-l1">
-  <a class="reference internal" href="../../intro.html">
-   Getting Started
-  </a>
- </li>
- <li class="toctree-l1 has-children">
-  <a class="reference internal" href="../../walkthrough/index.html">
-   User Guide
-  </a>
-  <input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" type="checkbox"/>
-  <label for="toctree-checkbox-1">
-   <i class="fas fa-chevron-down">
-   </i>
-  </label>
-  <ul>
-   <li class="toctree-l2">
-    <a class="reference internal" href="../../walkthrough/one-dim.html">
-     Sharrow Basics
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="../../walkthrough/two-dim.html">
-     Multi-Dimensional Analysis
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="../../walkthrough/encoding.html">
-     Data Encoding
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="../../walkthrough/sparse.html">
-     Using Sparse MAZ Skims
-    </a>
-   </li>
-  </ul>
- </li>
- <li class="toctree-l1">
-  <a class="reference internal" href="../../api.html">
-   API Reference
-  </a>
- </li>
+<li class="toctree-l1"><a class="reference internal" href="../../intro.html">Getting Started</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../walkthrough/index.html">User Guide</a><input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" type="checkbox"/><label class="toctree-toggle" for="toctree-checkbox-1"><i class="fa-solid fa-chevron-down"></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../walkthrough/one-dim.html">Sharrow Basics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../walkthrough/two-dim.html">Multi-Dimensional Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../walkthrough/encoding.html">Data Encoding</a></li>
+
+<li class="toctree-l2"><a class="reference internal" href="../../walkthrough/sparse.html">Using Sparse MAZ Skims</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../api.html">API Reference</a></li>
 </ul>
 
     </div>
 </nav></div>
-        <div class="bd-sidebar__bottom">
-             <!-- To handle the deprecated key -->
-            
-        </div>
     </div>
-    <div id="rtd-footer-container"></div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><label class="sidebar-toggle primary-toggle btn btn-sm" for="__primary" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</label></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-source-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Source repositories">
+    <i class="fab fa-github"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="https://github.com/ActivitySim/sharrow" target="_blank"
+   class="btn btn-sm btn-source-repository-button dropdown-item"
+   title="Source repository"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+<span class="btn__text-container">Repository</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li><a href="https://github.com/ActivitySim/sharrow/issues/new?title=Issue%20on%20page%20%2F_modules/sharrow/dataset.html&body=Your%20issue%20content%20here." target="_blank"
+   class="btn btn-sm btn-source-issues-button dropdown-item"
+   title="Open an issue"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-lightbulb"></i>
+  </span>
+<span class="btn__text-container">Open issue</span>
+</a>
+</li>
+      
+  </ul>
 </div>
 
 
-          
 
 
-          
-<!-- A tiny helper pixel to detect if we've scrolled -->
-<div class="sbt-scroll-pixel-helper"></div>
-<!-- Main content -->
-<div class="col py-0 content-container">
-    
-    <div class="header-article row sticky-top noprint">
-        
-
-
-
-<div class="col py-1 d-flex header-article-main">
-    <div class="header-article__left">
-        
-        <label for="__navigation"
-  class="headerbtn"
-  data-toggle="tooltip"
-data-placement="right"
-title="Toggle navigation"
->
-  
-
-<span class="headerbtn__icon-container">
-  <i class="fas fa-bars"></i>
-  </span>
-
-</label>
-
-        
-    </div>
-    <div class="header-article__right">
 <button onclick="toggleFullScreen()"
-  class="headerbtn"
-  data-toggle="tooltip"
-data-placement="bottom"
-title="Fullscreen mode"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
 >
   
 
-<span class="headerbtn__icon-container">
+<span class="btn__icon-container">
   <i class="fas fa-expand"></i>
   </span>
 
 </button>
 
-<div class="menu-dropdown menu-dropdown-repository-buttons">
-  <button class="headerbtn menu-dropdown__trigger"
-      aria-label="Source repositories">
-      <i class="fab fa-github"></i>
+
+<script>
+document.write(`
+  <button class="theme-switch-button btn btn-sm btn-outline-primary navbar-btn rounded-circle" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch" data-mode="light"><i class="fa-solid fa-sun"></i></span>
+    <span class="theme-switch" data-mode="dark"><i class="fa-solid fa-moon"></i></span>
+    <span class="theme-switch" data-mode="auto"><i class="fa-solid fa-circle-half-stroke"></i></span>
   </button>
-  <div class="menu-dropdown__content">
-    <ul>
-      <li>
-        <a href="https://github.com/ActivitySim/sharrow"
-   class="headerbtn"
-   data-toggle="tooltip"
-data-placement="left"
-title="Source repository"
->
-  
+`);
+</script>
 
-<span class="headerbtn__icon-container">
-  <i class="fab fa-github"></i>
-  </span>
-<span class="headerbtn__text-container">repository</span>
-</a>
+<script>
+document.write(`
+  <button class="btn btn-sm navbar-btn search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+  </button>
+`);
+</script>
 
-      </li>
+</div></div>
       
-      <li>
-        <a href="https://github.com/ActivitySim/sharrow/issues/new?title=Issue%20on%20page%20%2F_modules/sharrow/dataset.html&body=Your%20issue%20content%20here."
-   class="headerbtn"
-   data-toggle="tooltip"
-data-placement="left"
-title="Open an issue"
->
+    </div>
   
-
-<span class="headerbtn__icon-container">
-  <i class="fas fa-lightbulb"></i>
-  </span>
-<span class="headerbtn__text-container">open issue</span>
-</a>
-
-      </li>
-      
-    </ul>
-  </div>
 </div>
+</div>
+              
+              
 
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1></h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+        </div>
     </div>
 </div>
 
-<!-- Table of contents -->
-<div class="col-md-3 bd-toc show noprint">
-</div>
-    </div>
-    <div class="article row">
-        <div class="col pl-md-3 pl-lg-5 content-container">
-            <!-- Table of contents that is only displayed when printing the page -->
-            <div id="jb-print-docs-body" class="onlyprint">
-                <h1></h1>
-                <!-- Table of contents -->
-                <div id="print-main-content">
-                    <div id="jb-print-toc">
-                        
-                    </div>
-                </div>
-            </div>
-            <main id="main-content" role="main">
+              
                 
-              <div>
-                
+<div id="searchbox"></div>
+                <article class="bd-article" role="main">
+                  
   <h1>Source code for sharrow.dataset</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">ast</span>
+<span></span><span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">import</span> <span class="nn">ast</span>
 <span class="kn">import</span> <span class="nn">base64</span>
 <span class="kn">import</span> <span class="nn">hashlib</span>
 <span class="kn">import</span> <span class="nn">logging</span>
 <span class="kn">import</span> <span class="nn">re</span>
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Hashable</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">,</span> <span class="n">Sequence</span>
+<span class="kn">from</span> <span class="nn">collections.abc</span> <span class="kn">import</span> <span class="n">Hashable</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">,</span> <span class="n">Sequence</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span>
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
@@ -295,6 +323,7 @@ title="Open an issue"
 
 <span class="kn">from</span> <span class="nn">.accessors</span> <span class="kn">import</span> <span class="n">register_dataset_method</span>
 <span class="kn">from</span> <span class="nn">.aster</span> <span class="kn">import</span> <span class="n">extract_all_name_tokens</span>
+<span class="kn">from</span> <span class="nn">.categorical</span> <span class="kn">import</span> <span class="n">_Categorical</span>  <span class="c1"># noqa</span>
 <span class="kn">from</span> <span class="nn">.table</span> <span class="kn">import</span> <span class="n">Table</span>
 
 <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;sharrow&quot;</span><span class="p">)</span>
@@ -374,21 +403,21 @@ title="Open an issue"
     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">):</span>
         <span class="n">source</span> <span class="o">=</span> <span class="n">dataset_from_dataframe_fast</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>  <span class="c1"># xarray default can be slow</span>
     <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="p">(</span><span class="n">Table</span><span class="p">,</span> <span class="n">pa</span><span class="o">.</span><span class="n">Table</span><span class="p">)):</span>
-        <span class="n">source</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="o">.</span><span class="n">from_table</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
-    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="p">(</span><span class="n">pa</span><span class="o">.</span><span class="n">Table</span><span class="p">)):</span>
-        <span class="n">source</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="o">.</span><span class="n">from_table</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
+        <span class="n">source</span> <span class="o">=</span> <span class="n">from_table</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
     <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="p">):</span>
         <span class="k">pass</span>  <span class="c1"># don&#39;t do the superclass things</span>
     <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">all</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">source</span><span class="p">):</span>
-        <span class="n">source</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="o">.</span><span class="n">from_table</span><span class="p">(</span><span class="n">pa</span><span class="o">.</span><span class="n">table</span><span class="p">({</span><span class="n">i</span><span class="p">:</span> <span class="p">[]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">source</span><span class="p">}))</span>
+        <span class="n">source</span> <span class="o">=</span> <span class="n">from_table</span><span class="p">(</span><span class="n">pa</span><span class="o">.</span><span class="n">table</span><span class="p">({</span><span class="n">i</span><span class="p">:</span> <span class="p">[]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">source</span><span class="p">}))</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="n">source</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">source</span></div>
 
 
 <span class="k">def</span> <span class="nf">dataset_from_dataframe_fast</span><span class="p">(</span>
-    <span class="n">dataframe</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">sparse</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;Dataset&quot;</span><span class="p">:</span>
+    <span class="n">dataframe</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+    <span class="n">sparse</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">preserve_cat</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dataset</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Convert a pandas.DataFrame into an xarray.Dataset</span>
 
 <span class="sd">    Each column will be converted into an independent variable in the</span>
@@ -457,11 +486,26 @@ title="Open an issue"
     <span class="n">index_name</span> <span class="o">=</span> <span class="n">idx</span><span class="o">.</span><span class="n">name</span> <span class="k">if</span> <span class="n">idx</span><span class="o">.</span><span class="n">name</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="s2">&quot;index&quot;</span>
     <span class="c1"># Cast to a NumPy array first, in case the Series is a pandas Extension</span>
     <span class="c1"># array (which doesn&#39;t have a valid NumPy dtype)</span>
-    <span class="n">arrays</span> <span class="o">=</span> <span class="p">{</span>
-        <span class="n">name</span><span class="p">:</span> <span class="p">([</span><span class="n">index_name</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">dataframe</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">))</span>
-        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">dataframe</span><span class="o">.</span><span class="n">columns</span>
-        <span class="k">if</span> <span class="n">name</span> <span class="o">!=</span> <span class="n">index_name</span>
-    <span class="p">}</span>
+    <span class="n">arrays</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">dataframe</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">name</span> <span class="o">!=</span> <span class="n">index_name</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">dataframe</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">dtype</span> <span class="o">==</span> <span class="s2">&quot;category&quot;</span> <span class="ow">and</span> <span class="n">preserve_cat</span><span class="p">:</span>
+                <span class="n">cat</span> <span class="o">=</span> <span class="n">dataframe</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">cat</span>
+                <span class="n">categories</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">cat</span><span class="o">.</span><span class="n">categories</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">categories</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">kind</span> <span class="o">==</span> <span class="s2">&quot;O&quot;</span><span class="p">:</span>
+                    <span class="n">categories</span> <span class="o">=</span> <span class="n">categories</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
+                <span class="n">arrays</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="p">[</span><span class="n">index_name</span><span class="p">],</span>
+                    <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">cat</span><span class="o">.</span><span class="n">codes</span><span class="p">),</span>
+                    <span class="p">{</span>
+                        <span class="s2">&quot;digital_encoding&quot;</span><span class="p">:</span> <span class="p">{</span>
+                            <span class="s2">&quot;dictionary&quot;</span><span class="p">:</span> <span class="n">categories</span><span class="p">,</span>
+                            <span class="s2">&quot;ordered&quot;</span><span class="p">:</span> <span class="n">cat</span><span class="o">.</span><span class="n">ordered</span><span class="p">,</span>
+                        <span class="p">}</span>
+                    <span class="p">},</span>
+                <span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">arrays</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="p">([</span><span class="n">index_name</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">dataframe</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">))</span>
     <span class="k">return</span> <span class="n">Dataset</span><span class="p">(</span><span class="n">arrays</span><span class="p">,</span> <span class="n">coords</span><span class="o">=</span><span class="p">{</span><span class="n">index_name</span><span class="p">:</span> <span class="p">(</span><span class="n">index_name</span><span class="p">,</span> <span class="n">dataframe</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">values</span><span class="p">)})</span>
 
 
@@ -479,7 +523,8 @@ title="Open an issue"
 <span class="sd">        Table from which to use data and indices.</span>
 <span class="sd">    index_name : str, default &#39;index&#39;</span>
 <span class="sd">        This name will be given to the default dimension index, if</span>
-<span class="sd">        none is given.  Ignored if `index` is given explicitly.</span>
+<span class="sd">        none is given.  Ignored if `index` is given explicitly and</span>
+<span class="sd">        it already has a name.</span>
 <span class="sd">    index : Index-like, optional</span>
 <span class="sd">        Use this index instead of a default RangeIndex.</span>
 
@@ -500,10 +545,21 @@ title="Open an issue"
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
             <span class="s2">&quot;cannot attach a non-unique MultiIndex and convert into xarray&quot;</span>
         <span class="p">)</span>
-    <span class="n">arrays</span> <span class="o">=</span> <span class="p">[</span>
-        <span class="p">(</span><span class="n">tbl</span><span class="o">.</span><span class="n">column_names</span><span class="p">[</span><span class="n">n</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">tbl</span><span class="o">.</span><span class="n">column</span><span class="p">(</span><span class="n">n</span><span class="p">)))</span>
-        <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">tbl</span><span class="o">.</span><span class="n">column_names</span><span class="p">))</span>
-    <span class="p">]</span>
+    <span class="n">arrays</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">metadata</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">tbl</span><span class="o">.</span><span class="n">column_names</span><span class="p">)):</span>
+        <span class="n">c</span> <span class="o">=</span> <span class="n">tbl</span><span class="o">.</span><span class="n">column</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">type</span><span class="p">,</span> <span class="n">pa</span><span class="o">.</span><span class="n">DictionaryType</span><span class="p">):</span>
+            <span class="n">cc</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">combine_chunks</span><span class="p">()</span>
+            <span class="n">arrays</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">tbl</span><span class="o">.</span><span class="n">column_names</span><span class="p">[</span><span class="n">n</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">cc</span><span class="o">.</span><span class="n">indices</span><span class="p">)))</span>
+            <span class="n">metadata</span><span class="p">[</span><span class="n">tbl</span><span class="o">.</span><span class="n">column_names</span><span class="p">[</span><span class="n">n</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">&quot;digital_encoding&quot;</span><span class="p">:</span> <span class="p">{</span>
+                    <span class="s2">&quot;dictionary&quot;</span><span class="p">:</span> <span class="n">cc</span><span class="o">.</span><span class="n">dictionary</span><span class="p">,</span>
+                    <span class="s2">&quot;ordered&quot;</span><span class="p">:</span> <span class="n">cc</span><span class="o">.</span><span class="n">type</span><span class="o">.</span><span class="n">ordered</span><span class="p">,</span>
+                <span class="p">}</span>
+            <span class="p">}</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">arrays</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">tbl</span><span class="o">.</span><span class="n">column_names</span><span class="p">[</span><span class="n">n</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">c</span><span class="p">)))</span>
     <span class="n">result</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="p">()</span>
     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">MultiIndex</span><span class="p">):</span>
         <span class="n">dims</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span>
@@ -513,11 +569,17 @@ title="Open an issue"
         <span class="k">for</span> <span class="n">dim</span><span class="p">,</span> <span class="n">lev</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">dims</span><span class="p">,</span> <span class="n">index</span><span class="o">.</span><span class="n">levels</span><span class="p">):</span>
             <span class="n">result</span><span class="p">[</span><span class="n">dim</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">dim</span><span class="p">,</span> <span class="n">lev</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="n">index_name</span> <span class="o">=</span> <span class="n">index</span><span class="o">.</span><span class="n">name</span> <span class="k">if</span> <span class="n">index</span><span class="o">.</span><span class="n">name</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="s2">&quot;index&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">index</span><span class="o">.</span><span class="n">name</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">index_name</span> <span class="o">=</span> <span class="n">index</span><span class="o">.</span><span class="n">name</span>
+        <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+            <span class="k">pass</span>
         <span class="n">dims</span> <span class="o">=</span> <span class="p">(</span><span class="n">index_name</span><span class="p">,)</span>
         <span class="n">result</span><span class="p">[</span><span class="n">index_name</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">dims</span><span class="p">,</span> <span class="n">index</span><span class="p">)</span>
 
     <span class="n">result</span><span class="o">.</span><span class="n">_set_numpy_data_from_dataframe</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">arrays</span><span class="p">,</span> <span class="n">dims</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">metadata</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">result</span><span class="p">[</span><span class="n">k</span><span class="p">]</span><span class="o">.</span><span class="n">attrs</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">result</span></div>
 
 
@@ -909,27 +971,11 @@ title="Open an issue"
     <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">obj</span><span class="p">:</span>
         <span class="n">attrs</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="k">for</span> <span class="n">aname</span><span class="p">,</span> <span class="n">avalue</span> <span class="ow">in</span> <span class="n">obj</span><span class="p">[</span><span class="n">k</span><span class="p">]</span><span class="o">.</span><span class="n">attrs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-            <span class="k">if</span> <span class="p">(</span>
-                <span class="nb">isinstance</span><span class="p">(</span><span class="n">avalue</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span>
-                <span class="ow">and</span> <span class="n">avalue</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot; {&quot;</span><span class="p">)</span>
-                <span class="ow">and</span> <span class="n">avalue</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;} &quot;</span><span class="p">)</span>
-            <span class="p">):</span>
-                <span class="n">avalue</span> <span class="o">=</span> <span class="n">ast</span><span class="o">.</span><span class="n">literal_eval</span><span class="p">(</span><span class="n">avalue</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
-            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">avalue</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="n">avalue</span> <span class="o">==</span> <span class="s2">&quot; &lt; None &gt; &quot;</span><span class="p">:</span>
-                <span class="n">avalue</span> <span class="o">=</span> <span class="kc">None</span>
-            <span class="n">attrs</span><span class="p">[</span><span class="n">aname</span><span class="p">]</span> <span class="o">=</span> <span class="n">avalue</span>
+            <span class="n">attrs</span><span class="p">[</span><span class="n">aname</span><span class="p">]</span> <span class="o">=</span> <span class="n">_from_evalable_string</span><span class="p">(</span><span class="n">avalue</span><span class="p">)</span>
         <span class="n">obj</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">obj</span><span class="p">[</span><span class="n">k</span><span class="p">]</span><span class="o">.</span><span class="n">assign_attrs</span><span class="p">(</span><span class="n">attrs</span><span class="p">)</span>
     <span class="n">attrs</span> <span class="o">=</span> <span class="p">{}</span>
     <span class="k">for</span> <span class="n">aname</span><span class="p">,</span> <span class="n">avalue</span> <span class="ow">in</span> <span class="n">obj</span><span class="o">.</span><span class="n">attrs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-        <span class="k">if</span> <span class="p">(</span>
-            <span class="nb">isinstance</span><span class="p">(</span><span class="n">avalue</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span>
-            <span class="ow">and</span> <span class="n">avalue</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot; {&quot;</span><span class="p">)</span>
-            <span class="ow">and</span> <span class="n">avalue</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;} &quot;</span><span class="p">)</span>
-        <span class="p">):</span>
-            <span class="n">avalue</span> <span class="o">=</span> <span class="n">ast</span><span class="o">.</span><span class="n">literal_eval</span><span class="p">(</span><span class="n">avalue</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">avalue</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="n">avalue</span> <span class="o">==</span> <span class="s2">&quot; &lt; None &gt; &quot;</span><span class="p">:</span>
-            <span class="n">avalue</span> <span class="o">=</span> <span class="kc">None</span>
-        <span class="n">attrs</span><span class="p">[</span><span class="n">aname</span><span class="p">]</span> <span class="o">=</span> <span class="n">avalue</span>
+        <span class="n">attrs</span><span class="p">[</span><span class="n">aname</span><span class="p">]</span> <span class="o">=</span> <span class="n">_from_evalable_string</span><span class="p">(</span><span class="n">avalue</span><span class="p">)</span>
     <span class="n">obj</span> <span class="o">=</span> <span class="n">obj</span><span class="o">.</span><span class="n">assign_attrs</span><span class="p">(</span><span class="n">attrs</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">obj</span>
 
@@ -955,7 +1001,7 @@ title="Open an issue"
 
     <span class="vm">__slots__</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;dataset&quot;</span><span class="p">,</span> <span class="s2">&quot;dim_name&quot;</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">:</span> <span class="s2">&quot;Dataset&quot;</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">:</span> <span class="n">Dataset</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span> <span class="o">=</span> <span class="n">dataset</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">dims</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;single_dim implies a single dimension dataset&quot;</span><span class="p">)</span>
@@ -973,10 +1019,122 @@ title="Open an issue"
     <span class="k">def</span> <span class="nf">size</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">dims</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">dim_name</span><span class="p">]</span>
 
-    <span class="k">def</span> <span class="nf">to_pyarrow</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="n">pa</span><span class="o">.</span><span class="n">Table</span><span class="o">.</span><span class="n">from_pydict</span><span class="p">(</span>
-            <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">pa</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">v</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">())</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">variables</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+    <span class="k">def</span> <span class="nf">_to_pydict</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="n">k</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">variables</span> <span class="k">if</span> <span class="n">k</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim_name</span><span class="p">]</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">columns</span><span class="p">:</span>
+            <span class="n">a</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">_variables</span><span class="p">[</span><span class="n">k</span><span class="p">]</span>
+            <span class="k">if</span> <span class="p">(</span>
+                <span class="s2">&quot;digital_encoding&quot;</span> <span class="ow">in</span> <span class="n">a</span><span class="o">.</span><span class="n">attrs</span>
+                <span class="ow">and</span> <span class="s2">&quot;dictionary&quot;</span> <span class="ow">in</span> <span class="n">a</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;digital_encoding&quot;</span><span class="p">]</span>
+            <span class="p">):</span>
+                <span class="n">de</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;digital_encoding&quot;</span><span class="p">]</span>
+                <span class="n">data</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                    <span class="n">pd</span><span class="o">.</span><span class="n">Categorical</span><span class="o">.</span><span class="n">from_codes</span><span class="p">(</span>
+                        <span class="n">a</span><span class="o">.</span><span class="n">values</span><span class="p">,</span>
+                        <span class="n">de</span><span class="p">[</span><span class="s2">&quot;dictionary&quot;</span><span class="p">],</span>
+                        <span class="n">de</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;ordered&quot;</span><span class="p">),</span>
+                    <span class="p">)</span>
+                <span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">data</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">columns</span><span class="p">,</span> <span class="n">data</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">to_pyarrow</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pa</span><span class="o">.</span><span class="n">Table</span><span class="p">:</span>
+        <span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="n">k</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">variables</span> <span class="k">if</span> <span class="n">k</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim_name</span><span class="p">]</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">columns</span><span class="p">:</span>
+            <span class="n">a</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">_variables</span><span class="p">[</span><span class="n">k</span><span class="p">]</span>
+            <span class="k">if</span> <span class="p">(</span>
+                <span class="s2">&quot;digital_encoding&quot;</span> <span class="ow">in</span> <span class="n">a</span><span class="o">.</span><span class="n">attrs</span>
+                <span class="ow">and</span> <span class="s2">&quot;dictionary&quot;</span> <span class="ow">in</span> <span class="n">a</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;digital_encoding&quot;</span><span class="p">]</span>
+            <span class="p">):</span>
+                <span class="n">de</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;digital_encoding&quot;</span><span class="p">]</span>
+                <span class="n">data</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                    <span class="n">pa</span><span class="o">.</span><span class="n">DictionaryArray</span><span class="o">.</span><span class="n">from_arrays</span><span class="p">(</span>
+                        <span class="n">a</span><span class="o">.</span><span class="n">values</span><span class="p">,</span>
+                        <span class="n">de</span><span class="p">[</span><span class="s2">&quot;dictionary&quot;</span><span class="p">],</span>
+                        <span class="n">ordered</span><span class="o">=</span><span class="n">de</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;ordered&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">),</span>
+                    <span class="p">)</span>
+                <span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">data</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pa</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">values</span><span class="p">))</span>
+        <span class="n">content</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">columns</span><span class="p">,</span> <span class="n">data</span><span class="p">))</span>
+        <span class="n">content</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">dim_name</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">index</span>
+        <span class="k">return</span> <span class="n">pa</span><span class="o">.</span><span class="n">Table</span><span class="o">.</span><span class="n">from_pydict</span><span class="p">(</span><span class="n">content</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">to_parquet</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filename</span><span class="p">):</span>
+        <span class="kn">import</span> <span class="nn">pyarrow.parquet</span> <span class="k">as</span> <span class="nn">pq</span>
+
+        <span class="n">t</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">to_pyarrow</span><span class="p">()</span>
+        <span class="n">pq</span><span class="o">.</span><span class="n">write_table</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">filename</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">to_pandas</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Convert this dataset into a pandas DataFrame.</span>
+
+<span class="sd">        The resulting DataFrame is always a copy of the data in the dataset.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        pandas.DataFrame</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_to_pydict</span><span class="p">(),</span> <span class="n">index</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">eval</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">expr</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">parser</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;pandas&quot;</span><span class="p">,</span>
+        <span class="n">engine</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">local_dict</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">global_dict</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Evaluate a Python expression as a string using various backends.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        expr : str</span>
+<span class="sd">            The expression to evaluate. This string cannot contain any Python</span>
+<span class="sd">            `statements</span>
+<span class="sd">            &lt;https://docs.python.org/3/reference/simple_stmts.html#simple-statements&gt;`__,</span>
+<span class="sd">            only Python `expressions</span>
+<span class="sd">            &lt;https://docs.python.org/3/reference/simple_stmts.html#expression-statements&gt;`__.</span>
+<span class="sd">        parser : {&#39;pandas&#39;, &#39;python&#39;}, default &#39;pandas&#39;</span>
+<span class="sd">            The parser to use to construct the syntax tree from the expression. The</span>
+<span class="sd">            default of ``&#39;pandas&#39;`` parses code slightly different than standard</span>
+<span class="sd">            Python. Alternatively, you can parse an expression using the</span>
+<span class="sd">            ``&#39;python&#39;`` parser to retain strict Python semantics.  See the</span>
+<span class="sd">            :ref:`enhancing performance &lt;enhancingperf.eval&gt;` documentation for</span>
+<span class="sd">            more details.</span>
+<span class="sd">        engine : {&#39;python&#39;, &#39;numexpr&#39;}, default &#39;numexpr&#39;</span>
+<span class="sd">            The engine used to evaluate the expression. Supported engines are</span>
+<span class="sd">            - None : tries to use ``numexpr``, falls back to ``python``</span>
+<span class="sd">            - ``&#39;numexpr&#39;`` : This default engine evaluates pandas objects using</span>
+<span class="sd">              numexpr for large speed ups in complex expressions with large frames.</span>
+<span class="sd">            - ``&#39;python&#39;`` : Performs operations as if you had ``eval``&#39;d in top</span>
+<span class="sd">              level python. This engine is generally not that useful.</span>
+<span class="sd">        local_dict : dict or None, optional</span>
+<span class="sd">            A dictionary of local variables, taken from locals() by default.</span>
+<span class="sd">        global_dict : dict or None, optional</span>
+<span class="sd">            A dictionary of global variables, taken from globals() by default.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        DataArray or numeric scalar</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">eval</span><span class="p">(</span>
+            <span class="n">expr</span><span class="p">,</span>
+            <span class="n">parser</span><span class="o">=</span><span class="n">parser</span><span class="p">,</span>
+            <span class="n">engine</span><span class="o">=</span><span class="n">engine</span><span class="p">,</span>
+            <span class="n">local_dict</span><span class="o">=</span><span class="n">local_dict</span><span class="p">,</span>
+            <span class="n">global_dict</span><span class="o">=</span><span class="n">global_dict</span><span class="p">,</span>
+            <span class="n">resolvers</span><span class="o">=</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="p">],</span>
         <span class="p">)</span>
+        <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">DataArray</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">result</span><span class="p">),</span> <span class="n">coords</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">coords</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">result</span>
 
 
 <span class="nd">@xr</span><span class="o">.</span><span class="n">register_dataarray_accessor</span><span class="p">(</span><span class="s2">&quot;single_dim&quot;</span><span class="p">)</span>
@@ -987,7 +1145,7 @@ title="Open an issue"
 
     <span class="vm">__slots__</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;dataarray&quot;</span><span class="p">,</span> <span class="s2">&quot;dim_name&quot;</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataarray</span><span class="p">:</span> <span class="s2">&quot;DataArray&quot;</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataarray</span><span class="p">:</span> <span class="n">DataArray</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">dataarray</span> <span class="o">=</span> <span class="n">dataarray</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dataarray</span><span class="o">.</span><span class="n">dims</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;single_dim implies a single dimension dataset&quot;</span><span class="p">)</span>
@@ -1007,6 +1165,39 @@ title="Open an issue"
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataarray</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataarray</span><span class="o">.</span><span class="n">rename</span><span class="p">({</span><span class="bp">self</span><span class="o">.</span><span class="n">dim_name</span><span class="p">:</span> <span class="n">name</span><span class="p">})</span>
 
+    <span class="k">def</span> <span class="nf">to_pandas</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Convert this array into a pandas Series.</span>
+
+<span class="sd">        If this array is categorical (i.e. with a simple dictionary-based</span>
+<span class="sd">        digital encoding) then the result will be a Series with categorical dtype.</span>
+
+<span class="sd">        The DataArray&#39;s `name` attribute is preserved in the result.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataarray</span><span class="o">.</span><span class="n">cat</span><span class="o">.</span><span class="n">is_categorical</span><span class="p">():</span>
+            <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span>
+                <span class="n">pd</span><span class="o">.</span><span class="n">Categorical</span><span class="o">.</span><span class="n">from_codes</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">dataarray</span><span class="p">,</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">dataarray</span><span class="o">.</span><span class="n">cat</span><span class="o">.</span><span class="n">categories</span><span class="p">,</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">dataarray</span><span class="o">.</span><span class="n">cat</span><span class="o">.</span><span class="n">ordered</span><span class="p">,</span>
+                <span class="p">),</span>
+                <span class="n">index</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">,</span>
+                <span class="n">name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dataarray</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataarray</span><span class="o">.</span><span class="n">to_pandas</span><span class="p">()</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataarray</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+                <span class="n">result</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dataarray</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">result</span>
+
+    <span class="k">def</span> <span class="nf">to_pyarrow</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataarray</span><span class="o">.</span><span class="n">cat</span><span class="o">.</span><span class="n">is_categorical</span><span class="p">():</span>
+            <span class="k">return</span> <span class="n">pa</span><span class="o">.</span><span class="n">DictionaryArray</span><span class="o">.</span><span class="n">from_arrays</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">dataarray</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataarray</span><span class="o">.</span><span class="n">cat</span><span class="o">.</span><span class="n">categories</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">pa</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dataarray</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+
 
 <span class="nd">@xr</span><span class="o">.</span><span class="n">register_dataset_accessor</span><span class="p">(</span><span class="s2">&quot;iloc&quot;</span><span class="p">)</span>
 <span class="k">class</span> <span class="nc">_iLocIndexer</span><span class="p">:</span>
@@ -1024,10 +1215,10 @@ title="Open an issue"
 
     <span class="vm">__slots__</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;dataset&quot;</span><span class="p">,)</span>
 
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">:</span> <span class="s2">&quot;Dataset&quot;</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">:</span> <span class="n">Dataset</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span> <span class="o">=</span> <span class="n">dataset</span>
 
-    <span class="k">def</span> <span class="fm">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="n">Hashable</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="s2">&quot;Dataset&quot;</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="n">Hashable</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Dataset</span><span class="p">:</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">is_dict_like</span><span class="p">(</span><span class="n">key</span><span class="p">):</span>
             <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">dims</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
                 <span class="n">dim_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="fm">__iter__</span><span class="p">()</span><span class="o">.</span><span class="fm">__next__</span><span class="p">()</span>
@@ -1140,6 +1331,58 @@ title="Open an issue"
     <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">to_zarr</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
 
+<span class="k">def</span> <span class="nf">_to_ast_literal</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="s2">&quot;{&quot;</span>
+            <span class="o">+</span> <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">_to_ast_literal</span><span class="p">(</span><span class="n">k</span><span class="p">)</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">_to_ast_literal</span><span class="p">(</span><span class="n">v</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">x</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+            <span class="p">)</span>
+            <span class="o">+</span> <span class="s2">&quot;}&quot;</span>
+        <span class="p">)</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s2">&quot;[&quot;</span> <span class="o">+</span> <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">_to_ast_literal</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">x</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;]&quot;</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s2">&quot;(&quot;</span> <span class="o">+</span> <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">_to_ast_literal</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">x</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;)&quot;</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Index</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">_to_ast_literal</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">to_list</span><span class="p">())</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">_to_ast_literal</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">repr</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_to_evalable_string</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">x</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">&quot; &lt; None &gt; &quot;</span>
+    <span class="k">elif</span> <span class="n">x</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">&quot; &lt; True &gt; &quot;</span>
+    <span class="k">elif</span> <span class="n">x</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">&quot; &lt; False &gt; &quot;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot; </span><span class="si">{</span><span class="n">_to_ast_literal</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="si">}</span><span class="s2"> &quot;</span>
+
+
+<span class="k">def</span> <span class="nf">_from_evalable_string</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="c1"># if x.startswith(&quot; {&quot;) and x.endswith(&quot;} &quot;):</span>
+        <span class="c1">#     return ast.literal_eval(x[1:-1])</span>
+        <span class="k">if</span> <span class="n">x</span> <span class="o">==</span> <span class="s2">&quot; &lt; None &gt; &quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">x</span> <span class="o">==</span> <span class="s2">&quot; &lt; True &gt; &quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">if</span> <span class="n">x</span> <span class="o">==</span> <span class="s2">&quot; &lt; False &gt; &quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+        <span class="k">if</span> <span class="n">x</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot; &quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">x</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot; &quot;</span><span class="p">):</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">ast</span><span class="o">.</span><span class="n">literal_eval</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s2">&quot; &quot;</span><span class="p">))</span>
+            <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+                <span class="k">raise</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">x</span>
+
+
 <span class="nd">@register_dataset_method</span>
 <span class="k">def</span> <span class="nf">to_zarr_with_attr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
@@ -1220,19 +1463,17 @@ title="Open an issue"
     <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="bp">self</span><span class="p">:</span>
         <span class="n">attrs</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="k">for</span> <span class="n">aname</span><span class="p">,</span> <span class="n">avalue</span> <span class="ow">in</span> <span class="bp">self</span><span class="p">[</span><span class="n">k</span><span class="p">]</span><span class="o">.</span><span class="n">attrs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">avalue</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
-                <span class="n">avalue</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot; </span><span class="si">{</span><span class="n">avalue</span><span class="si">!r}</span><span class="s2"> &quot;</span>
-            <span class="k">if</span> <span class="n">avalue</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="n">avalue</span> <span class="o">=</span> <span class="s2">&quot; &lt; None &gt; &quot;</span>
-            <span class="n">attrs</span><span class="p">[</span><span class="n">aname</span><span class="p">]</span> <span class="o">=</span> <span class="n">avalue</span>
+            <span class="n">attrs</span><span class="p">[</span><span class="n">aname</span><span class="p">]</span> <span class="o">=</span> <span class="n">_to_evalable_string</span><span class="p">(</span><span class="n">avalue</span><span class="p">)</span>
         <span class="n">obj</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="p">[</span><span class="n">k</span><span class="p">]</span><span class="o">.</span><span class="n">assign_attrs</span><span class="p">(</span><span class="n">attrs</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;coords&quot;</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">coords</span><span class="p">:</span>
+            <span class="n">attrs</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">for</span> <span class="n">aname</span><span class="p">,</span> <span class="n">avalue</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">coords</span><span class="p">[</span><span class="n">k</span><span class="p">]</span><span class="o">.</span><span class="n">attrs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="n">attrs</span><span class="p">[</span><span class="n">aname</span><span class="p">]</span> <span class="o">=</span> <span class="n">_to_evalable_string</span><span class="p">(</span><span class="n">avalue</span><span class="p">)</span>
+            <span class="n">obj</span><span class="o">.</span><span class="n">coords</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">coords</span><span class="p">[</span><span class="n">k</span><span class="p">]</span><span class="o">.</span><span class="n">assign_attrs</span><span class="p">(</span><span class="n">attrs</span><span class="p">)</span>
     <span class="n">attrs</span> <span class="o">=</span> <span class="p">{}</span>
     <span class="k">for</span> <span class="n">aname</span><span class="p">,</span> <span class="n">avalue</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">attrs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">avalue</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
-            <span class="n">avalue</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot; </span><span class="si">{</span><span class="n">avalue</span><span class="si">!r}</span><span class="s2"> &quot;</span>
-        <span class="k">if</span> <span class="n">avalue</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">avalue</span> <span class="o">=</span> <span class="s2">&quot; &lt; None &gt; &quot;</span>
-        <span class="n">attrs</span><span class="p">[</span><span class="n">aname</span><span class="p">]</span> <span class="o">=</span> <span class="n">avalue</span>
+        <span class="n">attrs</span><span class="p">[</span><span class="n">aname</span><span class="p">]</span> <span class="o">=</span> <span class="n">_to_evalable_string</span><span class="p">(</span><span class="n">avalue</span><span class="p">)</span>
     <span class="n">obj</span> <span class="o">=</span> <span class="n">obj</span><span class="o">.</span><span class="n">assign_attrs</span><span class="p">(</span><span class="n">attrs</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">obj</span><span class="o">.</span><span class="n">to_zarr</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
@@ -1370,7 +1611,7 @@ title="Open an issue"
         <span class="k">try</span><span class="p">:</span>
             <span class="n">name</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">name</span>
         <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;argument </span><span class="si">{</span><span class="n">n</span><span class="si">}</span><span class="s2"> has no name&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;argument </span><span class="si">{</span><span class="n">n</span><span class="si">}</span><span class="s2"> has no name&quot;</span><span class="p">)</span> <span class="kn">from</span> <span class="kc">None</span>
         <span class="k">if</span> <span class="n">name</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;the name for argument </span><span class="si">{</span><span class="n">n</span><span class="si">}</span><span class="s2"> is None&quot;</span><span class="p">)</span>
         <span class="n">objs</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">a</span>
@@ -1436,36 +1677,73 @@ title="Open an issue"
         <span class="k">return</span> <span class="n">v</span>
 </pre></div>
 
-              </div>
+                </article>
               
-            </main>
-            <footer class="footer-article noprint">
-                
-    <!-- Previous / next buttons -->
-<div class='prev-next-area'>
+
+              
+              
+                <footer class="bd-footer-article">
+                  
+<div class="footer-article-items footer-article__inner">
+  
+    <div class="footer-article-item"><!-- Previous / next buttons -->
+<div class="prev-next-area">
+</div></div>
+  
 </div>
-            </footer>
-        </div>
-    </div>
-    <div class="footer-content row">
-        <footer class="col footer"><p>
+
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
   
-    By Sharrow contributors, for the <a href="https://activitysim.github.io/">ActivitySim Consortium</a><br/>
-  
-      &copy; Copyright 2022 AMPO Research Foundation.<br/>
-</p>
-        </footer>
-    </div>
+  <div class="footer-item">
     
+<p class="component-author">
+By Sharrow contributors, for the <a href="https://activitysim.github.io/">ActivitySim Consortium</a>
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  <p class="copyright">
+    
+      © Copyright 2022 AMPO Research Foundation.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
 </div>
+          </footer>
+        
 
-
-      </div>
+      </main>
     </div>
+  </div>
   
   <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script src="../../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf"></script>
+  <script src="../../_static/scripts/bootstrap.js?digest=e353d410970836974a52"></script>
+<script src="../../_static/scripts/pydata-sphinx-theme.js?digest=e353d410970836974a52"></script>
 
-
+  <footer class="bd-footer">
+  </footer>
   </body>
 </html>

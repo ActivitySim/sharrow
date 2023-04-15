@@ -1,35 +1,46 @@
 
+
 <!DOCTYPE html>
 
-<html>
+
+<html >
+
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>sharrow.relationships &#8212; v2.5.2</title>
-    
+    <title>sharrow.relationships &#8212; v2.6.0</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "light";
+  </script>
+  
   <!-- Loaded before other Sphinx assets -->
-  <link href="../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
-<link href="../../_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+  <link href="../../_static/styles/theme.css?digest=e353d410970836974a52" rel="stylesheet" />
+<link href="../../_static/styles/bootstrap.css?digest=e353d410970836974a52" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=e353d410970836974a52" rel="stylesheet" />
 
-    
-  <link rel="stylesheet"
-    href="../../_static/vendor/fontawesome/5.13.0/css/all.min.css">
-  <link rel="preload" as="font" type="font/woff2" crossorigin
-    href="../../_static/vendor/fontawesome/5.13.0/webfonts/fa-solid-900.woff2">
-  <link rel="preload" as="font" type="font/woff2" crossorigin
-    href="../../_static/vendor/fontawesome/5.13.0/webfonts/fa-brands-400.woff2">
+  
+  <link href="../../_static/vendor/fontawesome/6.1.2/css/all.min.css?digest=e353d410970836974a52" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.1.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.1.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.1.2/webfonts/fa-regular-400.woff2" />
 
     <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
-    <link rel="stylesheet" href="../../_static/styles/sphinx-book-theme.css?digest=5115cc725059bd94278eecd172e13a965bf8f5a9" type="text/css" />
+    <link rel="stylesheet" href="../../_static/styles/sphinx-book-theme.css?digest=14f4ca6b54d191a8c7657f6c759bf11a5fb86285" type="text/css" />
     <link rel="stylesheet" type="text/css" href="../../_static/togglebutton.css" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css" />
-    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css" />
     <link rel="stylesheet" type="text/css" href="../../_static/sphinx-thebe.css" />
     <link rel="stylesheet" type="text/css" href="../../_static/sharrow-docs.css" />
-    <link rel="stylesheet" type="text/css" href="../../_static/design-style.b7bb847fb20b106c3d81b95245e65545.min.css" />
-    
+    <link rel="stylesheet" type="text/css" href="../../_static/design-style.4045f2051d55cab465a707391d5b2007.min.css" />
+    <link rel="icon" sizes="32x32" type="image/png" href="../../_static/favicon.png" />
+  
   <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf">
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=e353d410970836974a52" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=e353d410970836974a52" />
 
     <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
     <script src="../../_static/jquery.js"></script>
@@ -37,12 +48,12 @@
     <script src="../../_static/doctools.js"></script>
     <script src="../../_static/clipboard.min.js"></script>
     <script src="../../_static/copybutton.js"></script>
-    <script src="../../_static/scripts/sphinx-book-theme.js?digest=9c920249402e914e316237a7dbc6769907cce411"></script>
+    <script src="../../_static/scripts/sphinx-book-theme.js?digest=5a5c038af52cf7bc1a1ec88eea08e6366ee68824"></script>
     <script>let toggleHintShow = 'Click to show';</script>
     <script>let toggleHintHide = 'Click to hide';</script>
     <script>let toggleOpenOnPrint = 'true';</script>
     <script src="../../_static/togglebutton.js"></script>
-    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown, .tag_hide_input div.cell_input, .tag_hide-input div.cell_input, .tag_hide_output div.cell_output, .tag_hide-output div.cell_output, .tag_hide_cell.cell, .tag_hide-cell.cell';</script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
     <script src="../../_static/design-tabs.js"></script>
     <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"
 const thebe_selector = ".thebe,.cell"
@@ -50,235 +61,249 @@ const thebe_selector_input = "pre"
 const thebe_selector_output = ".output, .cell_output"
 </script>
     <script async="async" src="../../_static/sphinx-thebe.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/sharrow/relationships';</script>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="docsearch:language" content="None">
-    
-      
-      <link rel="icon" sizes="32x32" href="../../_static/favicon.png">
-      
-    
-
-    <!-- Google Analytics -->
-    
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="None"/>
   </head>
-  <body data-spy="scroll" data-target="#bd-toc-nav" data-offset="60">
-<!-- Checkboxes to toggle the left sidebar -->
-<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle navigation sidebar">
-<label class="overlay overlay-navbar" for="__navigation">
-    <div class="visually-hidden">Toggle navigation sidebar</div>
-</label>
-<!-- Checkboxes to toggle the in-page toc -->
-<input type="checkbox" class="sidebar-toggle" name="__page-toc" id="__page-toc" aria-label="Toggle in-page Table of Contents">
-<label class="overlay overlay-pagetoc" for="__page-toc">
-    <div class="visually-hidden">Toggle in-page Table of Contents</div>
-</label>
-<!-- Headers at the top -->
-<div class="announcement header-item noprint"></div>
-<div class="header header-item noprint"></div>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
 
-    
-    <div class="container-fluid" id="banner"></div>
-
-    
-
-    <div class="container-xl">
-      <div class="row">
-          
-<!-- Sidebar -->
-<div class="bd-sidebar noprint" id="site-navigation">
-    <div class="bd-sidebar__content">
-        <div class="bd-sidebar__top"><div class="navbar-brand-box">
-    <a class="navbar-brand text-wrap" href="../../index.html">
+  
+  
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          name="__primary"
+          id="__primary"/>
+  <label class="overlay overlay-primary" for="__primary"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          name="__secondary"
+          id="__secondary"/>
+  <label class="overlay overlay-secondary" for="__secondary"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search these docs..."
+         aria-label="Search these docs..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+  
+    <nav class="bd-header navbar navbar-expand-lg bd-navbar">
+    </nav>
+  
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
       
-        <!-- `logo` is deprecated in Sphinx 4.0, so remove this when we stop supporting 3 -->
+      <div class="bd-sidebar-primary bd-sidebar">
         
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+    
+    
       
-      
-      <img src="../../_static/logo.png" class="logo" alt="logo">
-      
-      
-      <h1 class="site-logo" id="site-title">v2.5.2</h1>
-      
-    </a>
-</div><form class="bd-search d-flex align-items-center" action="../../search.html" method="get">
-  <i class="icon fas fa-search"></i>
-  <input type="search" class="form-control" name="q" id="search-input" placeholder="Search these docs..." aria-label="Search these docs..." autocomplete="off" >
-</form><nav class="bd-links" id="bd-docs-nav" aria-label="Main">
-    <div class="bd-toc-item active">
+    
+    
+    <img src="../../_static/logo.png" class="logo__image only-light" alt="Logo image"/>
+    <script>document.write(`<img src="../../_static/logo.png" class="logo__image only-dark" alt="Logo image"/>`);</script>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item"><nav class="bd-links" id="bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
         <ul class="nav bd-sidenav">
- <li class="toctree-l1">
-  <a class="reference internal" href="../../intro.html">
-   Getting Started
-  </a>
- </li>
- <li class="toctree-l1 has-children">
-  <a class="reference internal" href="../../walkthrough/index.html">
-   User Guide
-  </a>
-  <input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" type="checkbox"/>
-  <label for="toctree-checkbox-1">
-   <i class="fas fa-chevron-down">
-   </i>
-  </label>
-  <ul>
-   <li class="toctree-l2">
-    <a class="reference internal" href="../../walkthrough/one-dim.html">
-     Sharrow Basics
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="../../walkthrough/two-dim.html">
-     Multi-Dimensional Analysis
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="../../walkthrough/encoding.html">
-     Data Encoding
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="../../walkthrough/sparse.html">
-     Using Sparse MAZ Skims
-    </a>
-   </li>
-  </ul>
- </li>
- <li class="toctree-l1">
-  <a class="reference internal" href="../../api.html">
-   API Reference
-  </a>
- </li>
+<li class="toctree-l1"><a class="reference internal" href="../../intro.html">Getting Started</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../walkthrough/index.html">User Guide</a><input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" type="checkbox"/><label class="toctree-toggle" for="toctree-checkbox-1"><i class="fa-solid fa-chevron-down"></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../walkthrough/one-dim.html">Sharrow Basics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../walkthrough/two-dim.html">Multi-Dimensional Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../walkthrough/encoding.html">Data Encoding</a></li>
+
+<li class="toctree-l2"><a class="reference internal" href="../../walkthrough/sparse.html">Using Sparse MAZ Skims</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../api.html">API Reference</a></li>
 </ul>
 
     </div>
 </nav></div>
-        <div class="bd-sidebar__bottom">
-             <!-- To handle the deprecated key -->
-            
-        </div>
     </div>
-    <div id="rtd-footer-container"></div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><label class="sidebar-toggle primary-toggle btn btn-sm" for="__primary" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</label></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-source-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Source repositories">
+    <i class="fab fa-github"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="https://github.com/ActivitySim/sharrow" target="_blank"
+   class="btn btn-sm btn-source-repository-button dropdown-item"
+   title="Source repository"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+<span class="btn__text-container">Repository</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li><a href="https://github.com/ActivitySim/sharrow/issues/new?title=Issue%20on%20page%20%2F_modules/sharrow/relationships.html&body=Your%20issue%20content%20here." target="_blank"
+   class="btn btn-sm btn-source-issues-button dropdown-item"
+   title="Open an issue"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-lightbulb"></i>
+  </span>
+<span class="btn__text-container">Open issue</span>
+</a>
+</li>
+      
+  </ul>
 </div>
 
 
-          
 
 
-          
-<!-- A tiny helper pixel to detect if we've scrolled -->
-<div class="sbt-scroll-pixel-helper"></div>
-<!-- Main content -->
-<div class="col py-0 content-container">
-    
-    <div class="header-article row sticky-top noprint">
-        
-
-
-
-<div class="col py-1 d-flex header-article-main">
-    <div class="header-article__left">
-        
-        <label for="__navigation"
-  class="headerbtn"
-  data-toggle="tooltip"
-data-placement="right"
-title="Toggle navigation"
->
-  
-
-<span class="headerbtn__icon-container">
-  <i class="fas fa-bars"></i>
-  </span>
-
-</label>
-
-        
-    </div>
-    <div class="header-article__right">
 <button onclick="toggleFullScreen()"
-  class="headerbtn"
-  data-toggle="tooltip"
-data-placement="bottom"
-title="Fullscreen mode"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
 >
   
 
-<span class="headerbtn__icon-container">
+<span class="btn__icon-container">
   <i class="fas fa-expand"></i>
   </span>
 
 </button>
 
-<div class="menu-dropdown menu-dropdown-repository-buttons">
-  <button class="headerbtn menu-dropdown__trigger"
-      aria-label="Source repositories">
-      <i class="fab fa-github"></i>
+
+<script>
+document.write(`
+  <button class="theme-switch-button btn btn-sm btn-outline-primary navbar-btn rounded-circle" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch" data-mode="light"><i class="fa-solid fa-sun"></i></span>
+    <span class="theme-switch" data-mode="dark"><i class="fa-solid fa-moon"></i></span>
+    <span class="theme-switch" data-mode="auto"><i class="fa-solid fa-circle-half-stroke"></i></span>
   </button>
-  <div class="menu-dropdown__content">
-    <ul>
-      <li>
-        <a href="https://github.com/ActivitySim/sharrow"
-   class="headerbtn"
-   data-toggle="tooltip"
-data-placement="left"
-title="Source repository"
->
-  
+`);
+</script>
 
-<span class="headerbtn__icon-container">
-  <i class="fab fa-github"></i>
-  </span>
-<span class="headerbtn__text-container">repository</span>
-</a>
+<script>
+document.write(`
+  <button class="btn btn-sm navbar-btn search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+  </button>
+`);
+</script>
 
-      </li>
+</div></div>
       
-      <li>
-        <a href="https://github.com/ActivitySim/sharrow/issues/new?title=Issue%20on%20page%20%2F_modules/sharrow/relationships.html&body=Your%20issue%20content%20here."
-   class="headerbtn"
-   data-toggle="tooltip"
-data-placement="left"
-title="Open an issue"
->
+    </div>
   
-
-<span class="headerbtn__icon-container">
-  <i class="fas fa-lightbulb"></i>
-  </span>
-<span class="headerbtn__text-container">open issue</span>
-</a>
-
-      </li>
-      
-    </ul>
-  </div>
 </div>
+</div>
+              
+              
 
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1></h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+        </div>
     </div>
 </div>
 
-<!-- Table of contents -->
-<div class="col-md-3 bd-toc show noprint">
-</div>
-    </div>
-    <div class="article row">
-        <div class="col pl-md-3 pl-lg-5 content-container">
-            <!-- Table of contents that is only displayed when printing the page -->
-            <div id="jb-print-docs-body" class="onlyprint">
-                <h1></h1>
-                <!-- Table of contents -->
-                <div id="print-main-content">
-                    <div id="jb-print-toc">
-                        
-                    </div>
-                </div>
-            </div>
-            <main id="main-content" role="main">
+              
                 
-              <div>
-                
+<div id="searchbox"></div>
+                <article class="bd-article" role="main">
+                  
   <h1>Source code for sharrow.relationships</h1><div class="highlight"><pre>
 <span></span><span class="kn">import</span> <span class="nn">ast</span>
 <span class="kn">import</span> <span class="nn">logging</span>
@@ -306,7 +331,8 @@ title="Open an issue"
 <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
     <span class="kn">from</span> <span class="nn">astunparse</span> <span class="kn">import</span> <span class="n">unparse</span> <span class="k">as</span> <span class="n">_unparse</span>
 
-    <span class="n">unparse</span> <span class="o">=</span> <span class="k">lambda</span> <span class="o">*</span><span class="n">args</span><span class="p">:</span> <span class="n">_unparse</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">unparse</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">_unparse</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
 
 
 <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;sharrow&quot;</span><span class="p">)</span>
@@ -328,6 +354,8 @@ title="Open an issue"
     <span class="s2">&quot;transpose_leading&quot;</span><span class="p">,</span>
     <span class="s2">&quot;clip&quot;</span><span class="p">,</span>
 <span class="p">}</span>
+
+<span class="n">NOTSET</span> <span class="o">=</span> <span class="s2">&quot;&lt;--NOTSET--&gt;&quot;</span>
 
 
 <span class="k">def</span> <span class="nf">_require_string</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
@@ -479,16 +507,46 @@ title="Open an issue"
 
     <span class="k">def</span> <span class="fm">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">):</span>
-            <span class="k">return</span> <span class="nb">repr</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">==</span> <span class="nb">repr</span><span class="p">(</span><span class="n">other</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">analog</span><span class="p">:</span>
+                <span class="n">left</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;&lt;Relationship by label: &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">parent_data</span><span class="si">}</span><span class="s2">[</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">analog</span><span class="si">!r}</span><span class="s2">] -&gt; &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">child_data</span><span class="si">}</span><span class="s2">[</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">child_name</span><span class="si">!r}</span><span class="s2">]&gt;&quot;</span>
+                <span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">left</span> <span class="o">=</span> <span class="nb">repr</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">other</span><span class="o">.</span><span class="n">analog</span><span class="p">:</span>
+                <span class="n">right</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;&lt;Relationship by label: &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">other</span><span class="o">.</span><span class="n">parent_data</span><span class="si">}</span><span class="s2">[</span><span class="si">{</span><span class="n">other</span><span class="o">.</span><span class="n">analog</span><span class="si">!r}</span><span class="s2">] -&gt; &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">other</span><span class="o">.</span><span class="n">child_data</span><span class="si">}</span><span class="s2">[</span><span class="si">{</span><span class="n">other</span><span class="o">.</span><span class="n">child_name</span><span class="si">!r}</span><span class="s2">]&gt;&quot;</span>
+                <span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">right</span> <span class="o">=</span> <span class="nb">repr</span><span class="p">(</span><span class="n">other</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">left</span> <span class="o">==</span> <span class="n">right</span>
 
     <span class="k">def</span> <span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;&lt;Relationship by </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">indexing</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">parent_data</span><span class="si">}</span><span class="s2">[</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">parent_name</span><span class="si">!r}</span><span class="s2">] -&gt; </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">child_data</span><span class="si">}</span><span class="s2">[</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">child_name</span><span class="si">!r}</span><span class="s2">]&gt;&quot;</span>
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;&lt;Relationship by </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">indexing</span><span class="si">}</span><span class="s2">: &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">parent_data</span><span class="si">}</span><span class="s2">[</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">parent_name</span><span class="si">!r}</span><span class="s2">] -&gt; &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">child_data</span><span class="si">}</span><span class="s2">[</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">child_name</span><span class="si">!r}</span><span class="s2">]&gt;&quot;</span>
+        <span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">attrs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span>
             <span class="n">parent_name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">parent_name</span><span class="p">,</span>
             <span class="n">child_name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">child_name</span><span class="p">,</span>
             <span class="n">indexing</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">indexing</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">to_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span>
+            <span class="n">parent_data</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">parent_data</span><span class="p">,</span>
+            <span class="n">parent_name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">parent_name</span><span class="p">,</span>
+            <span class="n">child_data</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">child_data</span><span class="p">,</span>
+            <span class="n">child_name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">child_name</span><span class="p">,</span>
+            <span class="n">indexing</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">indexing</span><span class="p">,</span>
+            <span class="n">analog</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">analog</span><span class="p">,</span>
         <span class="p">)</span>
 
     <span class="nd">@classmethod</span>
@@ -539,7 +597,7 @@ title="Open an issue"
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    graph : networkx.MultiDiGraph</span>
-<span class="sd">    root_node_name : str</span>
+<span class="sd">    root_node_name : str or False</span>
 <span class="sd">        The name of the node at the root of the tree.</span>
 <span class="sd">    extra_funcs : Tuple[Callable]</span>
 <span class="sd">        Additional functions that can be called by Flow objects created</span>
@@ -723,14 +781,33 @@ title="Open an issue"
 
     <span class="nd">@root_node_name</span><span class="o">.</span><span class="n">setter</span>
     <span class="k">def</span> <span class="nf">root_node_name</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
-        <span class="k">if</span> <span class="n">name</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_root_node_name</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">name</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">name</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_root_node_name</span> <span class="o">=</span> <span class="n">name</span>
             <span class="k">return</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;root_node_name must be str not </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">name</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;root_node_name must be one of [str, None, False] not </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">name</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
         <span class="k">if</span> <span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_root_node_name</span> <span class="o">=</span> <span class="n">name</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">root_node_name_str</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;str: The root node for this data tree, which is only ever a parent.</span>
+
+<span class="sd">        This method raises a ValueError if root node cannot be determined.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_root_node_name</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">nodename</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">:</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_graph</span><span class="o">.</span><span class="n">in_degree</span><span class="p">(</span><span class="n">nodename</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_root_node_name</span> <span class="o">=</span> <span class="n">nodename</span>
+                    <span class="k">break</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_root_node_name</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;root node cannot be determined&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_root_node_name</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;root node is False&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_root_node_name</span>
 
 <div class="viewcode-block" id="DataTree.add_relationship"><a class="viewcode-back" href="../../api.html#sharrow.DataTree.add_relationship">[docs]</a>    <span class="k">def</span> <span class="nf">add_relationship</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -751,28 +828,7 @@ title="Open an issue"
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">args</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">Relationship</span><span class="p">):</span>
             <span class="n">r</span> <span class="o">=</span> <span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
         <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">args</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="nb">str</span><span class="p">):</span>
-            <span class="n">s</span> <span class="o">=</span> <span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-            <span class="k">if</span> <span class="s2">&quot;-&gt;&quot;</span> <span class="ow">in</span> <span class="n">s</span><span class="p">:</span>
-                <span class="n">parent</span><span class="p">,</span> <span class="n">child</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;-&gt;&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
-                <span class="n">i</span> <span class="o">=</span> <span class="s2">&quot;position&quot;</span>
-            <span class="k">elif</span> <span class="s2">&quot;@&quot;</span> <span class="ow">in</span> <span class="n">s</span><span class="p">:</span>
-                <span class="n">parent</span><span class="p">,</span> <span class="n">child</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;@&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
-                <span class="n">i</span> <span class="o">=</span> <span class="s2">&quot;label&quot;</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;cannot interpret relationship </span><span class="si">{</span><span class="n">s</span><span class="si">!r}</span><span class="s2">&quot;</span><span class="p">)</span>
-            <span class="n">p1</span><span class="p">,</span> <span class="n">p2</span> <span class="o">=</span> <span class="n">parent</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
-            <span class="n">c1</span><span class="p">,</span> <span class="n">c2</span> <span class="o">=</span> <span class="n">child</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
-            <span class="n">p1</span> <span class="o">=</span> <span class="n">p1</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
-            <span class="n">p2</span> <span class="o">=</span> <span class="n">p2</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
-            <span class="n">c1</span> <span class="o">=</span> <span class="n">c1</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
-            <span class="n">c2</span> <span class="o">=</span> <span class="n">c2</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
-            <span class="n">r</span> <span class="o">=</span> <span class="n">Relationship</span><span class="p">(</span>
-                <span class="n">parent_data</span><span class="o">=</span><span class="n">p1</span><span class="p">,</span>
-                <span class="n">parent_name</span><span class="o">=</span><span class="n">p2</span><span class="p">,</span>
-                <span class="n">child_data</span><span class="o">=</span><span class="n">c1</span><span class="p">,</span>
-                <span class="n">child_name</span><span class="o">=</span><span class="n">c2</span><span class="p">,</span>
-                <span class="n">indexing</span><span class="o">=</span><span class="n">i</span><span class="p">,</span>
-            <span class="p">)</span>
+            <span class="n">r</span> <span class="o">=</span> <span class="n">Relationship</span><span class="o">.</span><span class="n">from_string</span><span class="p">(</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">r</span> <span class="o">=</span> <span class="n">Relationship</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
@@ -792,6 +848,13 @@ title="Open an issue"
     <span class="k">def</span> <span class="nf">get_relationship</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="n">child</span><span class="p">):</span>
         <span class="n">attrs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_graph</span><span class="o">.</span><span class="n">edges</span><span class="p">[</span><span class="n">parent</span><span class="p">,</span> <span class="n">child</span><span class="p">]</span>
         <span class="k">return</span> <span class="n">Relationship</span><span class="p">(</span><span class="n">parent_data</span><span class="o">=</span><span class="n">parent</span><span class="p">,</span> <span class="n">child_data</span><span class="o">=</span><span class="n">child</span><span class="p">,</span> <span class="o">**</span><span class="n">attrs</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">list_relationships</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Relationship</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;list : List all relationships defined in this tree.&quot;&quot;&quot;</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_graph</span><span class="o">.</span><span class="n">edges</span><span class="p">:</span>
+            <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_get_relationship</span><span class="p">(</span><span class="n">e</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">result</span>
 
 <div class="viewcode-block" id="DataTree.add_dataset"><a class="viewcode-back" href="../../api.html#sharrow.DataTree.add_dataset">[docs]</a>    <span class="k">def</span> <span class="nf">add_dataset</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">dataset</span><span class="p">,</span> <span class="n">relationships</span><span class="o">=</span><span class="p">(),</span> <span class="n">as_root</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -846,11 +909,11 @@ title="Open an issue"
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">root_node</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">root_node_name</span><span class="p">]</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">root_node_name_str</span><span class="p">]</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">root_dataset</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">root_node_name</span><span class="p">][</span><span class="s2">&quot;dataset&quot;</span><span class="p">]</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">root_node_name_str</span><span class="p">][</span><span class="s2">&quot;dataset&quot;</span><span class="p">]</span>
 
     <span class="nd">@root_dataset</span><span class="o">.</span><span class="n">setter</span>
     <span class="k">def</span> <span class="nf">root_dataset</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
@@ -858,7 +921,7 @@ title="Open an issue"
 
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">Dataset</span><span class="p">):</span>
             <span class="n">x</span> <span class="o">=</span> <span class="n">construct</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">root_node_name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">replacement_filters</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">root_node_name_str</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">replacement_filters</span><span class="p">:</span>
             <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">replacement_filters</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">root_node_name</span><span class="p">](</span><span class="n">x</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">root_node_name</span><span class="p">][</span><span class="s2">&quot;dataset&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">x</span>
 
@@ -912,16 +975,28 @@ title="Open an issue"
                     <span class="k">raise</span>
                 <span class="k">else</span><span class="p">:</span>
                     <span class="n">result</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span><span class="n">default</span><span class="p">)</span>
-        <span class="n">root_dataset</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">root_dataset</span>
-        <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">dims</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">root_dims</span> <span class="ow">and</span> <span class="n">broadcast</span><span class="p">:</span>
-            <span class="n">result</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">broadcast</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">root_dataset</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">coords</span><span class="p">:</span>
-            <span class="n">add_coords</span> <span class="o">=</span> <span class="p">{}</span>
-            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">dims</span><span class="p">:</span>
-                <span class="k">if</span> <span class="n">i</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">coords</span> <span class="ow">and</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">root_dataset</span><span class="o">.</span><span class="n">coords</span><span class="p">:</span>
-                    <span class="n">add_coords</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">root_dataset</span><span class="o">.</span><span class="n">coords</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
-            <span class="k">if</span> <span class="n">add_coords</span><span class="p">:</span>
-                <span class="n">result</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">assign_coords</span><span class="p">(</span><span class="n">add_coords</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">root_node_name</span><span class="p">:</span>
+            <span class="n">root_dataset</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">root_dataset</span>
+            <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">dims</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">root_dims</span> <span class="ow">and</span> <span class="n">broadcast</span><span class="p">:</span>
+                <span class="n">result</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">broadcast</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">root_dataset</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">coords</span><span class="p">:</span>
+                <span class="n">add_coords</span> <span class="o">=</span> <span class="p">{}</span>
+                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">dims</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">i</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">coords</span> <span class="ow">and</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">root_dataset</span><span class="o">.</span><span class="n">coords</span><span class="p">:</span>
+                        <span class="n">add_coords</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">root_dataset</span><span class="o">.</span><span class="n">coords</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+                <span class="k">if</span> <span class="n">add_coords</span><span class="p">:</span>
+                    <span class="n">result</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">assign_coords</span><span class="p">(</span><span class="n">add_coords</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">root_node_name</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+            <span class="k">if</span> <span class="s2">&quot;.&quot;</span> <span class="ow">in</span> <span class="n">item</span><span class="p">:</span>
+                <span class="n">item_in</span><span class="p">,</span> <span class="n">item</span> <span class="o">=</span> <span class="n">item</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+                <span class="n">base_dataset</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">item_in</span><span class="p">][</span><span class="s2">&quot;dataset&quot;</span><span class="p">]</span>
+                <span class="k">if</span> <span class="n">coords</span><span class="p">:</span>
+                    <span class="n">add_coords</span> <span class="o">=</span> <span class="p">{}</span>
+                    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">dims</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="n">i</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">coords</span> <span class="ow">and</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">base_dataset</span><span class="o">.</span><span class="n">coords</span><span class="p">:</span>
+                            <span class="n">add_coords</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">base_dataset</span><span class="o">.</span><span class="n">coords</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+                    <span class="k">if</span> <span class="n">add_coords</span><span class="p">:</span>
+                        <span class="n">result</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">assign_coords</span><span class="p">(</span><span class="n">add_coords</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">result</span>
 
     <span class="k">def</span> <span class="nf">finditem</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">item</span><span class="p">,</span> <span class="n">maybe_in</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
@@ -947,11 +1022,17 @@ title="Open an issue"
 
         <span class="k">if</span> <span class="s2">&quot;.&quot;</span> <span class="ow">in</span> <span class="n">item</span><span class="p">:</span>
             <span class="n">item_in</span><span class="p">,</span> <span class="n">item</span> <span class="o">=</span> <span class="n">item</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">queue</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">root_node_name</span><span class="p">]</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">root_node_name</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+                <span class="c1"># when root_node_name is False, we don&#39;t want to broadcast</span>
+                <span class="c1"># back to the root, but instead only to the given `item_in`</span>
+                <span class="n">queue</span> <span class="o">=</span> <span class="p">[</span><span class="n">item_in</span><span class="p">]</span>
+                <span class="n">item_in</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">item_in</span> <span class="o">=</span> <span class="kc">None</span>
-
-        <span class="n">queue</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">root_node_name</span><span class="p">]</span>
+            <span class="n">queue</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">root_node_name_str</span><span class="p">]</span>
         <span class="n">examined</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="n">start_from</span> <span class="o">=</span> <span class="n">queue</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
         <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="n">queue</span><span class="p">):</span>
             <span class="n">current_node</span> <span class="o">=</span> <span class="n">queue</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">current_node</span> <span class="ow">in</span> <span class="n">examined</span><span class="p">:</span>
@@ -968,7 +1049,7 @@ title="Open an issue"
             <span class="k">if</span> <span class="p">(</span><span class="n">by_name</span> <span class="ow">or</span> <span class="n">by_dims</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">item_in</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">item_in</span> <span class="o">==</span> <span class="n">current_node</span><span class="p">):</span>
                 <span class="k">if</span> <span class="n">just_node_name</span><span class="p">:</span>
                     <span class="k">return</span> <span class="n">current_node</span>
-                <span class="k">if</span> <span class="n">current_node</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">root_node_name</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">current_node</span> <span class="o">==</span> <span class="n">start_from</span><span class="p">:</span>
                     <span class="k">if</span> <span class="n">by_dims</span><span class="p">:</span>
                         <span class="k">return</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span>
                             <span class="n">pd</span><span class="o">.</span><span class="n">RangeIndex</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">dims</span><span class="p">[</span><span class="n">item</span><span class="p">]),</span> <span class="n">dims</span><span class="o">=</span><span class="n">item</span>
@@ -993,19 +1074,19 @@ title="Open an issue"
                     <span class="n">dims_in_result</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">dims</span><span class="p">)</span>
                     <span class="n">top_dim_names</span> <span class="o">=</span> <span class="p">{}</span>
                     <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">nx</span><span class="o">.</span><span class="n">algorithms</span><span class="o">.</span><span class="n">simple_paths</span><span class="o">.</span><span class="n">all_simple_edge_paths</span><span class="p">(</span>
-                        <span class="bp">self</span><span class="o">.</span><span class="n">_graph</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">root_node_name</span><span class="p">,</span> <span class="n">current_node</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">_graph</span><span class="p">,</span> <span class="n">start_from</span><span class="p">,</span> <span class="n">current_node</span>
                     <span class="p">):</span>
                         <span class="k">if</span> <span class="n">dim_names_from_top</span><span class="p">:</span>
                             <span class="n">e</span> <span class="o">=</span> <span class="n">path</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
                             <span class="n">top_dim_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_graph</span><span class="o">.</span><span class="n">edges</span><span class="p">[</span><span class="n">e</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;parent_name&quot;</span><span class="p">)</span>
-                            <span class="n">root_dataset</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">root_dataset</span>
+                            <span class="n">start_dataset</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">start_from</span><span class="p">][</span><span class="s2">&quot;dataset&quot;</span><span class="p">]</span>
                             <span class="c1"># deconvert digitized dim names back to native dims</span>
                             <span class="k">if</span> <span class="p">(</span>
-                                <span class="n">top_dim_name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">root_dataset</span><span class="o">.</span><span class="n">dims</span>
-                                <span class="ow">and</span> <span class="n">top_dim_name</span> <span class="ow">in</span> <span class="n">root_dataset</span><span class="o">.</span><span class="n">variables</span>
+                                <span class="n">top_dim_name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">start_dataset</span><span class="o">.</span><span class="n">dims</span>
+                                <span class="ow">and</span> <span class="n">top_dim_name</span> <span class="ow">in</span> <span class="n">start_dataset</span><span class="o">.</span><span class="n">variables</span>
                             <span class="p">):</span>
-                                <span class="k">if</span> <span class="n">root_dataset</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="n">top_dim_name</span><span class="p">]</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-                                    <span class="n">top_dim_name</span> <span class="o">=</span> <span class="n">root_dataset</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span>
+                                <span class="k">if</span> <span class="n">start_dataset</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="n">top_dim_name</span><span class="p">]</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                                    <span class="n">top_dim_name</span> <span class="o">=</span> <span class="n">start_dataset</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span>
                                         <span class="n">top_dim_name</span>
                                     <span class="p">]</span><span class="o">.</span><span class="n">dims</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
                         <span class="k">else</span><span class="p">:</span>
@@ -1110,6 +1191,8 @@ title="Open an issue"
                 <span class="n">result</span> <span class="o">=</span> <span class="n">DataArray</span><span class="p">(</span>
                     <span class="n">pd</span><span class="o">.</span><span class="n">eval</span><span class="p">(</span><span class="n">expression</span><span class="p">,</span> <span class="n">resolvers</span><span class="o">=</span><span class="p">[</span><span class="bp">self</span><span class="p">],</span> <span class="n">engine</span><span class="o">=</span><span class="s2">&quot;numexpr&quot;</span><span class="p">),</span>
                 <span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;unknown engine </span><span class="si">{</span><span class="n">engine</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span> <span class="kn">from</span> <span class="kc">None</span>
         <span class="k">return</span> <span class="n">result</span>
 
     <span class="nd">@property</span>
@@ -1128,12 +1211,48 @@ title="Open an issue"
             <span class="k">if</span> <span class="n">s</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="k">yield</span> <span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">s</span><span class="p">)</span>
 
+    <span class="k">def</span> <span class="nf">contains_subspace</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Is this named Dataset in this tree&#39;s subspaces</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        key : str</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        bool</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">key</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_graph</span><span class="o">.</span><span class="n">nodes</span>
+
+    <span class="k">def</span> <span class="nf">get_subspace</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">default_empty</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Access named Dataset from this tree&#39;s subspaces</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        key : str</span>
+<span class="sd">        default_empty : bool, default False</span>
+<span class="sd">            Return an empty Dataset if the key is not found.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        xr.Dataset</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;dataset&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">result</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">default_empty</span><span class="p">:</span>
+                <span class="n">result</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="p">()</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">result</span>
+
     <span class="k">def</span> <span class="nf">namespace_names</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="n">namespace</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
         <span class="k">for</span> <span class="n">spacename</span><span class="p">,</span> <span class="n">spacearrays</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">subspaces_iter</span><span class="p">():</span>
-            <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">arr</span> <span class="ow">in</span> <span class="n">spacearrays</span><span class="o">.</span><span class="n">coords</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">_arr</span> <span class="ow">in</span> <span class="n">spacearrays</span><span class="o">.</span><span class="n">coords</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
                 <span class="n">namespace</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;__</span><span class="si">{</span><span class="n">spacename</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="s1">&#39;base&#39;</span><span class="si">}</span><span class="s2">__</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-            <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">arr</span> <span class="ow">in</span> <span class="n">spacearrays</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">_arr</span> <span class="ow">in</span> <span class="n">spacearrays</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
                 <span class="k">if</span> <span class="n">k</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;_s_&quot;</span><span class="p">):</span>
                     <span class="n">namespace</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;__</span><span class="si">{</span><span class="n">spacename</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="s1">&#39;base&#39;</span><span class="si">}</span><span class="s2">__</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s2">__indptr&quot;</span><span class="p">)</span>
                     <span class="n">namespace</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;__</span><span class="si">{</span><span class="n">spacename</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="s1">&#39;base&#39;</span><span class="si">}</span><span class="s2">__</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s2">__indices&quot;</span><span class="p">)</span>
@@ -1148,7 +1267,7 @@ title="Open an issue"
 <span class="sd">        Mapping from dimension names to lengths across all dataset nodes.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">dims</span> <span class="o">=</span> <span class="p">{}</span>
-        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">subspaces_iter</span><span class="p">():</span>
+        <span class="k">for</span> <span class="n">_k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">subspaces_iter</span><span class="p">():</span>
             <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">length</span> <span class="ow">in</span> <span class="n">v</span><span class="o">.</span><span class="n">dims</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
                 <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">dims</span><span class="p">:</span>
                     <span class="k">if</span> <span class="n">dims</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">!=</span> <span class="n">length</span><span class="p">:</span>
@@ -1212,7 +1331,7 @@ title="Open an issue"
         <span class="c1"># remove subspaces that rely on dropped dim</span>
         <span class="n">boot_queue</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
         <span class="n">booted</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
-        <span class="k">for</span> <span class="p">(</span><span class="n">up</span><span class="p">,</span> <span class="n">dn</span><span class="p">,</span> <span class="n">n</span><span class="p">),</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">obj</span><span class="o">.</span><span class="n">_graph</span><span class="o">.</span><span class="n">edges</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">for</span> <span class="p">(</span><span class="n">up</span><span class="p">,</span> <span class="n">dn</span><span class="p">,</span> <span class="n">_n</span><span class="p">),</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">obj</span><span class="o">.</span><span class="n">_graph</span><span class="o">.</span><span class="n">edges</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
             <span class="k">if</span> <span class="n">up</span> <span class="o">==</span> <span class="n">obj</span><span class="o">.</span><span class="n">root_node_name</span><span class="p">:</span>
                 <span class="n">_analog</span> <span class="o">=</span> <span class="n">e</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;analog&quot;</span><span class="p">,</span> <span class="s2">&quot;&lt;missing&gt;&quot;</span><span class="p">)</span>
                 <span class="k">if</span> <span class="n">_analog</span> <span class="ow">in</span> <span class="n">dims</span><span class="p">:</span>
@@ -1227,7 +1346,7 @@ title="Open an issue"
         <span class="k">while</span> <span class="n">boot_queue</span><span class="p">:</span>
             <span class="n">b</span> <span class="o">=</span> <span class="n">boot_queue</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
             <span class="n">booted</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">b</span><span class="p">)</span>
-            <span class="k">for</span> <span class="p">(</span><span class="n">up</span><span class="p">,</span> <span class="n">dn</span><span class="p">,</span> <span class="n">n</span><span class="p">),</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">obj</span><span class="o">.</span><span class="n">_graph</span><span class="o">.</span><span class="n">edges</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">for</span> <span class="p">(</span><span class="n">up</span><span class="p">,</span> <span class="n">dn</span><span class="p">,</span> <span class="n">_n</span><span class="p">)</span> <span class="ow">in</span> <span class="n">obj</span><span class="o">.</span><span class="n">_graph</span><span class="o">.</span><span class="n">edges</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
                 <span class="k">if</span> <span class="n">up</span> <span class="o">==</span> <span class="n">b</span><span class="p">:</span>
                     <span class="n">boot_queue</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">dn</span><span class="p">)</span>
 
@@ -1269,7 +1388,8 @@ title="Open an issue"
             <span class="k">if</span> <span class="n">result_shape</span> <span class="o">!=</span> <span class="n">result_k</span><span class="o">.</span><span class="n">shape</span><span class="p">:</span>
                 <span class="k">if</span> <span class="n">check_shapes</span><span class="p">:</span>
                     <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                        <span class="sa">f</span><span class="s2">&quot;inconsistent index shapes </span><span class="si">{</span><span class="n">result_k</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2"> v </span><span class="si">{</span><span class="n">result_shape</span><span class="si">}</span><span class="s2"> (probably an error on </span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s2"> or </span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="n">dims</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">)&quot;</span>
+                        <span class="sa">f</span><span class="s2">&quot;inconsistent index shapes </span><span class="si">{</span><span class="n">result_k</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2"> v </span><span class="si">{</span><span class="n">result_shape</span><span class="si">}</span><span class="s2"> &quot;</span>
+                        <span class="sa">f</span><span class="s2">&quot;(probably an error on </span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s2"> or </span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="n">dims</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">)&quot;</span>
                     <span class="p">)</span>
             <span class="n">result</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">result_k</span>
 
@@ -1356,6 +1476,7 @@ title="Open an issue"
         <span class="n">write_hash_audit</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
         <span class="n">hashing_level</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
         <span class="n">dim_exclude</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">with_root_node_name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
     <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Set up a new Flow for analysis using the structure of this DataTree.</span>
@@ -1440,6 +1561,7 @@ title="Open an issue"
             <span class="n">write_hash_audit</span><span class="o">=</span><span class="n">write_hash_audit</span><span class="p">,</span>
             <span class="n">dim_order</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dim_order</span><span class="p">,</span>
             <span class="n">dim_exclude</span><span class="o">=</span><span class="n">dim_exclude</span><span class="p">,</span>
+            <span class="n">with_root_node_name</span><span class="o">=</span><span class="n">with_root_node_name</span><span class="p">,</span>
         <span class="p">)</span></div>
 
     <span class="k">def</span> <span class="nf">_spill</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">all_name_tokens</span><span class="o">=</span><span class="p">()):</span>
@@ -1519,13 +1641,18 @@ title="Open an issue"
 
                 <span class="c1"># vectorize version</span>
                 <span class="n">mapper</span> <span class="o">=</span> <span class="p">{</span><span class="n">i</span><span class="p">:</span> <span class="n">j</span> <span class="k">for</span> <span class="p">(</span><span class="n">j</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">_dataarray_to_numpy</span><span class="p">(</span><span class="n">downstream</span><span class="p">))}</span>
+
+                <span class="k">def</span> <span class="nf">mapper_get</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">mapper</span><span class="o">=</span><span class="n">mapper</span><span class="p">):</span>
+                    <span class="k">return</span> <span class="n">mapper</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+
                 <span class="k">if</span> <span class="n">upstream</span><span class="o">.</span><span class="n">size</span><span class="p">:</span>
-                    <span class="n">offsets</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">apply_ufunc</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">vectorize</span><span class="p">(</span><span class="n">mapper</span><span class="o">.</span><span class="n">get</span><span class="p">),</span> <span class="n">upstream</span><span class="p">)</span>
+                    <span class="n">offsets</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">apply_ufunc</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">vectorize</span><span class="p">(</span><span class="n">mapper_get</span><span class="p">),</span> <span class="n">upstream</span><span class="p">)</span>
                 <span class="k">else</span><span class="p">:</span>
                     <span class="n">offsets</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">([],</span> <span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;index&quot;</span><span class="p">])</span>
                 <span class="k">if</span> <span class="n">offsets</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">kind</span> <span class="o">!=</span> <span class="s2">&quot;i&quot;</span><span class="p">:</span>
                     <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
                         <span class="sa">f</span><span class="s2">&quot;detected missing values in digitizing </span><span class="si">{</span><span class="n">r</span><span class="o">.</span><span class="n">parent_data</span><span class="si">}</span><span class="s2">.</span><span class="si">{</span><span class="n">r</span><span class="o">.</span><span class="n">parent_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                        <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
                     <span class="p">)</span>
 
                 <span class="c1"># candidate name for write back</span>
@@ -1635,29 +1762,40 @@ title="Open an issue"
                 <span class="k">try</span><span class="p">:</span>
                     <span class="n">upside</span> <span class="o">=</span> <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">unparse</span><span class="p">(</span><span class="n">t</span><span class="p">)</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">upside_ast</span><span class="p">)</span>
                 <span class="k">except</span><span class="p">:</span>  <span class="c1"># noqa: E722</span>
-                    <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">upside_ast</span><span class="p">:</span>
-                        <span class="n">str_t</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
-                        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">str_t</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">2000</span><span class="p">:</span>
-                            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;t:</span><span class="si">{</span><span class="n">str_t</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-                        <span class="k">else</span><span class="p">:</span>
-                            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;t:</span><span class="si">{</span><span class="n">str_t</span><span class="p">[:</span><span class="mi">200</span><span class="p">]</span><span class="si">}</span><span class="s2">...&quot;</span><span class="p">)</span>
-                    <span class="k">raise</span>
-
-                <span class="c1"># check for redirection target</span>
-                <span class="k">if</span> <span class="n">retarget</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                    <span class="n">tokens</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
-                        <span class="sa">f</span><span class="s2">&quot;__</span><span class="si">{</span><span class="n">spacename</span><span class="si">}</span><span class="s2">___digitized_</span><span class="si">{</span><span class="n">retarget</span><span class="si">}</span><span class="s2">_of_</span><span class="si">{</span><span class="n">this_dim_name</span><span class="si">}</span><span class="s2">[__</span><span class="si">{</span><span class="n">parent_data</span><span class="si">}</span><span class="s2">__</span><span class="si">{</span><span class="n">parent_name</span><span class="si">}</span><span class="s2">[</span><span class="si">{</span><span class="n">upside</span><span class="si">}</span><span class="s2">]]&quot;</span>
-                    <span class="p">)</span>
-                <span class="k">else</span><span class="p">:</span>
-                    <span class="n">tokens</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;__</span><span class="si">{</span><span class="n">parent_data</span><span class="si">}</span><span class="s2">__</span><span class="si">{</span><span class="n">parent_name</span><span class="si">}</span><span class="s2">[</span><span class="si">{</span><span class="n">upside</span><span class="si">}</span><span class="s2">]&quot;</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">root_node_name</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+                        <span class="n">upside</span> <span class="o">=</span> <span class="kc">None</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">parent_data</span><span class="si">=}</span><span class="s2">&quot;</span><span class="p">)</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">parent_name</span><span class="si">=}</span><span class="s2">&quot;</span><span class="p">)</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">spacearrayname</span><span class="si">=}</span><span class="s2">&quot;</span><span class="p">)</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">exclude_dims</span><span class="si">=}</span><span class="s2">&quot;</span><span class="p">)</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">blends</span><span class="si">=}</span><span class="s2">&quot;</span><span class="p">)</span>
+                        <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">upside_ast</span><span class="p">:</span>
+                            <span class="n">str_t</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+                            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">str_t</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">2000</span><span class="p">:</span>
+                                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;t:</span><span class="si">{</span><span class="n">str_t</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                            <span class="k">else</span><span class="p">:</span>
+                                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;t:</span><span class="si">{</span><span class="n">str_t</span><span class="p">[:</span><span class="mi">200</span><span class="p">]</span><span class="si">}</span><span class="s2">...&quot;</span><span class="p">)</span>
+                        <span class="k">raise</span>
+                <span class="k">if</span> <span class="n">upside</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="c1"># check for redirection target</span>
+                    <span class="k">if</span> <span class="n">retarget</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                        <span class="n">tokens</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                            <span class="sa">f</span><span class="s2">&quot;__</span><span class="si">{</span><span class="n">spacename</span><span class="si">}</span><span class="s2">___digitized_</span><span class="si">{</span><span class="n">retarget</span><span class="si">}</span><span class="s2">_of_</span><span class="si">{</span><span class="n">this_dim_name</span><span class="si">}</span><span class="s2">[__</span><span class="si">{</span><span class="n">parent_data</span><span class="si">}</span><span class="s2">__</span><span class="si">{</span><span class="n">parent_name</span><span class="si">}</span><span class="s2">[</span><span class="si">{</span><span class="n">upside</span><span class="si">}</span><span class="s2">]]&quot;</span>
+                        <span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">tokens</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;__</span><span class="si">{</span><span class="n">parent_data</span><span class="si">}</span><span class="s2">__</span><span class="si">{</span><span class="n">parent_name</span><span class="si">}</span><span class="s2">[</span><span class="si">{</span><span class="n">upside</span><span class="si">}</span><span class="s2">]&quot;</span><span class="p">)</span>
                 <span class="n">found_token</span> <span class="o">=</span> <span class="kc">True</span>
                 <span class="k">break</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">found_token</span><span class="p">:</span>
                 <span class="k">if</span> <span class="n">dimname</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">subspaces</span><span class="p">[</span><span class="n">spacename</span><span class="p">]</span><span class="o">.</span><span class="n">indexes</span><span class="p">:</span>
-                    <span class="n">ix</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">subspaces</span><span class="p">[</span><span class="n">spacename</span><span class="p">]</span><span class="o">.</span><span class="n">indexes</span><span class="p">[</span><span class="n">dimname</span><span class="p">]</span>
-                    <span class="n">ix</span> <span class="o">=</span> <span class="p">{</span><span class="n">i</span><span class="p">:</span> <span class="n">n</span> <span class="k">for</span> <span class="n">n</span><span class="p">,</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">ix</span><span class="p">)}</span>
-                    <span class="n">tokens</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ix</span><span class="p">)</span>
-                    <span class="n">n_missing_tokens</span> <span class="o">+=</span> <span class="mi">1</span>
+                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">root_node_name</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+                        <span class="n">tokens</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">ix</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">subspaces</span><span class="p">[</span><span class="n">spacename</span><span class="p">]</span><span class="o">.</span><span class="n">indexes</span><span class="p">[</span><span class="n">dimname</span><span class="p">]</span>
+                        <span class="n">ix</span> <span class="o">=</span> <span class="p">{</span><span class="n">i</span><span class="p">:</span> <span class="n">n</span> <span class="k">for</span> <span class="n">n</span><span class="p">,</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">ix</span><span class="p">)}</span>
+                        <span class="n">tokens</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ix</span><span class="p">)</span>
+                        <span class="n">n_missing_tokens</span> <span class="o">+=</span> <span class="mi">1</span>
                 <span class="k">elif</span> <span class="n">dimname</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;_indices&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">dimname</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;_indptr&quot;</span><span class="p">):</span>
                     <span class="n">tokens</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
                     <span class="c1"># this dimension corresponds to a blender</span>
@@ -1678,7 +1816,7 @@ title="Open an issue"
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">root_dataset</span><span class="o">.</span><span class="n">coords</span>
 
     <span class="k">def</span> <span class="nf">get_index</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dim</span><span class="p">):</span>
-        <span class="k">for</span> <span class="n">spacename</span><span class="p">,</span> <span class="n">subspace</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">subspaces</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">for</span> <span class="n">_spacename</span><span class="p">,</span> <span class="n">subspace</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">subspaces</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
             <span class="k">if</span> <span class="n">dim</span> <span class="ow">in</span> <span class="n">subspace</span><span class="o">.</span><span class="n">coords</span><span class="p">:</span>
                 <span class="k">return</span> <span class="n">subspace</span><span class="o">.</span><span class="n">indexes</span><span class="p">[</span><span class="n">dim</span><span class="p">]</span>
 
@@ -1736,36 +1874,73 @@ title="Open an issue"
         <span class="k">return</span> <span class="n">result</span></div>
 </pre></div>
 
-              </div>
+                </article>
               
-            </main>
-            <footer class="footer-article noprint">
-                
-    <!-- Previous / next buttons -->
-<div class='prev-next-area'>
+
+              
+              
+                <footer class="bd-footer-article">
+                  
+<div class="footer-article-items footer-article__inner">
+  
+    <div class="footer-article-item"><!-- Previous / next buttons -->
+<div class="prev-next-area">
+</div></div>
+  
 </div>
-            </footer>
-        </div>
-    </div>
-    <div class="footer-content row">
-        <footer class="col footer"><p>
+
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
   
-    By Sharrow contributors, for the <a href="https://activitysim.github.io/">ActivitySim Consortium</a><br/>
-  
-      &copy; Copyright 2022 AMPO Research Foundation.<br/>
-</p>
-        </footer>
-    </div>
+  <div class="footer-item">
     
+<p class="component-author">
+By Sharrow contributors, for the <a href="https://activitysim.github.io/">ActivitySim Consortium</a>
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  <p class="copyright">
+    
+      © Copyright 2022 AMPO Research Foundation.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
 </div>
+          </footer>
+        
 
-
-      </div>
+      </main>
     </div>
+  </div>
   
   <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script src="../../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf"></script>
+  <script src="../../_static/scripts/bootstrap.js?digest=e353d410970836974a52"></script>
+<script src="../../_static/scripts/pydata-sphinx-theme.js?digest=e353d410970836974a52"></script>
 
-
+  <footer class="bd-footer">
+  </footer>
   </body>
 </html>
