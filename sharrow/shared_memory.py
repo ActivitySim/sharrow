@@ -23,7 +23,6 @@ logger = logging.getLogger("sharrow.shared_memory")
 
 
 def si_units(x, kind="B", digits=3, shift=1000):
-
     #       nano micro milli    kilo mega giga tera peta exa  zeta yotta
     tiers = ["n", "µ", "m", "", "K", "M", "G", "T", "P", "E", "Z", "Y"]
 
@@ -219,7 +218,6 @@ def delete_shared_memory_files(key):
 
 @xr.register_dataset_accessor("shm")
 class SharedMemDatasetAccessor:
-
     _parent_class = xr.Dataset
 
     def __init__(self, xarray_obj):

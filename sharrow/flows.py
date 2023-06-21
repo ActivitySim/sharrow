@@ -1074,7 +1074,7 @@ class Flow:
                 self._used_aux_vars.append(aux_var)
 
         subspace_names = set()
-        for (k, _) in self.tree.subspaces_iter():
+        for k, _ in self.tree.subspaces_iter():
             subspace_names.add(k)
         for k in self.tree.subspace_fallbacks:
             subspace_names.add(k)
@@ -1083,7 +1083,7 @@ class Flow:
         )
         self._optional_get_tokens = []
         if optional_get_tokens:
-            for (_spacename, _varname) in optional_get_tokens:
+            for _spacename, _varname in optional_get_tokens:
                 found = False
                 if (
                     _spacename in self.tree.subspaces
@@ -1665,7 +1665,6 @@ class Flow:
             with rewrite(
                 os.path.join(self.cache_dir, self.name, "__init__.py"), "wt"
             ) as f_code:
-
                 f_code.write(
                     textwrap.dedent(
                         f"""
@@ -1719,7 +1718,6 @@ class Flow:
                 f_code.write("\n\n# machinery code\n\n")
 
                 if self.tree.relationships_are_digitized:
-
                     if with_root_node_name is None:
                         with_root_node_name = self.tree.root_node_name
 
@@ -1803,7 +1801,6 @@ class Flow:
                         raise ValueError(f"invalid n_root_dims {n_root_dims}")
 
                 else:
-
                     raise RuntimeError("digitization is now required")
 
                 f_code.write(blacken(textwrap.dedent(line_template)))
@@ -2441,7 +2438,6 @@ class Flow:
                 {k: result[:, n] for n, k in enumerate(self._raw_functions.keys())}
             )
         elif as_dataarray:
-
             if result_squeeze:
                 result = squeeze(result, result_squeeze)
                 result_p = squeeze(result_p, result_squeeze)

@@ -7,7 +7,6 @@ import sharrow
 
 
 def test_simple_cat(tours_dataset: xr.Dataset):
-
     tree = sharrow.DataTree(tours=tours_dataset)
 
     assert all(tours_dataset.TourMode.cat.categories == ["Bus", "Car", "Walk"])
@@ -26,7 +25,6 @@ def test_2_level_tree_cat(
     tours_dataset: xr.Dataset,
     person_dataset: xr.Dataset,
 ):
-
     tree = sharrow.DataTree(tours=tours_dataset)
     tree.add_dataset("persons", person_dataset, "tours.person_id @ persons.person_id")
 
@@ -53,7 +51,6 @@ def test_3_level_tree_cat(
     person_dataset: xr.Dataset,
     household_dataset: xr.Dataset,
 ):
-
     tree = sharrow.DataTree(tours=tours_dataset)
     tree.add_dataset("persons", person_dataset, "tours.person_id @ persons.person_id")
     tree.add_dataset(
@@ -83,7 +80,6 @@ def test_rootless_tree_cat(
     person_dataset: xr.Dataset,
     household_dataset: xr.Dataset,
 ):
-
     tree = sharrow.DataTree(tours=tours_dataset, root_node_name=False)
     tree.add_dataset("persons", person_dataset, "tours.person_id @ persons.person_id")
     tree.add_dataset(

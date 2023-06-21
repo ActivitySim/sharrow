@@ -577,7 +577,6 @@ class DataTree:
             self.digitize_relationships(inplace=True)
 
     def add_items(self, items):
-
         from collections.abc import Mapping, Sequence
 
         if isinstance(items, Sequence):
@@ -707,7 +706,6 @@ class DataTree:
         just_node_name=False,
         dim_names_from_top=False,
     ):
-
         if isinstance(item, (list, tuple)):
             from .dataset import Dataset
 
@@ -790,7 +788,7 @@ class DataTree:
                         # path_indexing = self._graph.edges[path[-1]].get('indexing')
                         t1 = None
                         # intermediate nodes on path
-                        for (e, e_next) in zip(path[:-1], path[1:]):
+                        for e, e_next in zip(path[:-1], path[1:]):
                             r = self._get_relationship(e)
                             r_next = self._get_relationship(e_next)
                             if t1 is None:
@@ -1039,7 +1037,7 @@ class DataTree:
         while boot_queue:
             b = boot_queue.pop()
             booted.add(b)
-            for (up, dn, _n) in obj._graph.edges.keys():
+            for up, dn, _n in obj._graph.edges.keys():
                 if up == b:
                     boot_queue.add(dn)
 
@@ -1395,7 +1393,6 @@ class DataTree:
     def _arg_tokenizer(
         self, spacename, spacearray, spacearrayname, exclude_dims=None, blends=None
     ):
-
         if blends is None:
             blends = {}
 
