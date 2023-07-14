@@ -129,6 +129,13 @@ def dataset_from_dataframe_fast(
         If true, create a sparse arrays instead of dense numpy arrays. This
         can potentially save a large amount of memory if the DataFrame has
         a MultiIndex. Requires the sparse package (sparse.pydata.org).
+    preserve_cat : bool, default True
+        If true, preserve encoding of categorical columns.  Xarray lacks an
+        official implementation of a categorical datatype, so sharrow's
+        dictionary-based digital encoding is applied instead. Note that in
+        native xarray usage, the resulting variable will look like integer
+        values instead of the category values.  The `dataset.cat` accessor
+        can be used to interact with the categorical data.
 
     Returns
     -------
