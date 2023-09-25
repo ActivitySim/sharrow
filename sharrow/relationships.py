@@ -1336,7 +1336,13 @@ class DataTree:
                 mapper = {i: j for (j, i) in enumerate(_dataarray_to_numpy(downstream))}
 
                 def mapper_get(x, mapper=mapper):
-                    return mapper.get(x, 0)
+                    # temp solution
+                    # when time period is a pandas categorical, x is already an int, not a string
+                    # with pandas categoricals, the indexing should not be "label", should be "position"
+                    if np.issubdtype(type(x), int):
+                        return x
+                    else:
+                        return mapper.get(x, 0)
 
                 if upstream.size:
                     offsets = xr.apply_ufunc(np.vectorize(mapper_get), upstream)
