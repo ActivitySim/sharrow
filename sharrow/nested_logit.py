@@ -1,4 +1,4 @@
-from typing import Mapping
+from collections.abc import Mapping
 
 import numba as nb
 import numpy as np
@@ -17,7 +17,6 @@ def _utility_to_probability(
     logprob,  # float output shape=[nodes]
     probability,  # float output shape=[nodes]
 ):
-
     for up in range(n_alts, utility.size):
         up_nest = up - n_alts
         n_children_for_parent = len_slots[up_nest]

@@ -21,7 +21,6 @@ def omx_to_zarr(
     time_periods=None,
     time_period_sep="__",
 ):
-
     bucket = {}
 
     r1 = r2 = None

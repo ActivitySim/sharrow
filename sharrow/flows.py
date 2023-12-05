@@ -46,6 +46,7 @@ well_known_names = {
     "hard_sigmoid",
     "transpose_leading",
     "clip",
+    "get",
 }
 
 
@@ -140,6 +141,61 @@ def filter_name_tokens(expr, matchable_names=None):
     return name_tokens, arg_tokens
 
 
+class ExtractOptionalGetTokens(ast.NodeVisitor):
+    def __init__(self, from_names):
+        self.optional_get_tokens = set()
+        self.required_get_tokens = set()
+        self.from_names = from_names
+
+    def visit_Call(self, node):
+        if isinstance(node.func, ast.Attribute):
+            if node.func.attr == "get":
+                if isinstance(node.func.value, ast.Name):
+                    if node.func.value.id in self.from_names:
+                        if len(node.args) == 1:
+                            if isinstance(node.args[0], ast.Constant):
+                                if len(node.keywords) == 0:
+                                    self.required_get_tokens.add(
+                                        (node.func.value.id, node.args[0].value)
+                                    )
+                                elif (
+                                    len(node.keywords) == 1
+                                    and node.keywords[0].arg == "default"
+                                ):
+                                    self.optional_get_tokens.add(
+                                        (node.func.value.id, node.args[0].value)
+                                    )
+                                else:
+                                    raise ValueError(
+                                        f"{node.func.value.id}.get with unexpected keyword arguments"
+                                    )
+                        if len(node.args) == 2:
+                            if isinstance(node.args[0], ast.Constant):
+                                self.optional_get_tokens.add(
+                                    (node.func.value.id, node.args[0].value)
+                                )
+                        if len(node.args) > 2:
+                            raise ValueError(
+                                f"{node.func.value.id}.get with more than 2 positional arguments"
+                            )
+        self.generic_visit(node)
+
+    def check(self, node):
+        if isinstance(node, str):
+            node = ast.parse(node)
+        if isinstance(node, ast.AST):
+            self.visit(node)
+        else:
+            try:
+                node_iter = iter(node)
+            except TypeError:
+                pass
+            else:
+                for i in node_iter:
+                    self.check(i)
+        return self.optional_get_tokens
+
+
 def coerce_to_range_index(idx):
     if isinstance(idx, pd.RangeIndex):
         return idx
@@ -152,7 +208,13 @@ def coerce_to_range_index(idx):
 FUNCTION_TEMPLATE = """
 
 # {init_expr}
-@nb.jit(cache=False, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath}, nogil={nopython})
+@nb.jit(
+    cache=False,
+    error_model='{error_model}',
+    boundscheck={boundscheck},
+    nopython={nopython},
+    fastmath={fastmath},
+    nogil={nopython})
 def {fname}(
     {argtokens}
     _outputs,
@@ -164,7 +226,14 @@ def {fname}(
 
 
 IRUNNER_1D_TEMPLATE = """
-@nb.jit(cache=True, parallel=True, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath}, nogil={nopython})
+@nb.jit(
+    cache=True,
+    parallel=True,
+    error_model='{error_model}',
+    boundscheck={boundscheck},
+    nopython={nopython},
+    fastmath={fastmath},
+    nogil={nopython})
 def irunner(
     argshape,
     {joined_namespace_names}
@@ -185,7 +254,14 @@ def irunner(
 """
 
 IRUNNER_2D_TEMPLATE = """
-@nb.jit(cache=True, parallel=True, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath}, nogil={nopython})
+@nb.jit(
+    cache=True,
+    parallel=True,
+    error_model='{error_model}',
+    boundscheck={boundscheck},
+    nopython={nopython},
+    fastmath={fastmath},
+    nogil={nopython})
 def irunner(
     argshape,
     {joined_namespace_names}
@@ -207,7 +283,14 @@ def irunner(
 """
 
 IDOTTER_1D_TEMPLATE = """
-@nb.jit(cache=True, parallel=True, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath}, nogil={nopython})
+@nb.jit(
+    cache=True,
+    parallel=True,
+    error_model='{error_model}',
+    boundscheck={boundscheck},
+    nopython={nopython},
+    fastmath={fastmath},
+    nogil={nopython})
 def idotter(
     argshape,
     {joined_namespace_names}
@@ -232,7 +315,14 @@ def idotter(
 """
 
 IDOTTER_2D_TEMPLATE = """
-@nb.jit(cache=True, parallel=True, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath}, nogil={nopython})
+@nb.jit(
+    cache=True,
+    parallel=True,
+    error_model='{error_model}',
+    boundscheck={boundscheck},
+    nopython={nopython},
+    fastmath={fastmath},
+    nogil={nopython})
 def idotter(
     argshape,
     {joined_namespace_names}
@@ -259,7 +349,13 @@ def idotter(
 """
 
 ILINER_1D_TEMPLATE = """
-@nb.jit(cache=False, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath}, nogil={nopython})
+@nb.jit(
+    cache=False,
+    error_model='{error_model}',
+    boundscheck={boundscheck},
+    nopython={nopython},
+    fastmath={fastmath},
+    nogil={nopython})
 def linemaker(
     intermediate, j0,
     {joined_namespace_names}
@@ -269,7 +365,13 @@ def linemaker(
 """
 
 ILINER_2D_TEMPLATE = """
-@nb.jit(cache=False, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath}, nogil={nopython})
+@nb.jit(
+    cache=False,
+    error_model='{error_model}',
+    boundscheck={boundscheck},
+    nopython={nopython},
+    fastmath={fastmath},
+    nogil={nopython})
 def linemaker(
     intermediate, j0, j1,
     {joined_namespace_names}
@@ -280,7 +382,13 @@ def linemaker(
 
 
 MNL_GENERIC_TEMPLATE = """
-@nb.jit(cache=True, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath}, nogil={nopython})
+@nb.jit(
+    cache=True,
+    error_model='{error_model}',
+    boundscheck={boundscheck},
+    nopython={nopython},
+    fastmath={fastmath},
+    nogil={nopython})
 def _sample_choices_maker(
         prob_array,
         random_array,
@@ -330,7 +438,13 @@ def _sample_choices_maker(
 
 
 
-@nb.jit(cache=True, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath}, nogil={nopython})
+@nb.jit(
+    cache=True,
+    error_model='{error_model}',
+    boundscheck={boundscheck},
+    nopython={nopython},
+    fastmath={fastmath},
+    nogil={nopython})
 def _sample_choices_maker_counted(
         prob_array,
         random_array,
@@ -395,7 +509,14 @@ MNL_1D_TEMPLATE = (
 
 logit_ndims = 1
 
-@nb.jit(cache=True, parallel=True, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath}, nogil={nopython})
+@nb.jit(
+    cache=True,
+    parallel=True,
+    error_model='{error_model}',
+    boundscheck={boundscheck},
+    nopython={nopython},
+    fastmath={fastmath},
+    nogil={nopython})
 def mnl_transform_plus1d(
     argshape,
     {joined_namespace_names}
@@ -445,7 +566,13 @@ def mnl_transform_plus1d(
 
 """
 )
-# @nb.jit(cache=True, parallel=True, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath})
+# @nb.jit(
+#     cache=True,
+#     parallel=True,
+#     error_model='{error_model}',
+#     boundscheck={boundscheck},
+#     nopython={nopython},
+#     fastmath={fastmath})
 # def mnl_transform_plus1d(
 #     argshape,
 #     {joined_namespace_names}
@@ -482,7 +609,9 @@ def mnl_transform_plus1d(
 #             if logsums:
 #                 _logsums[j0,k0] = np.log(local_sum) + shifter
 #             if pick_counted:
-#                 _sample_choices_maker_counted(partial, random_draws[j0,k0], result[j0,k0], result_p[j0,k0], pick_count[j0,k0])
+#                 _sample_choices_maker_counted(
+#                   partial, random_draws[j0,k0], result[j0,k0], result_p[j0,k0], pick_count[j0,k0]
+#                 )
 #             else:
 #                 _sample_choices_maker(partial, random_draws[j0,k0], result[j0,k0], result_p[j0,k0])
 #     return result, result_p, pick_count, _logsums
@@ -494,7 +623,14 @@ MNL_2D_TEMPLATE = (
 
 logit_ndims = 2
 
-@nb.jit(cache=True, parallel=True, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath}, nogil={nopython})
+@nb.jit(
+    cache=True,
+    parallel=True,
+    error_model='{error_model}',
+    boundscheck={boundscheck},
+    nopython={nopython},
+    fastmath={fastmath},
+    nogil={nopython})
 def mnl_transform(
     argshape,
     {joined_namespace_names}
@@ -558,7 +694,14 @@ def mnl_transform(
     return result, result_p, pick_count, _logsums
 
 
-@nb.jit(cache=True, parallel=True, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath}, nogil={nopython})
+@nb.jit(
+    cache=True,
+    parallel=True,
+    error_model='{error_model}',
+    boundscheck={boundscheck},
+    nopython={nopython},
+    fastmath={fastmath},
+    nogil={nopython})
 def mnl_transform_plus1d(
     argshape,
     {joined_namespace_names}
@@ -613,7 +756,9 @@ def mnl_transform_plus1d(
                     continue
             partial /= local_sum
             if pick_counted:
-                _sample_choices_maker_counted(partial, random_draws[j0,j1], result[j0,j1], result_p[j0,j1], pick_count[j0,j1])
+                _sample_choices_maker_counted(
+                    partial, random_draws[j0,j1], result[j0,j1], result_p[j0,j1], pick_count[j0,j1]
+                )
             else:
                 _sample_choices_maker(partial, random_draws[j0,j1], result[j0,j1], result_p[j0,j1])
     return result, result_p, pick_count, _logsums
@@ -625,7 +770,14 @@ NL_1D_TEMPLATE = """
 
 from sharrow.nested_logit import _utility_to_probability
 
-@nb.jit(cache=True, parallel=True, error_model='{error_model}', boundscheck={boundscheck}, nopython={nopython}, fastmath={fastmath}, nogil={nopython})
+@nb.jit(
+    cache=True,
+    parallel=True,
+    error_model='{error_model}',
+    boundscheck={boundscheck},
+    nopython={nopython},
+    fastmath={fastmath},
+    nogil={nopython})
 def nl_transform(
     argshape,
     {joined_namespace_names}
@@ -695,7 +847,9 @@ def nl_transform(
                 _logsums[j0] = utility[-1]
             if logsums != 1:
                 if pick_counted:
-                    _sample_choices_maker_counted(probability[:n_alts], random_draws[j0], result[j0], result_p[j0], pick_count[j0])
+                    _sample_choices_maker_counted(
+                        probability[:n_alts], random_draws[j0], result[j0], result_p[j0], pick_count[j0]
+                    )
                 else:
                     _sample_choices_maker(probability[:n_alts], random_draws[j0], result[j0], result_p[j0])
     return result, result_p, pick_count, _logsums
@@ -802,6 +956,7 @@ class Flow:
         dim_order=None,
         dim_exclude=None,
         bool_wrapping=False,
+        with_root_node_name=None,
     ):
         assert isinstance(tree, DataTree)
         tree.digitize_relationships(inplace=True)
@@ -844,9 +999,11 @@ class Flow:
             parallel=parallel,
             extra_hash_data=extra_hash_data,
             write_hash_audit=write_hash_audit,
+            with_root_node_name=with_root_node_name,
         )
         if flow_library is not None:
             flow_library[self.flow_hash] = self
+        self.with_root_node_name = with_root_node_name
         return self
 
     def __initialize_1(
@@ -886,7 +1043,7 @@ class Flow:
 
         all_raw_names = set()
         all_name_tokens = set()
-        for k, expr in defs.items():
+        for _k, expr in defs.items():
             plain_names, attribute_pairs, subscript_pairs = extract_names_2(expr)
             all_raw_names |= plain_names
             if self.tree.root_node_name:
@@ -915,6 +1072,37 @@ class Flow:
         for aux_var in self.tree.aux_vars:
             if aux_var in all_raw_names:
                 self._used_aux_vars.append(aux_var)
+
+        subspace_names = set()
+        for k, _ in self.tree.subspaces_iter():
+            subspace_names.add(k)
+        for k in self.tree.subspace_fallbacks:
+            subspace_names.add(k)
+        optional_get_tokens = ExtractOptionalGetTokens(from_names=subspace_names).check(
+            defs.values()
+        )
+        self._optional_get_tokens = []
+        if optional_get_tokens:
+            for _spacename, _varname in optional_get_tokens:
+                found = False
+                if (
+                    _spacename in self.tree.subspaces
+                    and _varname in self.tree.subspaces[_spacename]
+                ):
+                    self._optional_get_tokens.append(f"__{_spacename}__{_varname}:True")
+                    found = True
+                elif _spacename in self.tree.subspace_fallbacks:
+                    for _subspacename in self.tree.subspace_fallbacks[_spacename]:
+                        if _varname in self.tree.subspaces[_subspacename]:
+                            self._optional_get_tokens.append(
+                                f"__{_subspacename}__{_varname}:__{_spacename}__{_varname}"
+                            )
+                            found = True
+                            break
+                if not found:
+                    self._optional_get_tokens.append(
+                        f"__{_spacename}__{_varname}:False"
+                    )
 
         self._hashing_level = hashing_level
         if self._hashing_level > 1:
@@ -956,6 +1144,8 @@ class Flow:
             _flow_hash_push(f"aux_var:{k}")
         for k in sorted(self._used_extra_funcs):
             _flow_hash_push(f"func:{k}")
+        for k in sorted(self._optional_get_tokens):
+            _flow_hash_push(f"OPTIONAL:{k}")
         _flow_hash_push("---DataTree---")
         for k in self.arg_names:
             _flow_hash_push(f"arg:{k}")
@@ -984,15 +1174,19 @@ class Flow:
                         digital_encoding = self.tree.subspaces[parts[1]][
                             "__".join(parts[2:])
                         ].attrs["digital_encoding"]
-                    except (AttributeError, KeyError):
+                    except (AttributeError, KeyError) as err:
                         pass
+                        print(f"$$$$/ndigital_encoding=ERR\n{err}\n\n\n$$$")
+
                     else:
+                        print(f"$$$$/n{digital_encoding=}\n\n\n$$$")
                         if digital_encoding:
                             for de_k in sorted(digital_encoding.keys()):
                                 de_v = digital_encoding[de_k]
                                 if de_k == "dictionary":
                                     self.encoding_dictionaries[k] = de_v
                                 _flow_hash_push((k, "digital_encoding", de_k, de_v))
+
         for k in extra_hash_data:
             _flow_hash_push(k)
 
@@ -1086,7 +1280,7 @@ class Flow:
                 other_way = False
                 # if other_way is triggered, there may be residual other terms
                 # that were not addressed, so this loop should be applied again.
-                for spacename, spacearrays in self.tree.subspaces.items():
+                for spacename in self.tree.subspaces.keys():
                     dim_slots, digital_encodings, blenders = meta_data[spacename]
                     try:
                         expr = expression_for_numba(
@@ -1164,6 +1358,52 @@ class Flow:
                                 other_way = True
                                 # at least one variable was found in a get
                                 break
+                        if not other_way and "get" in expr:
+                            # any remaining "get" expressions with defaults should now use them
+                            try:
+                                expr = expression_for_numba(
+                                    expr,
+                                    spacename,
+                                    dim_slots,
+                                    dim_slots,
+                                    digital_encodings=digital_encodings,
+                                    extra_vars=self.tree.extra_vars,
+                                    blenders=blenders,
+                                    bool_wrapping=self.bool_wrapping,
+                                    get_default=True,
+                                )
+                            except KeyError as err:  # noqa: F841
+                                pass
+                            else:
+                                other_way = True
+                                # at least one variable was found in a get
+                                break
+                            # check if we can resolve this "get" on any other subspace
+                            for other_spacename in self.tree.subspace_fallbacks.get(
+                                topkey, []
+                            ):
+                                dim_slots, digital_encodings, blenders = meta_data[
+                                    other_spacename
+                                ]
+                                try:
+                                    expr = expression_for_numba(
+                                        expr,
+                                        spacename,
+                                        dim_slots,
+                                        dim_slots,
+                                        digital_encodings=digital_encodings,
+                                        prefer_name=other_spacename,
+                                        extra_vars=self.tree.extra_vars,
+                                        blenders=blenders,
+                                        bool_wrapping=self.bool_wrapping,
+                                        get_default=True,
+                                    )
+                                except KeyError as err:  # noqa: F841
+                                    pass
+                                else:
+                                    other_way = True
+                                    # at least one variable was found in a fallback
+                                    break
                         if not other_way:
                             raise
                 if prior_expr == expr:
@@ -1173,6 +1413,49 @@ class Flow:
                     # something was changed, run the loop again to confirm
                     # nothing else needs to change
                     prior_expr = expr
+
+            # now process for subspace fallbacks
+            for gd in [False, True]:
+                # first run all these with get_default off, nothing drops to defaults
+                # if we might find it later.  Then do a second pass with get_default on.
+                for (
+                    alias_spacename,
+                    actual_spacenames,
+                ) in self.tree.subspace_fallbacks.items():
+                    for actual_spacename in actual_spacenames:
+                        dim_slots, digital_encodings, blenders = meta_data[
+                            actual_spacename
+                        ]
+                        try:
+                            expr = expression_for_numba(
+                                expr,
+                                alias_spacename,
+                                dim_slots,
+                                dim_slots,
+                                digital_encodings=digital_encodings,
+                                prefer_name=actual_spacename,
+                                extra_vars=self.tree.extra_vars,
+                                blenders=blenders,
+                                bool_wrapping=self.bool_wrapping,
+                                get_default=gd,
+                            )
+                        except KeyError:
+                            # there was an error, but lets make sure we process the
+                            # whole expression to rewrite all the things we can before
+                            # moving on to the fallback processing.
+                            expr = expression_for_numba(
+                                expr,
+                                alias_spacename,
+                                dim_slots,
+                                dim_slots,
+                                digital_encodings=digital_encodings,
+                                prefer_name=actual_spacename,
+                                extra_vars=self.tree.extra_vars,
+                                blenders=blenders,
+                                bool_wrapping=self.bool_wrapping,
+                                swallow_errors=True,
+                                get_default=gd,
+                            )
 
             # now find instances where an identifier is previously created in this flow.
             expr = expression_for_numba(
@@ -1248,6 +1531,7 @@ class Flow:
         parallel=True,
         extra_hash_data=(),
         write_hash_audit=True,
+        with_root_node_name=None,
     ):
         """
 
@@ -1311,7 +1595,7 @@ class Flow:
         # if an existing __init__ file matches the hash, just use it
         init_file = os.path.join(self.cache_dir, self.name, "__init__.py")
         if os.path.isfile(init_file):
-            with open(init_file, "rt") as f:
+            with open(init_file) as f:
                 content = f.read()
             s = re.search("""flow_hash = ['"](.*)['"]""", content)
         else:
@@ -1401,7 +1685,6 @@ class Flow:
             with rewrite(
                 os.path.join(self.cache_dir, self.name, "__init__.py"), "wt"
             ) as f_code:
-
                 f_code.write(
                     textwrap.dedent(
                         f"""
@@ -1455,10 +1738,12 @@ class Flow:
                 f_code.write("\n\n# machinery code\n\n")
 
                 if self.tree.relationships_are_digitized:
+                    if with_root_node_name is None:
+                        with_root_node_name = self.tree.root_node_name
 
                     root_dims = list(
                         presorted(
-                            self.tree.root_dataset.dims,
+                            self.tree._graph.nodes[with_root_node_name]["dataset"].dims,
                             self.dim_order,
                             self.dim_exclude,
                         )
@@ -1518,6 +1803,9 @@ class Flow:
                         nl_template = NL_1D_TEMPLATE.format(**locals()).format(
                             **locals()
                         )
+                        nl_template = NL_1D_TEMPLATE.format(**locals()).format(
+                            **locals()
+                        )
                     elif n_root_dims == 2:
                         meta_template = IRUNNER_2D_TEMPLATE.format(**locals()).format(
                             **locals()
@@ -1536,7 +1824,6 @@ class Flow:
                         raise ValueError(f"invalid n_root_dims {n_root_dims}")
 
                 else:
-
                     raise RuntimeError("digitization is now required")
 
                 f_code.write(blacken(textwrap.dedent(line_template)))
@@ -1610,7 +1897,9 @@ class Flow:
             assembled_args = [args.get(k) for k in self.arg_name_positions.keys()]
             for aa in assembled_args:
                 if aa.dtype.kind != "i":
-                    warnings.warn("position arguments are not all integers")
+                    warnings.warn(
+                        "position arguments are not all integers", stacklevel=2
+                    )
             try:
                 if runner is None:
                     if dot is None:
@@ -1777,7 +2066,13 @@ class Flow:
                     kwargs.update(nesting)
                 if mask is not None:
                     kwargs["mask"] = mask
-                tree_root_dims = rg.root_dataset.dims
+
+                if self.with_root_node_name is None:
+                    tree_root_dims = rg.root_dataset.dims
+                else:
+                    tree_root_dims = rg._graph.nodes[self.with_root_node_name][
+                        "dataset"
+                    ].dims
                 argshape = [
                     tree_root_dims[i]
                     for i in presorted(tree_root_dims, self.dim_order, self.dim_exclude)
@@ -1903,7 +2198,9 @@ class Flow:
                             f"cache miss in {self.flow_hash}{warning_text}\n"
                             f"Compile Time: {timers}"
                         )
-                        warnings.warn(f"{self.flow_hash}", CacheMissWarning)
+                        warnings.warn(
+                            f"{self.flow_hash}", CacheMissWarning, stacklevel=1
+                        )
                         self.compiled_recently = True
                         self._known_cache_misses[runner_name][k] = v
         return self.compiled_recently
@@ -1987,9 +2284,18 @@ class Flow:
         if logit_draws is None and logsums == 1:
             logit_draws = np.zeros(source.shape + (0,), dtype=dtype)
 
-        use_dims = list(
-            presorted(source.root_dataset.dims, self.dim_order, self.dim_exclude)
-        )
+        if self.with_root_node_name is None:
+            use_dims = list(
+                presorted(source.root_dataset.dims, self.dim_order, self.dim_exclude)
+            )
+        else:
+            use_dims = list(
+                presorted(
+                    source._graph.nodes[self.with_root_node_name]["dataset"].dims,
+                    self.dim_order,
+                    self.dim_exclude,
+                )
+            )
 
         if logit_draws is not None:
             if dot is None:
@@ -2155,14 +2461,24 @@ class Flow:
                 {k: result[:, n] for n, k in enumerate(self._raw_functions.keys())}
             )
         elif as_dataarray:
-
             if result_squeeze:
                 result = squeeze(result, result_squeeze)
                 result_p = squeeze(result_p, result_squeeze)
                 pick_count = squeeze(pick_count, result_squeeze)
-            result_coords = {
-                k: v for k, v in source.root_dataset.coords.items() if k in result_dims
-            }
+            if self.with_root_node_name is None:
+                result_coords = {
+                    k: v
+                    for k, v in source.root_dataset.coords.items()
+                    if k in result_dims
+                }
+            else:
+                result_coords = {
+                    k: v
+                    for k, v in source._graph.nodes[self.with_root_node_name][
+                        "dataset"
+                    ].coords.items()
+                    if k in result_dims
+                }
             if result is not None:
                 result = xr.DataArray(
                     result,
@@ -2458,6 +2774,10 @@ class Flow:
         )
 
     @property
+    def defs(self):
+        return {k: v[0] for (k, v) in self._raw_functions.items()}
+
+    @property
     def function_names(self):
         return list(self._raw_functions.keys())
 
@@ -2501,7 +2821,7 @@ class Flow:
         from pygments.lexers.python import PythonLexer
 
         codefile = os.path.join(self.cache_dir, self.name, "__init__.py")
-        with open(codefile, "rt") as f_code:
+        with open(codefile) as f_code:
             code = f_code.read()
         pretty = highlight(code, PythonLexer(), HtmlFormatter(linenos=linenos))
         css = HtmlFormatter().get_style_defs(".highlight")

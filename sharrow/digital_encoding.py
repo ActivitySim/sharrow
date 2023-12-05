@@ -163,24 +163,35 @@ def find_bins(values, final_width=255):
 def digitize_by_dictionary(arr, bitwidth=8):
     result = arr.copy()
     bins = find_bins(arr, final_width=1 << bitwidth)
-    bin_edges = (bins[1:] - bins[:-1]) / 2 + bins[:-1]
     try:
-        arr_data = arr.data
-    except AttributeError:
-        pass
+        bin_edges = (bins[1:] - bins[:-1]) / 2 + bins[:-1]
+    except TypeError:
+        # bins are not numeric
+        bin_map = {x: n for n, x in enumerate(bins)}
+        u, inv = np.unique(arr.data, return_inverse=True)
+        result.data = np.array([bin_map.get(x) for x in u])[inv].reshape(arr.shape)
+        result.attrs["digital_encoding"] = {
+            "dictionary": bins,
+        }
+        return result
     else:
-        if isinstance(arr_data, da.Array):
-            result.data = da.digitize(arr_data, bin_edges).astype(f"uint{bitwidth}")
-            result.attrs["digital_encoding"] = {
-                "dictionary": bins,
-            }
-            return result
-    # fall back to numpy digitize
-    result.data = np.digitize(arr, bin_edges).astype(f"uint{bitwidth}")
-    result.attrs["digital_encoding"] = {
-        "dictionary": bins,
-    }
-    return result
+        try:
+            arr_data = arr.data
+        except AttributeError:
+            pass
+        else:
+            if isinstance(arr_data, da.Array):
+                result.data = da.digitize(arr_data, bin_edges).astype(f"uint{bitwidth}")
+                result.attrs["digital_encoding"] = {
+                    "dictionary": bins,
+                }
+                return result
+        # fall back to numpy digitize
+        result.data = np.digitize(arr, bin_edges).astype(f"uint{bitwidth}")
+        result.attrs["digital_encoding"] = {
+            "dictionary": bins,
+        }
+        return result
 
 
 @xr.register_dataset_accessor("digital_encoding")

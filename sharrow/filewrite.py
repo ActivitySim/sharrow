@@ -21,7 +21,7 @@ def blacken(code):
     except Exception as err:
         import warnings
 
-        warnings.warn(f"error in blacken: {err!r}")
+        warnings.warn(f"error in blacken: {err!r}", stacklevel=2)
         return code
 
 

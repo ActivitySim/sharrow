@@ -1,3 +1,5 @@
+import math
+
 import numba as nb
 import numpy as np
 import pandas as pd
@@ -197,15 +199,17 @@ class RedirectionAccessor:
         return b
 
 
-@nb.generated_jit(nopython=True)
+# fastmath must be false to ensure NaNs are detected here.
+# wrapping this as such allows fastmath to be turned on in outer functions
+# but not lose the ability to check for NaNs.  Older versions of this function
+# checked whether the float cast to an integer was -9223372036854775808, but
+# that turns out to be not compatible with all hardware (i.e. Apple Silicon).
+@nb.generated_jit(nopython=True, fastmath=False)
 def isnan_fast_safe(x):
     if isinstance(x, nb.types.Float):
 
         def func(x):
-            if int(x) == -9223372036854775808:
-                return True
-            else:
-                return False
+            return math.isnan(x)
 
         return func
     elif isinstance(x, (nb.types.UnicodeType, nb.types.UnicodeCharSeq)):

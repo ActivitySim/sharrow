@@ -8,7 +8,7 @@ dependencies:
   # required for testing
   - dask
   - filelock
-  - flake8
+  - ruff
   - jupyter
   - larch>=5.7.1
   - nbmake

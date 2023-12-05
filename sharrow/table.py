@@ -257,9 +257,9 @@ class Table:
                 stopper = blockname
             else:
                 qlog = os.path.join(path, "quilt.log")
-                with open(qlog, "rt") as logreader:
+                with open(qlog) as logreader:
                     existing_info = yaml.safe_load(logreader)
-                for stopper, block in enumerate(existing_info):
+                for _stopper, block in enumerate(existing_info):
                     if block.get("name", None) == blockname:
                         break
                 else:
@@ -267,8 +267,13 @@ class Table:
         else:
             stopper = 1e99
         n = 0
-        rowfile = lambda n: os.path.join(path, f"block.{n:03d}.rows")
-        colfile = lambda n: os.path.join(path, f"block.{n:03d}.cols")
+
+        def rowfile(n):
+            return os.path.join(path, f"block.{n:03d}.rows")
+
+        def colfile(n):
+            return os.path.join(path, f"block.{n:03d}.cols")
+
         builder = None
         look = True
         while look and n <= stopper:
@@ -291,7 +296,7 @@ class Table:
                 n += 1
         if builder is not None:
             metadata = builder.schema.metadata
-            metadata[b"quilt_number"] = f"{n}".encode("utf8")
+            metadata[b"quilt_number"] = f"{n}".encode()
             return builder.replace_schema_metadata(metadata)
         return None
 
@@ -305,7 +310,7 @@ class Table:
             ex_cols = []
             max_block = -1
         else:
-            with open(qlog, "rt") as logreader:
+            with open(qlog) as logreader:
                 existing_info = yaml.safe_load(logreader)
             ex_rows = sum(block.get("rows", 0) for block in existing_info)
             ex_cols = sum((block.get("cols", []) for block in existing_info), [])
