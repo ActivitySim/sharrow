@@ -1037,7 +1037,7 @@ class DataTree:
         while boot_queue:
             b = boot_queue.pop()
             booted.add(b)
-            for up, dn, _n in obj._graph.edges.keys():
+            for (up, dn, _n) in obj._graph.edges.keys():
                 if up == b:
                     boot_queue.add(dn)
 

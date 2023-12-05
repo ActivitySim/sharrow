@@ -1741,6 +1741,9 @@ class Flow:
                     if with_root_node_name is None:
                         with_root_node_name = self.tree.root_node_name
 
+                    if with_root_node_name is None:
+                        with_root_node_name = self.tree.root_node_name
+
                     root_dims = list(
                         presorted(
                             self.tree._graph.nodes[with_root_node_name]["dataset"].dims,

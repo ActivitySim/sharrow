@@ -134,6 +134,7 @@ class _Df_Accessor:
             ds_ = ds
 
         if _names:
+
             result = (
                 getattr(ds_, _func)(**loaders)
                 .digital_encoding.strip(_names)
