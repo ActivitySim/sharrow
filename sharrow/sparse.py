@@ -204,8 +204,17 @@ class RedirectionAccessor:
 # but not lose the ability to check for NaNs.  Older versions of this function
 # checked whether the float cast to an integer was -9223372036854775808, but
 # that turns out to be not compatible with all hardware (i.e. Apple Silicon).
-@nb.generated_jit(nopython=True, fastmath=False)
 def isnan_fast_safe(x):
+    if isinstance(x, float):
+        return math.isnan(x)
+    elif isinstance(x, str):
+        return x == "\u0015"
+    else:
+        return False
+
+
+@nb.extending.overload(isnan_fast_safe, jit_options={"fastmath": False})
+def ol_isnan_fast_safe(x):
     if isinstance(x, nb.types.Float):
 
         def func(x):
