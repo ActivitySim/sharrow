@@ -1806,9 +1806,6 @@ class Flow:
                         nl_template = NL_1D_TEMPLATE.format(**locals()).format(
                             **locals()
                         )
-                        nl_template = NL_1D_TEMPLATE.format(**locals()).format(
-                            **locals()
-                        )
                     elif n_root_dims == 2:
                         meta_template = IRUNNER_2D_TEMPLATE.format(**locals()).format(
                             **locals()
