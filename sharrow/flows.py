@@ -1358,26 +1358,6 @@ class Flow:
                                 other_way = True
                                 # at least one variable was found in a get
                                 break
-                        if not other_way and "get" in expr:
-                            # any remaining "get" expressions with defaults should now use them
-                            try:
-                                expr = expression_for_numba(
-                                    expr,
-                                    spacename,
-                                    dim_slots,
-                                    dim_slots,
-                                    digital_encodings=digital_encodings,
-                                    extra_vars=self.tree.extra_vars,
-                                    blenders=blenders,
-                                    bool_wrapping=self.bool_wrapping,
-                                    get_default=True,
-                                )
-                            except KeyError as err:  # noqa: F841
-                                pass
-                            else:
-                                other_way = True
-                                # at least one variable was found in a get
-                                break
                             # check if we can resolve this "get" on any other subspace
                             for other_spacename in self.tree.subspace_fallbacks.get(
                                 topkey, []
