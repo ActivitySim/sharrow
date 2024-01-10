@@ -1,6 +1,7 @@
+import pandas as pd
 import pytest
 import xarray as xr
-import pandas as pd
+
 from sharrow.dataset import construct
 
 

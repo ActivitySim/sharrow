@@ -1050,7 +1050,7 @@ class Flow:
                 all_raw_names |= attribute_pairs.get(self.tree.root_node_name, set())
                 all_raw_names |= subscript_pairs.get(self.tree.root_node_name, set())
 
-        dimensions_ordered = presorted(self.tree.dims, self.dim_order, self.dim_exclude)
+        dimensions_ordered = presorted(self.tree.sizes, self.dim_order, self.dim_exclude)
         index_slots = {i: n for n, i in enumerate(dimensions_ordered)}
         self.arg_name_positions = index_slots
         self.arg_names = dimensions_ordered
@@ -1074,7 +1074,7 @@ class Flow:
                 self._used_aux_vars.append(aux_var)
 
         subspace_names = set()
-        for (k, _) in self.tree.subspaces_iter():
+        for k, _ in self.tree.subspaces_iter():
             subspace_names.add(k)
         for k in self.tree.subspace_fallbacks:
             subspace_names.add(k)
@@ -1083,7 +1083,7 @@ class Flow:
         )
         self._optional_get_tokens = []
         if optional_get_tokens:
-            for (_spacename, _varname) in optional_get_tokens:
+            for _spacename, _varname in optional_get_tokens:
                 found = False
                 if (
                     _spacename in self.tree.subspaces
@@ -1202,7 +1202,7 @@ class Flow:
         return {
             i: n
             for n, i in enumerate(
-                presorted(self.tree.dims, self.dim_order, self.dim_exclude)
+                presorted(self.tree.sizes, self.dim_order, self.dim_exclude)
             )
         }
 
@@ -1219,7 +1219,7 @@ class Flow:
         index_slots = {
             i: n
             for n, i in enumerate(
-                presorted(self.tree.dims, self.dim_order, self.dim_exclude)
+                presorted(self.tree.sizes, self.dim_order, self.dim_exclude)
             )
         }
         self.arg_name_positions = index_slots
@@ -1665,7 +1665,6 @@ class Flow:
             with rewrite(
                 os.path.join(self.cache_dir, self.name, "__init__.py"), "wt"
             ) as f_code:
-
                 f_code.write(
                     textwrap.dedent(
                         f"""
@@ -1719,13 +1718,15 @@ class Flow:
                 f_code.write("\n\n# machinery code\n\n")
 
                 if self.tree.relationships_are_digitized:
+                    if with_root_node_name is None:
+                        with_root_node_name = self.tree.root_node_name
 
                     if with_root_node_name is None:
                         with_root_node_name = self.tree.root_node_name
 
                     root_dims = list(
                         presorted(
-                            self.tree._graph.nodes[with_root_node_name]["dataset"].dims,
+                            self.tree._graph.nodes[with_root_node_name]["dataset"].sizes,
                             self.dim_order,
                             self.dim_exclude,
                         )
@@ -1803,7 +1804,6 @@ class Flow:
                         raise ValueError(f"invalid n_root_dims {n_root_dims}")
 
                 else:
-
                     raise RuntimeError("digitization is now required")
 
                 f_code.write(blacken(textwrap.dedent(line_template)))
@@ -2048,11 +2048,11 @@ class Flow:
                     kwargs["mask"] = mask
 
                 if self.with_root_node_name is None:
-                    tree_root_dims = rg.root_dataset.dims
+                    tree_root_dims = rg.root_dataset.sizes
                 else:
                     tree_root_dims = rg._graph.nodes[self.with_root_node_name][
                         "dataset"
-                    ].dims
+                    ].sizes
                 argshape = [
                     tree_root_dims[i]
                     for i in presorted(tree_root_dims, self.dim_order, self.dim_exclude)
@@ -2266,12 +2266,12 @@ class Flow:
 
         if self.with_root_node_name is None:
             use_dims = list(
-                presorted(source.root_dataset.dims, self.dim_order, self.dim_exclude)
+                presorted(source.root_dataset.sizes, self.dim_order, self.dim_exclude)
             )
         else:
             use_dims = list(
                 presorted(
-                    source._graph.nodes[self.with_root_node_name]["dataset"].dims,
+                    source._graph.nodes[self.with_root_node_name]["dataset"].sizes,
                     self.dim_order,
                     self.dim_exclude,
                 )
@@ -2441,7 +2441,6 @@ class Flow:
                 {k: result[:, n] for n, k in enumerate(self._raw_functions.keys())}
             )
         elif as_dataarray:
-
             if result_squeeze:
                 result = squeeze(result, result_squeeze)
                 result_p = squeeze(result_p, result_squeeze)
@@ -2849,7 +2848,7 @@ class Flow:
 
         selected_args = tuple(general_mapping[k] for k in named_args)
         len_self_raw_functions = len(self._raw_functions)
-        tree_root_dims = source.root_dataset.dims
+        tree_root_dims = source.root_dataset.sizes
         argshape = tuple(
             tree_root_dims[i]
             for i in presorted(tree_root_dims, self.dim_order, self.dim_exclude)
