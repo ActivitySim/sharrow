@@ -139,9 +139,7 @@ def open_shared_memory_array(key, mode="r+"):
         except FileNotFoundError:
             raise FileNotFoundError(f"sharrow_shared_memory_array:{key}") from None
         else:
-            logger.info(
-                f"shared memory array from ephemeral memory, {si_units(result.size)}"
-            )
+            logger.info(f"shared memory array from ephemeral memory, {si_units(result.size)}")
             return result
 
     if backing.startswith("memmap:"):
@@ -237,9 +235,7 @@ class SharedMemDatasetAccessor:
         return r
 
     def release_shared_memory(self):
-        """
-        Release shared memory allocated to this Dataset.
-        """
+        """Release shared memory allocated to this Dataset."""
         release_shared_memory(self._shared_memory_key_)
 
     @staticmethod
@@ -364,17 +360,13 @@ class SharedMemDatasetAccessor:
                 mem_arr_p = np.ndarray(
                     shape=(_size_p // ad.indptr.dtype.itemsize,),
                     dtype=ad.indptr.dtype,
-                    buffer=buffer[
-                        _pos + _size_d + _size_i : _pos + _size_d + _size_i + _size_p
-                    ],
+                    buffer=buffer[_pos + _size_d + _size_i : _pos + _size_d + _size_i + _size_p],
                 )
                 mem_arr_d[:] = ad.data[:]
                 mem_arr_i[:] = ad.indices[:]
                 mem_arr_p[:] = ad.indptr[:]
             else:
-                mem_arr = np.ndarray(
-                    shape=a.shape, dtype=a.dtype, buffer=buffer[_pos : _pos + _size]
-                )
+                mem_arr = np.ndarray(shape=a.shape, dtype=a.dtype, buffer=buffer[_pos : _pos + _size])
                 if isinstance(a, xr.DataArray) and isinstance(a.data, da.Array):
                     tasks.append(da.store(a.data, mem_arr, lock=False, compute=False))
                 else:
@@ -385,9 +377,7 @@ class SharedMemDatasetAccessor:
         if key.startswith("memmap:"):
             mem.flush()
 
-        create_shared_list(
-            [pickle.dumps(self._obj.attrs)] + [pickle.dumps(i) for i in wrappers], key
-        )
+        create_shared_list([pickle.dumps(self._obj.attrs)] + [pickle.dumps(i) for i in wrappers], key)
         return type(self).from_shared_memory(key, own_data=mem, mode=mode)
 
     @property
@@ -474,14 +464,7 @@ class SharedMemDatasetAccessor:
                 mem_arr_p = np.ndarray(
                     _size_p // _dtype_p.itemsize,
                     dtype=_dtype_p,
-                    buffer=buffer[
-                        position
-                        + _size_d
-                        + _size_i : position
-                        + _size_d
-                        + _size_i
-                        + _size_p
-                    ],
+                    buffer=buffer[position + _size_d + _size_i : position + _size_d + _size_i + _size_p],
                 )
                 mem_arr = sparse.GCXS(
                     (
@@ -493,9 +476,7 @@ class SharedMemDatasetAccessor:
                     compressed_axes=(0,),
                 )
             else:
-                mem_arr = np.ndarray(
-                    shape, dtype=dtype, buffer=buffer[position : position + nbytes]
-                )
+                mem_arr = np.ndarray(shape, dtype=dtype, buffer=buffer[position : position + nbytes])
             content[name] = DataArray(mem_arr, **t)
 
         obj = cls._parent_class(content)
@@ -507,7 +488,7 @@ class SharedMemDatasetAccessor:
 
     @property
     def shared_memory_size(self):
-        """int : Size (in bytes) in shared memory, raises ValueError if not shared."""
+        """Int : Size (in bytes) in shared memory, raises ValueError if not shared."""
         try:
             return sum(i.size for i in self._shared_memory_objs_)
         except AttributeError:
@@ -515,7 +496,7 @@ class SharedMemDatasetAccessor:
 
     @property
     def is_shared_memory(self):
-        """bool : Whether this Dataset is in shared memory."""
+        """Bool : Whether this Dataset is in shared memory."""
         try:
             return sum(i.size for i in self._shared_memory_objs_) > 0
         except AttributeError:

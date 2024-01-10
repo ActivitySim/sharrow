@@ -101,8 +101,7 @@ def array_decode(x, digital_encoding=None, aux_data=None):
     if offset_source:
         if aux_data is None:
             raise ValueDecodeError(
-                "cannot independently decode multivalue DataArray, "
-                "provide aux_data or decode from dataset"
+                "cannot independently decode multivalue DataArray, " "provide aux_data or decode from dataset"
             )
         result = aux_data[offset_source].copy()
         result.data = x.to_numpy()[result.data]
@@ -167,7 +166,7 @@ def digitize_by_dictionary(arr, bitwidth=8):
         bin_edges = (bins[1:] - bins[:-1]) / 2 + bins[:-1]
     except TypeError:
         # bins are not numeric
-        bin_map = {x:n for n,x in enumerate(bins)}
+        bin_map = {x: n for n, x in enumerate(bins)}
         u, inv = np.unique(arr.data, return_inverse=True)
         result.data = np.array([bin_map.get(x) for x in u])[inv].reshape(arr.shape)
         result.attrs["digital_encoding"] = {
@@ -334,7 +333,7 @@ def multivalue_digitize_by_dictionary(ds, encode_vars=None, encoding_name=None):
 
     Returns
     -------
-
+    Dataset
     """
     logger = logging.getLogger("sharrow")
     if not isinstance(encoding_name, str):
@@ -349,35 +348,23 @@ def multivalue_digitize_by_dictionary(ds, encode_vars=None, encoding_name=None):
 
     # check each name in encode_vars to make sure it's not already encoded
     # if you want to re-encode first decode
-    encode_vars = [
-        v
-        for v in encode_vars
-        if "offset_source" not in ds[v].attrs.get("digital_encoding", {})
-    ]
+    encode_vars = [v for v in encode_vars if "offset_source" not in ds[v].attrs.get("digital_encoding", {})]
     if len(encode_vars) == 0:
         return ds
 
     encode_var_dims = ds[encode_vars[0]].dims
     for v in encode_vars[1:]:
-        assert (
-            encode_var_dims == ds[v].dims
-        ), f"dims must match, {encode_var_dims} != {ds[v].dims}"
+        assert encode_var_dims == ds[v].dims, f"dims must match, {encode_var_dims} != {ds[v].dims}"
     logger.info("assembling data stack")
-    conjoined = np.stack(
-        [array_decode(ds[v].compute(), aux_data=ds) for v in encode_vars], axis=-1
-    )
+    conjoined = np.stack([array_decode(ds[v].compute(), aux_data=ds) for v in encode_vars], axis=-1)
     logger.info("constructing stack view")
     baseshape = conjoined.shape[:-1]
     conjoined = conjoined.reshape([-1, conjoined.shape[-1]])
-    voidview = np.ascontiguousarray(conjoined).view(
-        np.dtype((np.void, conjoined.dtype.itemsize * conjoined.shape[1]))
-    )
+    voidview = np.ascontiguousarray(conjoined).view(np.dtype((np.void, conjoined.dtype.itemsize * conjoined.shape[1])))
     logger.info("finding unique value combinations")
     unique_values, pointers = np.unique(voidview, return_inverse=True)
     pointers = pointers.reshape(baseshape)
-    unique_values = unique_values.view(np.dtype(conjoined.dtype)).reshape(
-        [-1, len(encode_vars)]
-    )
+    unique_values = unique_values.view(np.dtype(conjoined.dtype)).reshape([-1, len(encode_vars)])
     logger.info("downsampling offsets")
     if unique_values.shape[0] < 1 << 8:
         pointers = pointers.astype(np.uint8)
@@ -410,7 +397,6 @@ def multivalue_digitize_by_dictionary(ds, encode_vars=None, encoding_name=None):
     bytes_saved = original_footprint - encoded_footprint
     savings_ratio = bytes_saved / original_footprint
     logger.info(
-        f"multivalue_digitize_by_dictionary {encoding_name} "
-        f"saved {si_units(bytes_saved)} {savings_ratio:.1%}"
+        f"multivalue_digitize_by_dictionary {encoding_name} " f"saved {si_units(bytes_saved)} {savings_ratio:.1%}"
     )
     return out

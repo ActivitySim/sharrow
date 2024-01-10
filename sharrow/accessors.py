@@ -1,3 +1,5 @@
+"""Convenience accessor wrappers for xarray objects."""
+
 import xarray as xr
 
 

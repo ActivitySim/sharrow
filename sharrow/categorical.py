@@ -14,9 +14,7 @@ class ArrayIsNotCategoricalError(TypeError):
 
 @xr.register_dataarray_accessor("cat")
 class _Categorical:
-    """
-    Accessor for pseudo-categorical arrays.
-    """
+    """Accessor for pseudo-categorical arrays."""
 
     __slots__ = ("dataarray",)
 

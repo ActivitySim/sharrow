@@ -70,16 +70,14 @@ def clean(s):
     cleaned = re.sub(r"\W|^(?=\d)", "_", s)
     if cleaned != s or len(cleaned) > 120:
         # digest size 15 creates a 24 character base32 string
-        h = base64.b32encode(
-            hashlib.blake2b(s.encode(), digest_size=15).digest()
-        ).decode()
+        h = base64.b32encode(hashlib.blake2b(s.encode(), digest_size=15).digest()).decode()
         cleaned = f"{cleaned[:90]}_{h}"
     return cleaned
 
 
 def construct(source):
     """
-    A generic constructor for creating Datasets from various similar objects.
+    Create Datasets from various similar objects.
 
     Parameters
     ----------
@@ -111,7 +109,7 @@ def dataset_from_dataframe_fast(
     sparse: bool = False,
     preserve_cat: bool = True,
 ) -> Dataset:
-    """Convert a pandas.DataFrame into an xarray.Dataset
+    """Convert a pandas.DataFrame into an xarray.Dataset.
 
     Each column will be converted into an independent variable in the
     Dataset. If the dataframe's index is a MultiIndex, it will be expanded
@@ -146,7 +144,6 @@ def dataset_from_dataframe_fast(
     xarray.DataArray.from_series
     pandas.DataFrame.to_xarray
     """
-
     # this is much faster than the default xarray version when not
     # using a MultiIndex.
 
@@ -170,9 +167,7 @@ def dataset_from_dataframe_fast(
                 if cannot_fix:
                     break
         dupe_column_names = [f"- {i}" for i in dupe_column_names]
-        logger.error(
-            "DataFrame has non-unique columns\n" + "\n".join(dupe_column_names)
-        )
+        logger.error("DataFrame has non-unique columns\n" + "\n".join(dupe_column_names))
         if cannot_fix:
             raise ValueError("cannot convert DataFrame with non-unique columns")
         else:
@@ -215,7 +210,7 @@ def from_table(
     index=None,
 ):
     """
-    Convert a pyarrow.Table into an xarray.Dataset
+    Convert a pyarrow.Table into an xarray.Dataset.
 
     Parameters
     ----------
@@ -238,13 +233,9 @@ def from_table(
         index = pd.RangeIndex(len(tbl), name=index_name)
     else:
         if len(index) != len(tbl):
-            raise ValueError(
-                f"length of index ({len(index)}) does not match length of table ({len(tbl)})"
-            )
+            raise ValueError(f"length of index ({len(index)}) does not match length of table ({len(tbl)})")
     if isinstance(index, pd.MultiIndex) and not index.is_unique:
-        raise ValueError(
-            "cannot attach a non-unique MultiIndex and convert into xarray"
-        )
+        raise ValueError("cannot attach a non-unique MultiIndex and convert into xarray")
     arrays = []
     metadata = {}
     for n in range(len(tbl.column_names)):
@@ -262,10 +253,7 @@ def from_table(
             arrays.append((tbl.column_names[n], np.asarray(c)))
     result = xr.Dataset()
     if isinstance(index, pd.MultiIndex):
-        dims = tuple(
-            name if name is not None else "level_%i" % n
-            for n, name in enumerate(index.names)
-        )
+        dims = tuple(name if name is not None else "level_%i" % n for n, name in enumerate(index.names))
         for dim, lev in zip(dims, index.levels):
             result[dim] = (dim, lev)
     else:
@@ -320,7 +308,6 @@ def from_omx(
     -------
     Dataset
     """
-
     # handle both larch.OMX and openmatrix.open_file versions
     if "lar" in type(omx).__module__:
         omx_data = omx.data
@@ -380,10 +367,7 @@ def from_omx(
                     raise KeyError(f"{i} not found in OMX lookups")
         indexes = indexes_
     if indexes is not None:
-        d["coords"] = {
-            index_name: {"dims": index_name, "data": index}
-            for index_name, index in indexes.items()
-        }
+        d["coords"] = {index_name: {"dims": index_name, "data": index} for index_name, index in indexes.items()}
     return xr.Dataset.from_dict(d)
 
 
@@ -474,9 +458,7 @@ def from_omx_3d(
     elif indexes in set(omx_lookup._v_children):
         ranger = None
     else:
-        raise NotImplementedError(
-            "only one-based, zero-based, and named indexes are implemented"
-        )
+        raise NotImplementedError("only one-based, zero-based, and named indexes are implemented")
     if ranger is not None:
         r1 = ranger(n1)
         r2 = ranger(n2)
@@ -496,9 +478,7 @@ def from_omx_3d(
             base_k, time_k = k.split(time_period_sep, 1)
             if base_k not in pending_3d:
                 pending_3d[base_k] = [None] * len(time_periods)
-            pending_3d[base_k][time_periods_map[time_k]] = dask.array.from_array(
-                omx_data[omx_data_map[k]][k]
-            )
+            pending_3d[base_k][time_periods_map[time_k]] = dask.array.from_array(omx_data[omx_data_map[k]][k])
         else:
             content[k] = xr.DataArray(
                 dask.array.from_array(omx_data[omx_data_map[k]][k]),
@@ -517,9 +497,7 @@ def from_omx_3d(
                 break
         if prototype is None:
             raise ValueError("no prototype")
-        darrs_ = [
-            (i if i is not None else dask.array.zeros_like(prototype)) for i in darrs
-        ]
+        darrs_ = [(i if i is not None else dask.array.zeros_like(prototype)) for i in darrs]
         content[base_k] = xr.DataArray(
             dask.array.stack(darrs_, axis=-1),
             dims=index_names,
@@ -569,10 +547,7 @@ def from_amx(
             elif indexes.get(i) == "0":
                 indexes[i] = zero_based(amx.shape[n])
     if indexes is not None:
-        d["coords"] = {
-            index_name: {"dims": index_name, "data": index}
-            for index_name, index in indexes.items()
-        }
+        d["coords"] = {index_name: {"dims": index_name, "data": index} for index_name, index in indexes.items()}
     return xr.Dataset.from_dict(d)
 
 
@@ -695,9 +670,7 @@ def is_dict_like(value: Any) -> bool:
 
 @xr.register_dataset_accessor("single_dim")
 class _SingleDim:
-    """
-    Convenience accessor for single-dimension datasets.
-    """
+    """Convenience accessor for single-dimension datasets."""
 
     __slots__ = ("dataset", "dim_name")
 
@@ -724,10 +697,7 @@ class _SingleDim:
         data = []
         for k in columns:
             a = self.dataset._variables[k]
-            if (
-                "digital_encoding" in a.attrs
-                and "dictionary" in a.attrs["digital_encoding"]
-            ):
+            if "digital_encoding" in a.attrs and "dictionary" in a.attrs["digital_encoding"]:
                 de = a.attrs["digital_encoding"]
                 data.append(
                     pd.Categorical.from_codes(
@@ -745,10 +715,7 @@ class _SingleDim:
         data = []
         for k in columns:
             a = self.dataset._variables[k]
-            if (
-                "digital_encoding" in a.attrs
-                and "dictionary" in a.attrs["digital_encoding"]
-            ):
+            if "digital_encoding" in a.attrs and "dictionary" in a.attrs["digital_encoding"]:
                 de = a.attrs["digital_encoding"]
                 data.append(
                     pa.DictionaryArray.from_arrays(
@@ -839,9 +806,7 @@ class _SingleDim:
 
 @xr.register_dataarray_accessor("single_dim")
 class _SingleDimArray:
-    """
-    Convenience accessor for single-dimension datasets.
-    """
+    """Convenience accessor for single-dimension datasets."""
 
     __slots__ = ("dataarray", "dim_name")
 
@@ -892,9 +857,7 @@ class _SingleDimArray:
 
     def to_pyarrow(self):
         if self.dataarray.cat.is_categorical():
-            return pa.DictionaryArray.from_arrays(
-                self.dataarray.data, self.dataarray.cat.categories
-            )
+            return pa.DictionaryArray.from_arrays(self.dataarray.data, self.dataarray.cat.categories)
         else:
             return pa.array(self.dataarray.data)
 
@@ -924,10 +887,7 @@ class _iLocIndexer:
                 dim_name = self.dataset.dims.__iter__().__next__()
                 key = {dim_name: key}
             else:
-                raise TypeError(
-                    "can only lookup dictionaries from Dataset.iloc, "
-                    "unless there is only one dimension"
-                )
+                raise TypeError("can only lookup dictionaries from Dataset.iloc, " "unless there is only one dimension")
         return self.dataset.isel(key)
 
 
@@ -939,9 +899,7 @@ def rename_or_ignore(self, dims_dict=None, **dims_kwargs):
     from xarray.core.utils import either_dict_or_kwargs
 
     dims_dict = either_dict_or_kwargs(dims_dict, dims_kwargs, "rename_dims_and_coords")
-    dims_dict = {
-        k: v for (k, v) in dims_dict.items() if (k in self.dims or k in self._variables)
-    }
+    dims_dict = {k: v for (k, v) in dims_dict.items() if (k in self.dims or k in self._variables)}
     return self.rename(dims_dict)
 
 
@@ -1033,13 +991,7 @@ def to_zarr_zip(self, *args, **kwargs):
 
 def _to_ast_literal(x):
     if isinstance(x, dict):
-        return (
-            "{"
-            + ", ".join(
-                f"{_to_ast_literal(k)}: {_to_ast_literal(v)}" for k, v in x.items()
-            )
-            + "}"
-        )
+        return "{" + ", ".join(f"{_to_ast_literal(k)}: {_to_ast_literal(v)}" for k, v in x.items()) + "}"
     elif isinstance(x, list):
         return "[" + ", ".join(_to_ast_literal(i) for i in x) + "]"
     elif isinstance(x, tuple):
@@ -1194,7 +1146,7 @@ def to_table(self):
     from .relationships import sparse_array_type
 
     def to_numpy(var):
-        """Coerces wrapped data to numpy and returns a numpy.ndarray"""
+        """Coerces wrapped data to numpy and returns a numpy.ndarray."""
         data = var.data
         if hasattr(data, "chunks"):
             data = data.compute()
@@ -1218,7 +1170,7 @@ def to_table(self):
 @register_dataset_method
 def select_and_rename(self, name_dict=None, **names):
     """
-    Select and rename variables from this Dataset
+    Select and rename variables from this Dataset.
 
     Parameters
     ----------

@@ -70,9 +70,7 @@ class SparseArray2D:
         if isinstance(data, scipy.sparse.csr_matrix):
             self._sparse_data = data
         else:
-            self._sparse_data = scipy.sparse.coo_matrix(
-                (data, (i, j)), shape=shape
-            ).tocsr()
+            self._sparse_data = scipy.sparse.coo_matrix((data, (i, j)), shape=shape).tocsr()
         self._sparse_data.sort_indices()
 
     def __getitem__(self, item):
@@ -95,12 +93,13 @@ class RedirectionAccessor:
 
     def set(self, m2t, map_to, map_also=None, name=None):
         """
+        Set the redirection of a dimension.
+
         Parameters
         ----------
         m2t : pandas.Series
             Mapping maz's to tazs
         """
-
         if name is None:
             name = f"redirect_{map_to}"
 
@@ -148,9 +147,7 @@ class RedirectionAccessor:
             i_ = i
             j_ = j
 
-        sparse_data = sparse.GCXS(
-            sparse.COO((i_, j_), data, shape=shape), compressed_axes=(0,)
-        )
+        sparse_data = sparse.GCXS(sparse.COO((i_, j_), data, shape=shape), compressed_axes=(0,))
         self._obj[f"_s_{name}"] = xr.DataArray(
             sparse_data,
             dims=(i_dim, j_dim),
@@ -240,9 +237,7 @@ def get_blended_2(backstop_value, indices, indptr, data, i, j, blend_limit=np.in
 
 
 @nb.njit
-def get_blended_2_arr(
-    backstop_values_, indices, indptr, data, i_, j_, blend_limit=np.inf
-):
+def get_blended_2_arr(backstop_values_, indices, indptr, data, i_, j_, blend_limit=np.inf):
     out = np.zeros_like(backstop_values_)
     for z in range(backstop_values_.size):
         out[z] = get_blended_2(
