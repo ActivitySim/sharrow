@@ -109,10 +109,16 @@ class DatasetWrapper:
         -------
         self (to facilitate chaining)
         """
-        assert self.orig_key in df, f"orig_key '{self.orig_key}' not in df columns: {list(df.columns)}"
-        assert self.dest_key in df, f"dest_key '{self.dest_key}' not in df columns: {list(df.columns)}"
+        assert (
+            self.orig_key in df
+        ), f"orig_key '{self.orig_key}' not in df columns: {list(df.columns)}"
+        assert (
+            self.dest_key in df
+        ), f"dest_key '{self.dest_key}' not in df columns: {list(df.columns)}"
         if self.time_key:
-            assert self.time_key in df, f"time_key '{self.time_key}' not in df columns: {list(df.columns)}"
+            assert (
+                self.time_key in df
+            ), f"time_key '{self.time_key}' not in df columns: {list(df.columns)}"
         self.df = df
 
         # TODO allow non-1 offsets

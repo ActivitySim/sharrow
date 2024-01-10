@@ -38,7 +38,7 @@ select = [    "F", # Pyflakes
 ]
 fix = true
 ignore-init-module-imports = true
-line-length = 120
+line-length = 88
 ignore = ["B905", "D1"]
 target-version = "py39"
 

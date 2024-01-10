@@ -128,7 +128,9 @@ class DataStore:
             if k in data.coords:
                 continue
             assert v.name == k
-            partial_update = self._update_dataarray(name, v, last_checkpoint, partial_update=partial_update)
+            partial_update = self._update_dataarray(
+                name, v, last_checkpoint, partial_update=partial_update
+            )
         for k, v in data.coords.items():
             assert v.name == k
             partial_update = self._update_dataarray(
@@ -156,8 +158,12 @@ class DataStore:
                     {data.name: data.assign_attrs(last_checkpoint=last_checkpoint)}
                 )
             else:
-                updated_dataset = base_data.assign({data.name: data.assign_attrs(last_checkpoint=last_checkpoint)})
-            self._tree = self._tree.replace_datasets({name: updated_dataset}, redigitize=self._keep_digitized)
+                updated_dataset = base_data.assign(
+                    {data.name: data.assign_attrs(last_checkpoint=last_checkpoint)}
+                )
+            self._tree = self._tree.replace_datasets(
+                {name: updated_dataset}, redigitize=self._keep_digitized
+            )
             return updated_dataset
         else:
             raise TypeError(type(data))
@@ -260,7 +266,9 @@ class DataStore:
         return self.directory.joinpath(table_name, checkpoint_name).with_suffix(".zarr")
 
     def _parquet_name(self, table_name, checkpoint_name):
-        return self.directory.joinpath(table_name, checkpoint_name).with_suffix(".parquet")
+        return self.directory.joinpath(table_name, checkpoint_name).with_suffix(
+            ".parquet"
+        )
 
     def make_checkpoint(self, checkpoint_name: str, overwrite: bool = True):
         """
@@ -294,7 +302,9 @@ class DataStore:
                     os.unlink(target)
                 target.parent.mkdir(parents=True, exist_ok=True)
                 table_data.single_dim.to_parquet(str(target))
-            elif self._storage_format == "zarr" or (self._storage_format == "parquet" and len(table_data.dims) > 1):
+            elif self._storage_format == "zarr" or (
+                self._storage_format == "parquet" and len(table_data.dims) > 1
+            ):
                 # zarr is used if ndim > 1
                 target = self._zarr_subdir(table_name, checkpoint_name)
                 if overwrite and target.is_dir():
@@ -304,7 +314,9 @@ class DataStore:
             elif self._storage_format == "hdf5":
                 raise NotImplementedError
             else:
-                raise ValueError(f"cannot write with storage format {self._storage_format!r}")
+                raise ValueError(
+                    f"cannot write with storage format {self._storage_format!r}"
+                )
             self.update(table_name, table_data, last_checkpoint=checkpoint_name)
         for table_name, table_data in self._tree.subspaces_iter():
             inventory = {"data_vars": {}, "coords": {}}
@@ -332,7 +344,9 @@ class DataStore:
     def _write_checkpoint(self, name, checkpoint):
         if self._mode == "r":
             raise ReadOnlyError
-        checkpoint_metadata_target = self.directory.joinpath(self.checkpoint_subdir, f"{name}.yaml")
+        checkpoint_metadata_target = self.directory.joinpath(
+            self.checkpoint_subdir, f"{name}.yaml"
+        )
         if checkpoint_metadata_target.exists():
             n = 1
             while checkpoint_metadata_target.with_suffix(f".{n}.yaml").exists():
@@ -386,7 +400,9 @@ class DataStore:
             else:
                 checkpoints = [checkpoints]
         for c in checkpoints:
-            with open(self.directory.joinpath(self.checkpoint_subdir, f"{c}.yaml")) as f:
+            with open(
+                self.directory.joinpath(self.checkpoint_subdir, f"{c}.yaml")
+            ) as f:
                 self._checkpoints[c] = yaml.safe_load(f)
 
     def restore_checkpoint(self, checkpoint_name: str):
@@ -414,7 +430,9 @@ class DataStore:
                         opened_targets[target] = from_zarr_with_attr(target)
                 else:
                     # zarr not found, try parquet
-                    target2 = self._parquet_name(table_name, coord_def["last_checkpoint"])
+                    target2 = self._parquet_name(
+                        table_name, coord_def["last_checkpoint"]
+                    )
                     if target2.exists():
                         if target not in opened_targets:
                             opened_targets[target] = _read_parquet(target2, index_name)

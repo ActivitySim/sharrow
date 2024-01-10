@@ -80,7 +80,9 @@ def clean(s):
     cleaned = re.sub(r"\W|^(?=\d)", "_", s)
     if cleaned != s or len(cleaned) > 120:
         # digest size 15 creates a 24 character base32 string
-        h = base64.b32encode(hashlib.blake2b(s.encode(), digest_size=15).digest()).decode()
+        h = base64.b32encode(
+            hashlib.blake2b(s.encode(), digest_size=15).digest()
+        ).decode()
         cleaned = f"{cleaned[:90]}_{h}"
     return cleaned
 
@@ -153,16 +155,29 @@ class ExtractOptionalGetTokens(ast.NodeVisitor):
                         if len(node.args) == 1:
                             if isinstance(node.args[0], ast.Constant):
                                 if len(node.keywords) == 0:
-                                    self.required_get_tokens.add((node.func.value.id, node.args[0].value))
-                                elif len(node.keywords) == 1 and node.keywords[0].arg == "default":
-                                    self.optional_get_tokens.add((node.func.value.id, node.args[0].value))
+                                    self.required_get_tokens.add(
+                                        (node.func.value.id, node.args[0].value)
+                                    )
+                                elif (
+                                    len(node.keywords) == 1
+                                    and node.keywords[0].arg == "default"
+                                ):
+                                    self.optional_get_tokens.add(
+                                        (node.func.value.id, node.args[0].value)
+                                    )
                                 else:
-                                    raise ValueError(f"{node.func.value.id}.get with unexpected keyword arguments")
+                                    raise ValueError(
+                                        f"{node.func.value.id}.get with unexpected keyword arguments"
+                                    )
                         if len(node.args) == 2:
                             if isinstance(node.args[0], ast.Constant):
-                                self.optional_get_tokens.add((node.func.value.id, node.args[0].value))
+                                self.optional_get_tokens.add(
+                                    (node.func.value.id, node.args[0].value)
+                                )
                         if len(node.args) > 2:
-                            raise ValueError(f"{node.func.value.id}.get with more than 2 positional arguments")
+                            raise ValueError(
+                                f"{node.func.value.id}.get with more than 2 positional arguments"
+                            )
         self.generic_visit(node)
 
     def check(self, node):
@@ -1035,7 +1050,9 @@ class Flow:
                 all_raw_names |= attribute_pairs.get(self.tree.root_node_name, set())
                 all_raw_names |= subscript_pairs.get(self.tree.root_node_name, set())
 
-        dimensions_ordered = presorted(self.tree.sizes, self.dim_order, self.dim_exclude)
+        dimensions_ordered = presorted(
+            self.tree.sizes, self.dim_order, self.dim_exclude
+        )
         index_slots = {i: n for n, i in enumerate(dimensions_ordered)}
         self.arg_name_positions = index_slots
         self.arg_names = dimensions_ordered
@@ -1063,12 +1080,17 @@ class Flow:
             subspace_names.add(k)
         for k in self.tree.subspace_fallbacks:
             subspace_names.add(k)
-        optional_get_tokens = ExtractOptionalGetTokens(from_names=subspace_names).check(defs.values())
+        optional_get_tokens = ExtractOptionalGetTokens(from_names=subspace_names).check(
+            defs.values()
+        )
         self._optional_get_tokens = []
         if optional_get_tokens:
             for _spacename, _varname in optional_get_tokens:
                 found = False
-                if _spacename in self.tree.subspaces and _varname in self.tree.subspaces[_spacename]:
+                if (
+                    _spacename in self.tree.subspaces
+                    and _varname in self.tree.subspaces[_spacename]
+                ):
                     self._optional_get_tokens.append(f"__{_spacename}__{_varname}:True")
                     found = True
                 elif _spacename in self.tree.subspace_fallbacks:
@@ -1080,7 +1102,9 @@ class Flow:
                             found = True
                             break
                 if not found:
-                    self._optional_get_tokens.append(f"__{_spacename}__{_varname}:False")
+                    self._optional_get_tokens.append(
+                        f"__{_spacename}__{_varname}:False"
+                    )
 
         self._hashing_level = hashing_level
         if self._hashing_level > 1:
@@ -1149,7 +1173,9 @@ class Flow:
                 parts = k.split("__")
                 if len(parts) > 2:
                     try:
-                        digital_encoding = self.tree.subspaces[parts[1]]["__".join(parts[2:])].attrs["digital_encoding"]
+                        digital_encoding = self.tree.subspaces[parts[1]][
+                            "__".join(parts[2:])
+                        ].attrs["digital_encoding"]
                     except (AttributeError, KeyError) as err:
                         pass
                         print(f"$$$$/ndigital_encoding=ERR\n{err}\n\n\n$$$")
@@ -1175,7 +1201,12 @@ class Flow:
         self.flow_hash_audit = "]\n# [".join(flow_hash_audit)
 
     def _index_slots(self):
-        return {i: n for n, i in enumerate(presorted(self.tree.sizes, self.dim_order, self.dim_exclude))}
+        return {
+            i: n
+            for n, i in enumerate(
+                presorted(self.tree.sizes, self.dim_order, self.dim_exclude)
+            )
+        }
 
     def init_sub_funcs(
         self,
@@ -1187,7 +1218,12 @@ class Flow:
     ):
         func_code = ""
         all_name_tokens = set()
-        index_slots = {i: n for n, i in enumerate(presorted(self.tree.sizes, self.dim_order, self.dim_exclude))}
+        index_slots = {
+            i: n
+            for n, i in enumerate(
+                presorted(self.tree.sizes, self.dim_order, self.dim_exclude)
+            )
+        }
         self.arg_name_positions = index_slots
         candidate_names = self.tree.namespace_names()
         candidate_names |= set(f"__aux_var__{i}" for i in self.tree.aux_vars.keys())
@@ -1280,8 +1316,12 @@ class Flow:
                         else:
                             raise
                         # check if we can resolve this name on any other subspace
-                        for other_spacename in self.tree.subspace_fallbacks.get(topkey, []):
-                            dim_slots, digital_encodings, blenders = meta_data[other_spacename]
+                        for other_spacename in self.tree.subspace_fallbacks.get(
+                            topkey, []
+                        ):
+                            dim_slots, digital_encodings, blenders = meta_data[
+                                other_spacename
+                            ]
                             try:
                                 expr = expression_for_numba(
                                     expr,
@@ -1321,8 +1361,12 @@ class Flow:
                                 # at least one variable was found in a get
                                 break
                             # check if we can resolve this "get" on any other subspace
-                            for other_spacename in self.tree.subspace_fallbacks.get(topkey, []):
-                                dim_slots, digital_encodings, blenders = meta_data[other_spacename]
+                            for other_spacename in self.tree.subspace_fallbacks.get(
+                                topkey, []
+                            ):
+                                dim_slots, digital_encodings, blenders = meta_data[
+                                    other_spacename
+                                ]
                                 try:
                                     expr = expression_for_numba(
                                         expr,
@@ -1361,7 +1405,9 @@ class Flow:
                     actual_spacenames,
                 ) in self.tree.subspace_fallbacks.items():
                     for actual_spacename in actual_spacenames:
-                        dim_slots, digital_encodings, blenders = meta_data[actual_spacename]
+                        dim_slots, digital_encodings, blenders = meta_data[
+                            actual_spacename
+                        ]
                         try:
                             expr = expression_for_numba(
                                 expr,
@@ -1404,7 +1450,10 @@ class Flow:
                 bool_wrapping=self.bool_wrapping,
             )
 
-            aux_tokens = {k: ast.parse(f"__aux_var__{k}", mode="eval").body for k in self.tree.aux_vars.keys()}
+            aux_tokens = {
+                k: ast.parse(f"__aux_var__{k}", mode="eval").body
+                for k in self.tree.aux_vars.keys()
+            }
 
             # now handle aux vars
             expr = expression_for_numba(
@@ -1505,7 +1554,9 @@ class Flow:
                 parts = k.split("__")
                 if len(parts) > 2:
                     try:
-                        digital_encoding = self.tree.subspaces[parts[1]]["__".join(parts[2:])].attrs["digital_encoding"]
+                        digital_encoding = self.tree.subspaces[parts[1]][
+                            "__".join(parts[2:])
+                        ].attrs["digital_encoding"]
                     except (AttributeError, KeyError):
                         pass
                     else:
@@ -1583,7 +1634,9 @@ class Flow:
                     if isinstance(x_var, (float, int, str)):
                         buffer.write(f"{x_name} = {x_var!r}\n")
                     else:
-                        buffer.write(f"{x_name} = pickle.loads({repr(pickle.dumps(x_var))})\n")
+                        buffer.write(
+                            f"{x_name} = pickle.loads({repr(pickle.dumps(x_var))})\n"
+                        )
                         dependencies.add("import pickle")
                 with io.StringIO() as x_code:
                     x_code.write("\n")
@@ -1600,7 +1653,9 @@ class Flow:
                     import pickle
                 buffer = io.StringIO()
                 for x_name, x_dict in self.encoding_dictionaries.items():
-                    buffer.write(f"__encoding_dict{x_name} = pickle.loads({repr(pickle.dumps(x_dict))})\n")
+                    buffer.write(
+                        f"__encoding_dict{x_name} = pickle.loads({repr(pickle.dumps(x_dict))})\n"
+                    )
                 with io.StringIO() as x_code:
                     x_code.write("\n")
                     x_code.write(buffer.getvalue())
@@ -1609,7 +1664,9 @@ class Flow:
 
             # write the master module for this flow
             os.makedirs(os.path.join(self.cache_dir, self.name), exist_ok=True)
-            with rewrite(os.path.join(self.cache_dir, self.name, "__init__.py"), "wt") as f_code:
+            with rewrite(
+                os.path.join(self.cache_dir, self.name, "__init__.py"), "wt"
+            ) as f_code:
                 f_code.write(
                     textwrap.dedent(
                         f"""
@@ -1671,7 +1728,9 @@ class Flow:
 
                     root_dims = list(
                         presorted(
-                            self.tree._graph.nodes[with_root_node_name]["dataset"].sizes,
+                            self.tree._graph.nodes[with_root_node_name][
+                                "dataset"
+                            ].sizes,
                             self.dim_order,
                             self.dim_exclude,
                         )
@@ -1683,7 +1742,9 @@ class Flow:
                     elif n_root_dims == 2:
                         js = "j0, j1"
                     else:
-                        raise NotImplementedError(f"n_root_dims only supported up to 2, not {n_root_dims}")
+                        raise NotImplementedError(
+                            f"n_root_dims only supported up to 2, not {n_root_dims}"
+                        )
 
                     meta_code = []
                     meta_code_dot = []
@@ -1700,24 +1761,48 @@ class Flow:
                         meta_code_dot.append(
                             f"intermediate[{n}] = ({clean(k)}({f_args_j}intermediate, {f_name_tokens})).item()"
                         )
-                    meta_code_stack = textwrap.indent("\n".join(meta_code), " " * 12).lstrip()
-                    meta_code_stack_dot = textwrap.indent("\n".join(meta_code_dot), " " * 12).lstrip()
+                    meta_code_stack = textwrap.indent(
+                        "\n".join(meta_code), " " * 12
+                    ).lstrip()
+                    meta_code_stack_dot = textwrap.indent(
+                        "\n".join(meta_code_dot), " " * 12
+                    ).lstrip()
                     len_self_raw_functions = len(self._raw_functions)
-                    joined_namespace_names = "\n    ".join(f"{nn}," for nn in self._namespace_names)
+                    joined_namespace_names = "\n    ".join(
+                        f"{nn}," for nn in self._namespace_names
+                    )
                     linefeed = "\n                           "
                     if not meta_code_stack_dot:
                         meta_code_stack_dot = "pass"
                     if n_root_dims == 1:
-                        meta_template = IRUNNER_1D_TEMPLATE.format(**locals()).format(**locals())
-                        meta_template_dot = IDOTTER_1D_TEMPLATE.format(**locals()).format(**locals())
-                        line_template = ILINER_1D_TEMPLATE.format(**locals()).format(**locals())
-                        mnl_template = MNL_1D_TEMPLATE.format(**locals()).format(**locals())
-                        nl_template = NL_1D_TEMPLATE.format(**locals()).format(**locals())
+                        meta_template = IRUNNER_1D_TEMPLATE.format(**locals()).format(
+                            **locals()
+                        )
+                        meta_template_dot = IDOTTER_1D_TEMPLATE.format(
+                            **locals()
+                        ).format(**locals())
+                        line_template = ILINER_1D_TEMPLATE.format(**locals()).format(
+                            **locals()
+                        )
+                        mnl_template = MNL_1D_TEMPLATE.format(**locals()).format(
+                            **locals()
+                        )
+                        nl_template = NL_1D_TEMPLATE.format(**locals()).format(
+                            **locals()
+                        )
                     elif n_root_dims == 2:
-                        meta_template = IRUNNER_2D_TEMPLATE.format(**locals()).format(**locals())
-                        meta_template_dot = IDOTTER_2D_TEMPLATE.format(**locals()).format(**locals())
-                        line_template = ILINER_2D_TEMPLATE.format(**locals()).format(**locals())
-                        mnl_template = MNL_2D_TEMPLATE.format(**locals()).format(**locals())
+                        meta_template = IRUNNER_2D_TEMPLATE.format(**locals()).format(
+                            **locals()
+                        )
+                        meta_template_dot = IDOTTER_2D_TEMPLATE.format(
+                            **locals()
+                        ).format(**locals())
+                        line_template = ILINER_2D_TEMPLATE.format(**locals()).format(
+                            **locals()
+                        )
+                        mnl_template = MNL_2D_TEMPLATE.format(**locals()).format(
+                            **locals()
+                        )
                         nl_template = ""
                     else:
                         raise ValueError(f"invalid n_root_dims {n_root_dims}")
@@ -1790,11 +1875,15 @@ class Flow:
     def load_raw(self, rg, args, runner=None, dtype=None, dot=None):
         assert isinstance(rg, DataTree)
         with warnings.catch_warnings():
-            warnings.filterwarnings("ignore", category=nb.NumbaExperimentalFeatureWarning)
+            warnings.filterwarnings(
+                "ignore", category=nb.NumbaExperimentalFeatureWarning
+            )
             assembled_args = [args.get(k) for k in self.arg_name_positions.keys()]
             for aa in assembled_args:
                 if aa.dtype.kind != "i":
-                    warnings.warn("position arguments are not all integers", stacklevel=2)
+                    warnings.warn(
+                        "position arguments are not all integers", stacklevel=2
+                    )
             try:
                 if runner is None:
                     if dot is None:
@@ -1872,7 +1961,9 @@ class Flow:
     ):
         assert isinstance(rg, DataTree)
         with warnings.catch_warnings():
-            warnings.filterwarnings("ignore", category=nb.NumbaExperimentalFeatureWarning)
+            warnings.filterwarnings(
+                "ignore", category=nb.NumbaExperimentalFeatureWarning
+            )
             try:
                 known_arg_names = {
                     "dtype",
@@ -1908,7 +1999,11 @@ class Flow:
                     elif dot is None:
                         runner_ = self._irunner
                         known_arg_names.update({"mask"})
-                        if mask is not None and dtype is not None and not np.issubdtype(dtype, np.floating):
+                        if (
+                            mask is not None
+                            and dtype is not None
+                            and not np.issubdtype(dtype, np.floating)
+                        ):
                             raise TypeError("cannot use mask unless dtype is float")
                     else:
                         runner_ = self._idotter
@@ -1959,8 +2054,13 @@ class Flow:
                 if self.with_root_node_name is None:
                     tree_root_dims = rg.root_dataset.sizes
                 else:
-                    tree_root_dims = rg._graph.nodes[self.with_root_node_name]["dataset"].sizes
-                argshape = [tree_root_dims[i] for i in presorted(tree_root_dims, self.dim_order, self.dim_exclude)]
+                    tree_root_dims = rg._graph.nodes[self.with_root_node_name][
+                        "dataset"
+                    ].sizes
+                argshape = [
+                    tree_root_dims[i]
+                    for i in presorted(tree_root_dims, self.dim_order, self.dim_exclude)
+                ]
                 if mnl is not None:
                     if nesting is not None:
                         n_alts = nesting["n_alts"]
@@ -1973,7 +2073,9 @@ class Flow:
                     elif n_alts < 32768:
                         kwargs["choice_dtype"] = np.int16
                 if logger.isEnabledFor(logging.DEBUG):
-                    logger.debug("========= PASSING ARGUMENT TO SHARROW LOAD ==========")
+                    logger.debug(
+                        "========= PASSING ARGUMENT TO SHARROW LOAD =========="
+                    )
                     logger.debug(f"{argshape=}")
                     for _name, _info in zip(_arguments_names, arguments):
                         try:
@@ -1993,10 +2095,14 @@ class Flow:
                                 logger.debug(f"KWARG {_name}: {alt_repr}")
                             else:
                                 logger.debug(f"KWARG {_name}: type={type(_info)}")
-                    logger.debug("========= ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ==========")
+                    logger.debug(
+                        "========= ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ =========="
+                    )
                 result = runner_(np.asarray(argshape), *arguments, **kwargs)
                 if compile_watch:
-                    self.check_cache_misses(runner_, log_details=compile_watch != "simple")
+                    self.check_cache_misses(
+                        runner_, log_details=compile_watch != "simple"
+                    )
                 return result
             except nb.TypingError as err:
                 _raw_functions = getattr(self, "_raw_functions", {})
@@ -2053,11 +2159,18 @@ class Flow:
                 for k, v in cache_misses.items():
                     if v > known_cache_misses.get(k, 0):
                         if log_details:
-                            warning_text = "\n".join(f" - {argname}: {sig}" for (sig, argname) in zip(k, named_args))
+                            warning_text = "\n".join(
+                                f" - {argname}: {sig}"
+                                for (sig, argname) in zip(k, named_args)
+                            )
                             warning_text = f"\n{runner_name}(\n{warning_text}\n)"
                         else:
                             warning_text = ""
-                        timers = f.overloads[k].metadata["timers"].get("compiler_lock", "N/A")
+                        timers = (
+                            f.overloads[k]
+                            .metadata["timers"]
+                            .get("compiler_lock", "N/A")
+                        )
                         if isinstance(timers, float):
                             if timers < 1e-3:
                                 timers = f"{timers/1e-6:.0f} µs"
@@ -2065,8 +2178,13 @@ class Flow:
                                 timers = f"{timers/1e-3:.1f} ms"
                             else:
                                 timers = f"{timers:.2f} s"
-                        logger.warning(f"cache miss in {self.flow_hash}{warning_text}\n" f"Compile Time: {timers}")
-                        warnings.warn(f"{self.flow_hash}", CacheMissWarning, stacklevel=1)
+                        logger.warning(
+                            f"cache miss in {self.flow_hash}{warning_text}\n"
+                            f"Compile Time: {timers}"
+                        )
+                        warnings.warn(
+                            f"{self.flow_hash}", CacheMissWarning, stacklevel=1
+                        )
                         self.compiled_recently = True
                         self._known_cache_misses[runner_name][k] = v
         return self.compiled_recently
@@ -2151,7 +2269,9 @@ class Flow:
             logit_draws = np.zeros(source.shape + (0,), dtype=dtype)
 
         if self.with_root_node_name is None:
-            use_dims = list(presorted(source.root_dataset.sizes, self.dim_order, self.dim_exclude))
+            use_dims = list(
+                presorted(source.root_dataset.sizes, self.dim_order, self.dim_exclude)
+            )
         else:
             use_dims = list(
                 presorted(
@@ -2208,7 +2328,11 @@ class Flow:
                 ):
                     result_dims = use_dims[:-1]
                     result_squeeze = (-1,)
-                elif dot.ndim == 2 and dot.shape[1] == 1 and logit_draws.ndim == len(use_dims):
+                elif (
+                    dot.ndim == 2
+                    and dot.shape[1] == 1
+                    and logit_draws.ndim == len(use_dims)
+                ):
                     result_dims = use_dims[:-1] + logit_draws_trailing_dim
                 elif dot.ndim == 2 and logit_draws.ndim == len(use_dims):
                     result_dims = use_dims[:-1] + dot_trailing_dim
@@ -2231,7 +2355,11 @@ class Flow:
                     and self._logit_ndims == 1
                 ):
                     result_dims = use_dims + logit_draws_trailing_dim
-                elif dot.ndim == 2 and logit_draws.ndim == len(use_dims) + 1 and logit_draws.shape[-1] == 0:
+                elif (
+                    dot.ndim == 2
+                    and logit_draws.ndim == len(use_dims) + 1
+                    and logit_draws.shape[-1] == 0
+                ):
                     # logsums only
                     result_dims = use_dims
                     result_squeeze = (-1,)
@@ -2309,20 +2437,30 @@ class Flow:
             raise RuntimeError("please digitize")
         if as_dataframe:
             index = getattr(source.root_dataset, "index", None)
-            result = pd.DataFrame(result, index=index, columns=list(self._raw_functions.keys()))
+            result = pd.DataFrame(
+                result, index=index, columns=list(self._raw_functions.keys())
+            )
         elif as_table:
-            result = Table({k: result[:, n] for n, k in enumerate(self._raw_functions.keys())})
+            result = Table(
+                {k: result[:, n] for n, k in enumerate(self._raw_functions.keys())}
+            )
         elif as_dataarray:
             if result_squeeze:
                 result = squeeze(result, result_squeeze)
                 result_p = squeeze(result_p, result_squeeze)
                 pick_count = squeeze(pick_count, result_squeeze)
             if self.with_root_node_name is None:
-                result_coords = {k: v for k, v in source.root_dataset.coords.items() if k in result_dims}
+                result_coords = {
+                    k: v
+                    for k, v in source.root_dataset.coords.items()
+                    if k in result_dims
+                }
             else:
                 result_coords = {
                     k: v
-                    for k, v in source._graph.nodes[self.with_root_node_name]["dataset"].coords.items()
+                    for k, v in source._graph.nodes[self.with_root_node_name][
+                        "dataset"
+                    ].coords.items()
                     if k in result_dims
                 }
             if result is not None:
@@ -2349,7 +2487,11 @@ class Flow:
                 out_logsum = xr.DataArray(
                     out_logsum,
                     dims=result_dims[: out_logsum.ndim],
-                    coords={k: v for k, v in source.root_dataset.coords.items() if k in result_dims[: out_logsum.ndim]},
+                    coords={
+                        k: v
+                        for k, v in source.root_dataset.coords.items()
+                        if k in result_dims[: out_logsum.ndim]
+                    },
                 )
 
         else:
@@ -2413,7 +2555,9 @@ class Flow:
         -------
         numpy.array
         """
-        return self._load(source=source, dtype=dtype, compile_watch=compile_watch, mask=mask)
+        return self._load(
+            source=source, dtype=dtype, compile_watch=compile_watch, mask=mask
+        )
 
     def load_dataframe(self, source=None, dtype=None, compile_watch=False, mask=None):
         """
@@ -2708,7 +2852,10 @@ class Flow:
         selected_args = tuple(general_mapping[k] for k in named_args)
         len_self_raw_functions = len(self._raw_functions)
         tree_root_dims = source.root_dataset.sizes
-        argshape = tuple(tree_root_dims[i] for i in presorted(tree_root_dims, self.dim_order, self.dim_exclude))
+        argshape = tuple(
+            tree_root_dims[i]
+            for i in presorted(tree_root_dims, self.dim_order, self.dim_exclude)
+        )
 
         if len(argshape) == 1:
             linemaker = self._linemaker
@@ -2740,6 +2887,8 @@ class Flow:
                 return result
 
         else:
-            raise NotImplementedError(f"root tree with {len(argshape)} dims {argshape=}")
+            raise NotImplementedError(
+                f"root tree with {len(argshape)} dims {argshape=}"
+            )
 
         return streamer

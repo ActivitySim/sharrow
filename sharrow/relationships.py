@@ -389,13 +389,17 @@ class DataTree:
             from .flows import presorted
 
             dim_order = presorted(self.root_dataset.dims, self.dim_order)
-        return tuple(self.root_dataset.dims[i] for i in dim_order if i not in self.dim_exclude)
+        return tuple(
+            self.root_dataset.dims[i] for i in dim_order if i not in self.dim_exclude
+        )
 
     @property
     def root_dims(self):
         from .flows import presorted
 
-        return tuple(presorted(self.root_dataset.dims, self.dim_order, self.dim_exclude))
+        return tuple(
+            presorted(self.root_dataset.dims, self.dim_order, self.dim_exclude)
+        )
 
     def __shallow_copy_extras(self):
         return dict(
@@ -422,7 +426,9 @@ class DataTree:
         if len(self._graph.edges):
             s += "\n relationships:"
             for e in self._graph.edges:
-                s += f"\n - {self._get_relationship(e)!r}".replace("<Relationship ", "").rstrip(">")
+                s += f"\n - {self._get_relationship(e)!r}".replace(
+                    "<Relationship ", ""
+                ).rstrip(">")
         else:
             s += "\n relationships: none"
         return s
@@ -445,7 +451,9 @@ class DataTree:
             h.append("datasets:none")
         if len(self._graph.edges):
             for e in self._graph.edges:
-                r = f"relationship:{self._get_relationship(e)!r}".replace("<Relationship ", "").rstrip(">")
+                r = f"relationship:{self._get_relationship(e)!r}".replace(
+                    "<Relationship ", ""
+                ).rstrip(">")
                 h.append(r)
         else:
             h.append("relationships:none")
@@ -468,7 +476,9 @@ class DataTree:
             self._root_node_name = name
             return
         if not isinstance(name, str):
-            raise TypeError(f"root_node_name must be one of [str, None, False] not {type(name)}")
+            raise TypeError(
+                f"root_node_name must be one of [str, None, False] not {type(name)}"
+            )
         if name not in self._graph.nodes:
             raise KeyError(name)
         self._root_node_name = name
@@ -606,7 +616,9 @@ class DataTree:
         self._graph.nodes[self.root_node_name]["dataset"] = x
 
     def _get_relationship(self, edge):
-        return Relationship(parent_data=edge[0], child_data=edge[1], **self._graph.edges[edge])
+        return Relationship(
+            parent_data=edge[0], child_data=edge[1], **self._graph.edges[edge]
+        )
 
     def __getitem__(self, item):
         return self.get(item)
@@ -635,12 +647,19 @@ class DataTree:
         if isinstance(item, (list, tuple)):
             from .dataset import Dataset
 
-            return Dataset({k: self.get(k, default=default, broadcast=broadcast, coords=coords) for k in item})
+            return Dataset(
+                {
+                    k: self.get(k, default=default, broadcast=broadcast, coords=coords)
+                    for k in item
+                }
+            )
         try:
             result = self._getitem(item, dim_names_from_top=True)
         except KeyError:
             try:
-                result = self._getitem(item, include_blank_dims=True, dim_names_from_top=True)
+                result = self._getitem(
+                    item, include_blank_dims=True, dim_names_from_top=True
+                )
             except KeyError:
                 if default is None:
                     raise
@@ -721,7 +740,9 @@ class DataTree:
                     return current_node
                 if current_node == start_from:
                     if by_dims:
-                        return xr.DataArray(pd.RangeIndex(dataset.dims[item]), dims=item)
+                        return xr.DataArray(
+                            pd.RangeIndex(dataset.dims[item]), dims=item
+                        )
                     else:
                         return dataset[item]
                 else:
@@ -741,15 +762,22 @@ class DataTree:
                         result = dataset[item]
                     dims_in_result = set(result.dims)
                     top_dim_names = {}
-                    for path in nx.algorithms.simple_paths.all_simple_edge_paths(self._graph, start_from, current_node):
+                    for path in nx.algorithms.simple_paths.all_simple_edge_paths(
+                        self._graph, start_from, current_node
+                    ):
                         if dim_names_from_top:
                             e = path[0]
                             top_dim_name = self._graph.edges[e].get("parent_name")
                             start_dataset = self._graph.nodes[start_from]["dataset"]
                             # deconvert digitized dim names back to native dims
-                            if top_dim_name not in start_dataset.dims and top_dim_name in start_dataset.variables:
+                            if (
+                                top_dim_name not in start_dataset.dims
+                                and top_dim_name in start_dataset.variables
+                            ):
                                 if start_dataset.variables[top_dim_name].ndim == 1:
-                                    top_dim_name = start_dataset.variables[top_dim_name].dims[0]
+                                    top_dim_name = start_dataset.variables[
+                                        top_dim_name
+                                    ].dims[0]
                         else:
                             top_dim_name = None
                         path_dim = self._graph.edges[path[-1]].get("child_name")
@@ -763,18 +791,36 @@ class DataTree:
                             r_next = self._get_relationship(e_next)
                             if t1 is None:
                                 t1 = self._graph.nodes[r.parent_data].get("dataset")
-                            t2 = self._graph.nodes[r.child_data].get("dataset")[[r_next.parent_name]]
+                            t2 = self._graph.nodes[r.child_data].get("dataset")[
+                                [r_next.parent_name]
+                            ]
                             if r.indexing == "label":
-                                t1 = t2.sel({r.child_name: _dataarray_to_numpy(t1[r.parent_name])})
+                                t1 = t2.sel(
+                                    {
+                                        r.child_name: _dataarray_to_numpy(
+                                            t1[r.parent_name]
+                                        )
+                                    }
+                                )
                             else:  # by position
-                                t1 = t2.isel({r.child_name: _dataarray_to_numpy(t1[r.parent_name])})
+                                t1 = t2.isel(
+                                    {
+                                        r.child_name: _dataarray_to_numpy(
+                                            t1[r.parent_name]
+                                        )
+                                    }
+                                )
                         # final node in path
                         e = path[-1]
-                        r = Relationship(parent_data=e[0], child_data=e[1], **self._graph.edges[e])
+                        r = Relationship(
+                            parent_data=e[0], child_data=e[1], **self._graph.edges[e]
+                        )
                         if t1 is None:
                             t1 = self._graph.nodes[r.parent_data].get("dataset")
                         if r.indexing == "label":
-                            _labels[r.child_name] = _dataarray_to_numpy(t1[r.parent_name])
+                            _labels[r.child_name] = _dataarray_to_numpy(
+                                t1[r.parent_name]
+                            )
                         else:  # by position
                             _idx = _dataarray_to_numpy(t1[r.parent_name])
                             if not np.issubdtype(_idx.dtype, np.integer):
@@ -823,7 +869,11 @@ class DataTree:
                 raise KeyError
         except (KeyError, IndexError):
             if engine == "sharrow":
-                result = self.setup_flow({expression: expression}).load_dataarray().isel(expressions=0)
+                result = (
+                    self.setup_flow({expression: expression})
+                    .load_dataarray()
+                    .isel(expressions=0)
+                )
             elif engine == "numexpr":
                 from xarray import DataArray
 
@@ -908,7 +958,9 @@ class DataTree:
             for name, length in v.dims.items():
                 if name in dims:
                     if dims[name] != length:
-                        raise ValueError("inconsistent dimensions\n" + self.dims_detail())
+                        raise ValueError(
+                            "inconsistent dimensions\n" + self.dims_detail()
+                        )
                 else:
                     dims[name] = length
         return xr.core.utils.Frozen(dims)
@@ -1006,7 +1058,11 @@ class DataTree:
             return self._cached_indexes[(position_only, as_dict)]
         if not position_only:
             raise NotImplementedError
-        dims = [d for d in self.dims if d[-1:] != "_" or (d[-1:] == "_" and d[:-1] not in self.dims)]
+        dims = [
+            d
+            for d in self.dims
+            if d[-1:] != "_" or (d[-1:] == "_" and d[:-1] not in self.dims)
+        ]
         if replacements is not None:
             obj = self.replace_datasets(replacements)
         else:
@@ -1272,7 +1328,9 @@ class DataTree:
                     )
 
                 # candidate name for write back
-                r_parent_name_new = f"{self._BY_OFFSET}{r.parent_name}_{r.child_data}_{r.child_name}"
+                r_parent_name_new = (
+                    f"{self._BY_OFFSET}{r.parent_name}_{r.child_data}_{r.child_name}"
+                )
 
                 # it is common to have mirrored offsets in various dimensions.
                 # we'd like to retain only the same data in memory once, so we'll
@@ -1283,14 +1341,16 @@ class DataTree:
                         if p_dataset[k].equals(offsets):
                             # we found a match, so we'll assign this name to
                             # the match's memory storage instead of replicating it.
-                            obj._graph.nodes[r.parent_data]["dataset"] = p_dataset.assign(
-                                {r_parent_name_new: p_dataset[k]}
-                            )
+                            obj._graph.nodes[r.parent_data][
+                                "dataset"
+                            ] = p_dataset.assign({r_parent_name_new: p_dataset[k]})
                             # r_parent_name_new = k
                             break
                 else:
                     # no existing offset arrays match, make this new one
-                    obj._graph.nodes[r.parent_data]["dataset"] = p_dataset.assign({r_parent_name_new: offsets})
+                    obj._graph.nodes[r.parent_data]["dataset"] = p_dataset.assign(
+                        {r_parent_name_new: offsets}
+                    )
                 obj._graph.edges[e].update(
                     dict(
                         parent_name=r_parent_name_new,
@@ -1311,7 +1371,9 @@ class DataTree:
                 return False
         return True
 
-    def _arg_tokenizer(self, spacename, spacearray, spacearrayname, exclude_dims=None, blends=None):
+    def _arg_tokenizer(
+        self, spacename, spacearray, spacearrayname, exclude_dims=None, blends=None
+    ):
         if blends is None:
             blends = {}
 
@@ -1325,7 +1387,10 @@ class DataTree:
             else:
                 from_dims = spacearray.dims
             return (
-                tuple(ast.parse(f"_arg{root_dims.index(dim):02}", mode="eval").body for dim in from_dims),
+                tuple(
+                    ast.parse(f"_arg{root_dims.index(dim):02}", mode="eval").body
+                    for dim in from_dims
+                ),
                 blends,
             )
 
@@ -1335,7 +1400,9 @@ class DataTree:
             spacearray_ = spacearray
 
         from_dims = spacearray_.dims
-        offset_source = spacearray_.attrs.get("digital_encoding", {}).get("offset_source", None)
+        offset_source = spacearray_.attrs.get("digital_encoding", {}).get(
+            "offset_source", None
+        )
         if offset_source is not None:
             from_dims = self._graph.nodes[spacename]["dataset"][offset_source].dims
 
@@ -1348,7 +1415,9 @@ class DataTree:
                 this_dim_name = self._graph.edges[e]["child_name"]
                 retarget = None
                 if dimname != this_dim_name:
-                    retarget = self._graph.nodes[spacename]["dataset"].redirection.target(this_dim_name)
+                    retarget = self._graph.nodes[spacename][
+                        "dataset"
+                    ].redirection.target(this_dim_name)
                     if dimname != retarget:
                         continue
                 parent_name = self._graph.edges[e]["parent_name"]
@@ -1423,7 +1492,9 @@ class DataTree:
                 return subspace.indexes[dim]
 
     def copy(self):
-        return type(self)(self._graph.copy(), self.root_node_name, **self.__shallow_copy_extras())
+        return type(self)(
+            self._graph.copy(), self.root_node_name, **self.__shallow_copy_extras()
+        )
 
     def all_var_names(self, uniquify=False, _duplicated_names=None):
         ordered_names = []
