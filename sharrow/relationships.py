@@ -969,6 +969,8 @@ class DataTree:
                     dims[name] = length
         return xr.core.utils.Frozen(dims)
 
+    sizes = dims  # alternate name
+
     def dims_detail(self):
         """
         Report on the names and sizes of dimensions in all Dataset nodes.
