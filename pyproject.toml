@@ -27,6 +27,16 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
 ]
+description = "numba for ActivitySim-style spec files"
+readme = "README.md"
+keywords = ["activitysim", "discrete choice"]
+
+[project.urls]
+Documentation = "https://activitysim.github.io/sharrow/"
+Repository = "https://github.com/activitysim/sharrow"
+
+[tool.setuptools]
+packages = ["sharrow", "sharrow.utils"]
 
 [tool.setuptools_scm]
 fallback_version = "1999"
