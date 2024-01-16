@@ -40,3 +40,9 @@ you can do so with the following command:
 ```shell
 pre-commit run --all-files
 ```
+
+If you don't use `pre-commit`, a service will run the checks for you when you
+open a pull request, and make fixes to your code when possible.
+
+
+
