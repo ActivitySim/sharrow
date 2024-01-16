@@ -3,8 +3,8 @@ import logging
 import numpy as np
 import pandas as pd
 import xarray as xr
-
 from larch import OMX
+
 from sharrow.dataset import Dataset
 
 from .dataset import one_based, zero_based
