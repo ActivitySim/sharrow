@@ -19,7 +19,7 @@ def timestamp():
 
 
 class ReadOnlyError(ValueError):
-    """This object is read-only."""
+    """Object is read-only."""
 
 
 def _read_parquet(filename, index_col=None) -> xr.Dataset:
@@ -377,7 +377,7 @@ class DataStore:
 
     def read_metadata(self, checkpoints=None):
         """
-        Read storage metadata
+        Read storage metadata.
 
         Parameters
         ----------
@@ -478,5 +478,5 @@ class DataStore:
 
     @property
     def relationships_are_digitized(self) -> bool:
-        """bool : Whether all relationships are digital (by position)."""
+        """Bool : Whether all relationships are digital (by position)."""
         return self._tree.relationships_are_digitized

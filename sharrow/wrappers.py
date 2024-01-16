@@ -79,6 +79,7 @@ def igather(source, positions):
 class DatasetWrapper:
     def __init__(self, dataset, orig_key, dest_key, time_key=None):
         """
+        Emulate ActivitySim's SkimWrapper.
 
         Parameters
         ----------
@@ -97,7 +98,7 @@ class DatasetWrapper:
 
     def set_df(self, df):
         """
-        Set the dataframe
+        Set the dataframe.
 
         Parameters
         ----------
@@ -137,7 +138,7 @@ class DatasetWrapper:
 
     def lookup(self, key, reverse=False):
         """
-        Generally not called by the user - use __getitem__ instead
+        Generally not called by the user - use __getitem__ instead.
 
         Parameters
         ----------
@@ -154,7 +155,6 @@ class DatasetWrapper:
             A Series of impedances which are elements of the Skim object and
             with the same index as df
         """
-
         assert self.df is not None, "Call set_df first"
         if reverse:
             x = self.positions.rename(columns={"otaz": "dtaz", "dtaz": "otaz"})
@@ -166,7 +166,9 @@ class DatasetWrapper:
 
     def __getitem__(self, key):
         """
-        Get the lookup for an available skim object (df and orig/dest and column names implicit)
+        Get the lookup for an available skim object.
+
+        The `df` and orig/dest and column names are implicit.
 
         Parameters
         ----------
@@ -176,6 +178,7 @@ class DatasetWrapper:
         Returns
         -------
         impedances: pd.Series with the same index as df
-            A Series of impedances values from the single Skim with specified key, indexed byt orig/dest pair
+            A Series of impedances values from the single Skim with specified key,
+            indexed byt orig/dest pair
         """
         return self.lookup(key)

@@ -14,7 +14,8 @@ except ModuleNotFoundError:
 
 def extract_zst(archive: Path, out_path: Path):
     """
-    extract .zst file
+    Extract content of zst file to a target file system directory.
+
     works on Windows, Linux, MacOS, etc.
 
     Parameters
@@ -24,7 +25,6 @@ def extract_zst(archive: Path, out_path: Path):
     out_path: pathlib.Path or str
       directory to extract files and directories to
     """
-
     if zstandard is None:
         raise ImportError("pip install zstandard")
 

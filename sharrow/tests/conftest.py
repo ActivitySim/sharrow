@@ -7,9 +7,7 @@ from sharrow.dataset import construct
 
 @pytest.fixture
 def person_dataset() -> xr.Dataset:
-    """
-    Sample persons dataset with dummy data.
-    """
+    """Sample persons dataset with dummy data."""
     df = pd.DataFrame(
         {
             "Income": [45, 88, 56, 15, 71],
@@ -26,9 +24,7 @@ def person_dataset() -> xr.Dataset:
 
 @pytest.fixture
 def household_dataset() -> xr.Dataset:
-    """
-    Sample household dataset with dummy data.
-    """
+    """Sample household dataset with dummy data."""
     df = pd.DataFrame(
         {
             "n_cars": [1, 2, 1],
@@ -40,9 +36,7 @@ def household_dataset() -> xr.Dataset:
 
 @pytest.fixture
 def tours_dataset() -> xr.Dataset:
-    """
-    Sample tours dataset with dummy data.
-    """
+    """Sample tours dataset with dummy data."""
     df = pd.DataFrame(
         {
             "TourMode": ["Car", "Bus", "Car", "Car", "Walk"],

@@ -154,7 +154,7 @@ def xgather(source, positions, indexes):
 
 
 def _dataarray_to_numpy(self) -> np.ndarray:
-    """Coerces wrapped data to numpy and returns a numpy.ndarray"""
+    """Coerces wrapped data to numpy and returns a numpy.ndarray."""
     data = self.data
     if isinstance(data, dask_array_type):
         data = data.compute()
@@ -165,9 +165,7 @@ def _dataarray_to_numpy(self) -> np.ndarray:
 
 
 class Relationship:
-    """
-    Defines a linkage between datasets in a `DataTree`.
-    """
+    """Defines a linkage between datasets in a `DataTree`."""
 
     def __init__(
         self,
@@ -543,7 +541,7 @@ class DataTree:
         return Relationship(parent_data=parent, child_data=child, **attrs)
 
     def list_relationships(self) -> list[Relationship]:
-        """list : List all relationships defined in this tree."""
+        """List : List all relationships defined in this tree."""
         result = []
         for e in self._graph.edges:
             result.append(self._get_relationship(e))
@@ -904,7 +902,7 @@ class DataTree:
 
     def contains_subspace(self, key) -> bool:
         """
-        Is this named Dataset in this tree's subspaces
+        Is this named Dataset in this tree's subspaces.
 
         Parameters
         ----------
@@ -918,7 +916,7 @@ class DataTree:
 
     def get_subspace(self, key, default_empty=False) -> xr.Dataset:
         """
-        Access named Dataset from this tree's subspaces
+        Access named Dataset from this tree's subspaces.
 
         Parameters
         ----------
@@ -954,9 +952,7 @@ class DataTree:
 
     @property
     def dims(self):
-        """
-        Mapping from dimension names to lengths across all dataset nodes.
-        """
+        """Mapping from dimension names to lengths across all dataset nodes."""
         dims = {}
         for _k, v in self.subspaces_iter():
             for name, length in v.dims.items():
@@ -1005,7 +1001,6 @@ class DataTree:
             Returns self if dropping inplace, otherwise returns a copy
             with dimensions dropped.
         """
-
         if isinstance(dims, str):
             dims = [dims]
         if inplace:
@@ -1039,7 +1034,7 @@ class DataTree:
         while boot_queue:
             b = boot_queue.pop()
             booted.add(b)
-            for (up, dn, _n) in obj._graph.edges.keys():
+            for up, dn, _n in obj._graph.edges.keys():
                 if up == b:
                     boot_queue.add(dn)
 
@@ -1257,21 +1252,6 @@ class DataTree:
             with_root_node_name=with_root_node_name,
         )
 
-    def _spill(self, all_name_tokens=()):
-        """
-        Write backup code for sharrow-lite.
-
-        Parameters
-        ----------
-        all_name_tokens
-
-        Returns
-        -------
-
-        """
-        cmds = []
-        return "\n".join(cmds)
-
     def get_named_array(self, mangled_name):
         if mangled_name[:2] != "__":
             raise KeyError(mangled_name)
@@ -1311,7 +1291,6 @@ class DataTree:
         DataTree or None
             Only returns a copy if not digitizing in-place.
         """
-
         if inplace:
             obj = self
         else:
@@ -1385,7 +1364,7 @@ class DataTree:
 
     @property
     def relationships_are_digitized(self):
-        """bool : Whether all relationships are digital (by position)."""
+        """Bool : Whether all relationships are digital (by position)."""
         for e in self._graph.edges:
             r = self._get_relationship(e)
             if r.indexing != "position":

@@ -95,12 +95,13 @@ class RedirectionAccessor:
 
     def set(self, m2t, map_to, map_also=None, name=None):
         """
+        Set the redirection of a dimension.
+
         Parameters
         ----------
         m2t : pandas.Series
             Mapping maz's to tazs
         """
-
         if name is None:
             name = f"redirect_{map_to}"
 

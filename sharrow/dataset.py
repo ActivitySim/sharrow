@@ -79,7 +79,7 @@ def clean(s):
 
 def construct(source):
     """
-    A generic constructor for creating Datasets from various similar objects.
+    Create Datasets from various similar objects.
 
     Parameters
     ----------
@@ -111,7 +111,7 @@ def dataset_from_dataframe_fast(
     sparse: bool = False,
     preserve_cat: bool = True,
 ) -> Dataset:
-    """Convert a pandas.DataFrame into an xarray.Dataset
+    """Convert a pandas.DataFrame into an xarray.Dataset.
 
     Each column will be converted into an independent variable in the
     Dataset. If the dataframe's index is a MultiIndex, it will be expanded
@@ -146,7 +146,6 @@ def dataset_from_dataframe_fast(
     xarray.DataArray.from_series
     pandas.DataFrame.to_xarray
     """
-
     # this is much faster than the default xarray version when not
     # using a MultiIndex.
 
@@ -215,7 +214,7 @@ def from_table(
     index=None,
 ):
     """
-    Convert a pyarrow.Table into an xarray.Dataset
+    Convert a pyarrow.Table into an xarray.Dataset.
 
     Parameters
     ----------
@@ -320,7 +319,6 @@ def from_omx(
     -------
     Dataset
     """
-
     # handle both larch.OMX and openmatrix.open_file versions
     if "lar" in type(omx).__module__:
         omx_data = omx.data
@@ -695,9 +693,7 @@ def is_dict_like(value: Any) -> bool:
 
 @xr.register_dataset_accessor("single_dim")
 class _SingleDim:
-    """
-    Convenience accessor for single-dimension datasets.
-    """
+    """Convenience accessor for single-dimension datasets."""
 
     __slots__ = ("dataset", "dim_name")
 
@@ -839,9 +835,7 @@ class _SingleDim:
 
 @xr.register_dataarray_accessor("single_dim")
 class _SingleDimArray:
-    """
-    Convenience accessor for single-dimension datasets.
-    """
+    """Convenience accessor for single-dimension datasets."""
 
     __slots__ = ("dataarray", "dim_name")
 
@@ -1194,7 +1188,7 @@ def to_table(self):
     from .relationships import sparse_array_type
 
     def to_numpy(var):
-        """Coerces wrapped data to numpy and returns a numpy.ndarray"""
+        """Coerces wrapped data to numpy and returns a numpy.ndarray."""
         data = var.data
         if hasattr(data, "chunks"):
             data = data.compute()
@@ -1218,7 +1212,7 @@ def to_table(self):
 @register_dataset_method
 def select_and_rename(self, name_dict=None, **names):
     """
-    Select and rename variables from this Dataset
+    Select and rename variables from this Dataset.
 
     Parameters
     ----------

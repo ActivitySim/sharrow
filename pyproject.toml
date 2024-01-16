@@ -1,30 +1,76 @@
 [build-system]
 requires = [
-    "setuptools>=42,<64",
-    "wheel",
-    "setuptools_scm[toml]>=7.0",
+    "setuptools>=69",
+    "setuptools_scm>=8",
 ]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "sharrow"
+requires-python = ">=3.9"
+dynamic = ["version"]
+dependencies = [
+    "numpy >= 1.19",
+    "pandas >= 1.2",
+    "pyarrow",
+    "xarray",
+    "numba >= 0.51.2",
+    "numexpr",
+    "filelock",
+    "dask",
+    "networkx",
+]
+classifiers = [
+    "License :: OSI Approved :: BSD License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+]
+description = "numba for ActivitySim-style spec files"
+readme = "README.md"
+keywords = ["activitysim", "discrete choice"]
+
+[project.urls]
+Documentation = "https://activitysim.github.io/sharrow/"
+Repository = "https://github.com/activitysim/sharrow"
+
+[tool.setuptools]
+packages = ["sharrow", "sharrow.utils"]
 
 [tool.setuptools_scm]
 fallback_version = "1999"
 write_to = "sharrow/_version.py"
 
-[tool.isort]
-profile = "black"
-skip_gitignore = true
-float_to_top = true
-default_section = "THIRDPARTY"
-known_first_party = "sharrow"
-
 [tool.ruff]
-# Enable flake8-bugbear (`B`) and pyupgrade ('UP') rules.
-select = ["E", "F", "B", "UP"]
+select = [
+    "F", # Pyflakes
+    "E", # Pycodestyle Errors
+    "W", # Pycodestyle Warnings
+    "I", # isort
+    "UP", # pyupgrade
+    "D", # pydocstyle
+    "B", # flake8-bugbear
+]
 fix = true
 ignore-init-module-imports = true
-line-length = 120
-ignore = ["B905"]
+line-length = 88
+ignore = ["B905", "D1"]
 target-version = "py39"
+extend-include = ["*.ipynb"]
+per-file-ignores = { "*.ipynb" = [
+    "E402", # allow imports to appear anywhere in Jupyter Notebooks
+    "E501", # allow long lines in Jupyter Notebooks
+] }
+
+[tool.ruff.lint.isort]
+known-first-party = ["sharrow"]
+
+[tool.ruff.lint.pycodestyle]
+max-line-length = 120
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
 
 [tool.pytest.ini_options]
 minversion = "6.0"

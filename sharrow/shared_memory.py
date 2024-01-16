@@ -237,9 +237,7 @@ class SharedMemDatasetAccessor:
         return r
 
     def release_shared_memory(self):
-        """
-        Release shared memory allocated to this Dataset.
-        """
+        """Release shared memory allocated to this Dataset."""
         release_shared_memory(self._shared_memory_key_)
 
     @staticmethod
@@ -475,9 +473,7 @@ class SharedMemDatasetAccessor:
                     _size_p // _dtype_p.itemsize,
                     dtype=_dtype_p,
                     buffer=buffer[
-                        position
-                        + _size_d
-                        + _size_i : position
+                        position + _size_d + _size_i : position
                         + _size_d
                         + _size_i
                         + _size_p
@@ -507,7 +503,7 @@ class SharedMemDatasetAccessor:
 
     @property
     def shared_memory_size(self):
-        """int : Size (in bytes) in shared memory, raises ValueError if not shared."""
+        """Int : Size (in bytes) in shared memory, raises ValueError if not shared."""
         try:
             return sum(i.size for i in self._shared_memory_objs_)
         except AttributeError:
@@ -515,7 +511,7 @@ class SharedMemDatasetAccessor:
 
     @property
     def is_shared_memory(self):
-        """bool : Whether this Dataset is in shared memory."""
+        """Bool : Whether this Dataset is in shared memory."""
         try:
             return sum(i.size for i in self._shared_memory_objs_) > 0
         except AttributeError:

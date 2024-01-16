@@ -1022,7 +1022,7 @@ class Flow:
         bool_wrapping=False,
     ):
         """
-        Initialize up to the flow_hash
+        Initialize up to the flow_hash.
 
         See main docstring for arguments.
         """
@@ -1050,7 +1050,9 @@ class Flow:
                 all_raw_names |= attribute_pairs.get(self.tree.root_node_name, set())
                 all_raw_names |= subscript_pairs.get(self.tree.root_node_name, set())
 
-        dimensions_ordered = presorted(self.tree.sizes, self.dim_order, self.dim_exclude)
+        dimensions_ordered = presorted(
+            self.tree.sizes, self.dim_order, self.dim_exclude
+        )
         index_slots = {i: n for n, i in enumerate(dimensions_ordered)}
         self.arg_name_positions = index_slots
         self.arg_names = dimensions_ordered
@@ -1514,6 +1516,7 @@ class Flow:
         with_root_node_name=None,
     ):
         """
+        Second step in initialization, only used if the flow is not cached.
 
         Parameters
         ----------
@@ -1535,7 +1538,6 @@ class Flow:
             be sure to avoid name conflicts with other flow's in the same
             directory.
         """
-
         if self._hashing_level <= 1:
             func_code, all_name_tokens = self.init_sub_funcs(
                 defs,
@@ -1726,7 +1728,9 @@ class Flow:
 
                     root_dims = list(
                         presorted(
-                            self.tree._graph.nodes[with_root_node_name]["dataset"].sizes,
+                            self.tree._graph.nodes[with_root_node_name][
+                                "dataset"
+                            ].sizes,
                             self.dim_order,
                             self.dim_exclude,
                         )
@@ -1938,7 +1942,7 @@ class Flow:
                 # raise the inner key error which is more helpful
                 context = getattr(err, "__context__", None)
                 if context:
-                    raise context
+                    raise context from None
                 else:
                     raise err
 
@@ -2768,8 +2772,7 @@ class Flow:
                 self._raw_functions[name] = (None, None, set(), [])
 
     def _spill(self, all_name_tokens=None):
-        cmds = [self.tree._spill(all_name_tokens)]
-        cmds.append("\n")
+        cmds = ["\n"]
         cmds.append(f"output_name_positions = {self.output_name_positions!r}")
         cmds.append(f"function_names = {self.function_names!r}")
         return "\n".join(cmds)

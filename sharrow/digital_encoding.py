@@ -167,7 +167,7 @@ def digitize_by_dictionary(arr, bitwidth=8):
         bin_edges = (bins[1:] - bins[:-1]) / 2 + bins[:-1]
     except TypeError:
         # bins are not numeric
-        bin_map = {x:n for n,x in enumerate(bins)}
+        bin_map = {x: n for n, x in enumerate(bins)}
         u, inv = np.unique(arr.data, return_inverse=True)
         result.data = np.array([bin_map.get(x) for x in u])[inv].reshape(arr.shape)
         result.attrs["digital_encoding"] = {
@@ -334,7 +334,7 @@ def multivalue_digitize_by_dictionary(ds, encode_vars=None, encoding_name=None):
 
     Returns
     -------
-
+    Dataset
     """
     logger = logging.getLogger("sharrow")
     if not isinstance(encoding_name, str):
