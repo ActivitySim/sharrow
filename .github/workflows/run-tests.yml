@@ -18,7 +18,7 @@ jobs:
     strategy:
       matrix:
         os: ["ubuntu-latest", "macos-latest", "windows-latest"]
-        python-version: ["3.9", "3.10"]
+        python-version: ["3.9", "3.10", "3.11"]
     defaults:
       run:
         shell: bash -l {0}
@@ -44,10 +44,11 @@ jobs:
           conda list
       - name: Lint with Ruff
         run: |
+          # code quality check
           # stop the build if there are Python syntax errors or undefined names
-          ruff check . --select=E9,F63,F7,F82 --statistics
-          # exit-zero treats all errors as warnings.
-          ruff check . --exit-zero --statistics
+          ruff check . --select=E9,F63,F7,F82 --no-fix
+          # stop the build for any other configured Ruff linting errors
+          ruff check . --show-fixes --exit-non-zero-on-fix
       - name: Test with pytest
         run: |
           python -m pytest
