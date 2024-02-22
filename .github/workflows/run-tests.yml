@@ -66,7 +66,7 @@ jobs:
             python -m pip install zarr "dask[diagnostics]"
         - name: More complete test with pytest
           run: |
-            python -m pytest -p no:nbmake
+            python -m pytest -v --disable-warnings sharrow/tests
 
   test:
     needs: fmt
