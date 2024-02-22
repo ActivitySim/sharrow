@@ -3,13 +3,17 @@ import math
 import numba as nb
 import numpy as np
 import pandas as pd
-import scipy.sparse
 import xarray as xr
 
 try:
     import sparse
 except ImportError:
     sparse = None
+
+try:
+    import scipy.sparse
+except ImportError:
+    scipy = None
 
 
 @nb.njit
@@ -71,6 +75,8 @@ def _get_idx(indices, indptr, data, i, j):
 
 class SparseArray2D:
     def __init__(self, i, j, data, shape=None):
+        if scipy is None:
+            raise ImportError("scipy is not installed")
         if isinstance(data, scipy.sparse.csr_matrix):
             self._sparse_data = data
         else:
