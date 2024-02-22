@@ -61,9 +61,9 @@ jobs:
           # tests that the datasets can be read and that the tests can be run
           run: |
             python -m pytest sharrow/tests/test_datasets.py
-        - name: Install zarr
+        - name: Install zarr and dask-diagnostics
           run: |
-            python -m pip install zarr
+            python -m pip install zarr "dask[diagnostics]"
         - name: More complete test with pytest
           run: |
             python -m pytest
