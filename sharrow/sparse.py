@@ -4,8 +4,12 @@ import numba as nb
 import numpy as np
 import pandas as pd
 import scipy.sparse
-import sparse
 import xarray as xr
+
+try:
+    import sparse
+except ImportError:
+    sparse = None
 
 
 @nb.njit
@@ -148,6 +152,9 @@ class RedirectionAccessor:
         else:
             i_ = i
             j_ = j
+
+        if sparse is None:
+            raise ImportError("sparse is not installed")
 
         sparse_data = sparse.GCXS(
             sparse.COO((i_, j_), data, shape=shape), compressed_axes=(0,)
