@@ -3,6 +3,7 @@ import sys
 
 import numpy as np
 import pandas as pd
+import pytest
 import xarray as xr
 from numpy.random import SeedSequence, default_rng
 from pytest import approx, fixture, mark, raises
@@ -216,6 +217,8 @@ def test_shared_data_reversible_by_label(dataframe_regression):
 
 
 def test_with_2d_base(dataframe_regression):
+    pytest.importorskip("scipy", minversion="0.16")
+
     data = example_data.get_data()
     skims = data["skims"]
     households = data["hhs"]

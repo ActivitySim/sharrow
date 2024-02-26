@@ -955,7 +955,7 @@ class DataTree:
         """Mapping from dimension names to lengths across all dataset nodes."""
         dims = {}
         for _k, v in self.subspaces_iter():
-            for name, length in v.dims.items():
+            for name, length in v.sizes.items():
                 if name in dims:
                     if dims[name] != length:
                         raise ValueError(
@@ -978,7 +978,7 @@ class DataTree:
         s = ""
         for k, v in self.subspaces_iter():
             s += f"\n{k}:"
-            for name, length in v.dims.items():
+            for name, length in v.sizes.items():
                 s += f"\n - {name}: {length}"
         return s[1:]
 

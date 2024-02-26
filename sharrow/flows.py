@@ -1176,12 +1176,9 @@ class Flow:
                         digital_encoding = self.tree.subspaces[parts[1]][
                             "__".join(parts[2:])
                         ].attrs["digital_encoding"]
-                    except (AttributeError, KeyError) as err:
+                    except (AttributeError, KeyError):
                         pass
-                        print(f"$$$$/ndigital_encoding=ERR\n{err}\n\n\n$$$")
-
                     else:
-                        print(f"$$$$/n{digital_encoding=}\n\n\n$$$")
                         if digital_encoding:
                             for de_k in sorted(digital_encoding.keys()):
                                 de_v = digital_encoding[de_k]

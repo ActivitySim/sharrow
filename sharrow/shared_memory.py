@@ -7,7 +7,6 @@ import pickle
 import dask
 import dask.array as da
 import numpy as np
-import sparse
 import xarray as xr
 
 try:
@@ -15,6 +14,10 @@ try:
 except ImportError:
     ShareableList, SharedMemory = None, None
 
+try:
+    import sparse
+except ImportError:
+    sparse = None
 
 __GLOBAL_MEMORY_ARRAYS = {}
 __GLOBAL_MEMORY_LISTS = {}
@@ -283,7 +286,7 @@ class SharedMemDatasetAccessor:
 
         def emit(k, a, is_coord):
             nonlocal names, wrappers, sizes, position
-            if isinstance(a.data, sparse.GCXS):
+            if sparse is not None and isinstance(a.data, sparse.GCXS):
                 wrappers.append(
                     {
                         "sparse": True,
@@ -452,6 +455,8 @@ class SharedMemDatasetAccessor:
             nbytes = t.pop("nbytes")
             is_sparse = t.pop("sparse", False)
             if is_sparse:
+                if sparse is None:
+                    raise ImportError("sparse is not installed")
                 _size_d = t.pop("data.nbytes")
                 _size_i = t.pop("indices.nbytes")
                 _size_p = t.pop("indptr.nbytes")
