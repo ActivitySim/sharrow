@@ -75,7 +75,7 @@ jobs:
     strategy:
       matrix:
         os: ["ubuntu-latest", "macos-latest", "windows-latest"]
-        python-version: ["3.9", "3.10", "3.11", "3.12"]
+        python-version: ["3.10", "3.11", "3.12"]
     defaults:
       run:
         shell: bash -l {0}
@@ -121,10 +121,10 @@ jobs:
         shell: bash -l {0}
     steps:
     - uses: actions/checkout@v2
-    - name: Set up Python 3.9
+    - name: Set up Python 3.10
       uses: actions/setup-python@v2
       with:
-        python-version: 3.9
+        python-version: 3.10
     - name: Install dependencies
       uses: conda-incubator/setup-miniconda@v2
       with:
@@ -132,7 +132,7 @@ jobs:
         miniforge-version: latest
         use-mamba: true
         environment-file: envs/testing.yml
-        python-version: 3.9
+        python-version: 3.10
         activate-environment: testing-env
         auto-activate-base: false
         auto-update-conda: false
