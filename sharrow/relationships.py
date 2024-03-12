@@ -1341,9 +1341,9 @@ class DataTree:
                         if p_dataset[k].equals(offsets):
                             # we found a match, so we'll assign this name to
                             # the match's memory storage instead of replicating it.
-                            obj._graph.nodes[r.parent_data][
-                                "dataset"
-                            ] = p_dataset.assign({r_parent_name_new: p_dataset[k]})
+                            obj._graph.nodes[r.parent_data]["dataset"] = (
+                                p_dataset.assign({r_parent_name_new: p_dataset[k]})
+                            )
                             # r_parent_name_new = k
                             break
                 else:
