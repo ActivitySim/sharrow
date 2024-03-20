@@ -910,6 +910,19 @@ class RewriteForNumba(ast.NodeTransformer):
                 args=apply_args,
                 keywords=[],
             )
+            # if the value XXX is a categorical, rather than just `np.isnan` we also
+            # want to check if the category number is less than zero
+            if isinstance(apply_args[0], ast.Subscript):
+                if isinstance(apply_args[0].value, ast.Name):
+                    if apply_args[0].value.id.startswith("__encoding_dict__"):
+                        cat_is_lt_zero = ast.Compare(
+                            left=apply_args[0].slice,
+                            ops=[ast.Lt()],
+                            comparators=[ast.Num(0)],
+                        )
+                        result = ast.BoolOp(
+                            op=ast.Or(), values=[cat_is_lt_zero, result]
+                        )
 
         # implement x.get("y",z) where x is the spacename
         if (
