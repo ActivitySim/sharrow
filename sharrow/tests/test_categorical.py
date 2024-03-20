@@ -4,6 +4,7 @@ from enum import IntEnum
 
 import numpy as np
 import pandas as pd
+import pytest
 import xarray as xr
 
 import sharrow
@@ -155,3 +156,17 @@ def test_missing_categorical():
     a = f4.load_dataarray(dtype=np.int8)
     a = a.isel(expressions=0)
     assert all(a == np.asarray([0, 0, 0, 0, 1, 0]))
+
+    expr = "df.TourMode2 == 'BAD'"
+    with pytest.warns(UserWarning):
+        f5 = tree.setup_flow({expr: expr}, with_root_node_name="df")
+    a = f5.load_dataarray(dtype=np.int8)
+    a = a.isel(expressions=0)
+    assert all(a == np.asarray([0, 0, 0, 0, 0, 0]))
+
+    expr = "'BAD' == df.TourMode2"
+    with pytest.warns(UserWarning):
+        f6 = tree.setup_flow({expr: expr}, with_root_node_name="df")
+    a = f6.load_dataarray(dtype=np.int8)
+    a = a.isel(expressions=0)
+    assert all(a == np.asarray([0, 0, 0, 0, 0, 0]))

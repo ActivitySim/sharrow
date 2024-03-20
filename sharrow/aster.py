@@ -2,6 +2,7 @@ import ast
 import io
 import logging
 import tokenize
+import warnings
 
 import numpy as np
 
@@ -1000,6 +1001,11 @@ class RewriteForNumba(ast.NodeTransformer):
                         right_decoded = np.where(left_dictionary == right.value)[0][0]
                     except IndexError:
                         right_decoded = None
+                        warnings.warn(
+                            f"right hand value {right.value!r} not found in "
+                            f"categories for {left_varname} in {self.spacename}",
+                            stacklevel=2,
+                        )
                     if right_decoded is not None:
                         result = ast.Compare(
                             left=left.slice,
@@ -1026,6 +1032,11 @@ class RewriteForNumba(ast.NodeTransformer):
                         left_decoded = np.where(right_dictionary == left.value)[0][0]
                     except IndexError:
                         left_decoded = None
+                        warnings.warn(
+                            f"left hand value {left.value!r} not found in "
+                            f"categories for {right_varname} in {self.spacename}",
+                            stacklevel=2,
+                        )
                     if left_decoded is not None:
                         result = ast.Compare(
                             left=ast_Constant(left_decoded),
