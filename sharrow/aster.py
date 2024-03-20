@@ -977,8 +977,8 @@ class RewriteForNumba(ast.NodeTransformer):
     def visit_Compare(self, node):
         result = None
 
-        # devolve XXX == YYY when XXX or YYY is a categorical and the other is a constant category value
-        if len(node.ops) == 1 and isinstance(node.ops[0], ast.Eq):
+        # devolve XXX ==/!= YYY when XXX or YYY is a categorical and the other is a constant category value
+        if len(node.ops) == 1 and isinstance(node.ops[0], (ast.Eq, ast.NotEq)):
             left = self.visit(node.left)
             right = self.visit(node.comparators[0])
             left_is_categorical = (
