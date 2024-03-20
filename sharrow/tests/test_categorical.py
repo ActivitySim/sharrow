@@ -143,3 +143,15 @@ def test_missing_categorical():
     a = f2.load_dataarray(dtype=np.int8)
     a = a.isel(expressions=0)
     assert all(a == np.asarray([0, 0, 0, 0, 0, 1]))
+
+    expr = "df.TourMode2 == 'Walk'"
+    f3 = tree.setup_flow({expr: expr}, with_root_node_name="df")
+    a = f3.load_dataarray(dtype=np.int8)
+    a = a.isel(expressions=0)
+    assert all(a == np.asarray([0, 0, 0, 0, 1, 0]))
+
+    expr = "'Walk' == df.TourMode2"
+    f4 = tree.setup_flow({expr: expr}, with_root_node_name="df")
+    a = f4.load_dataarray(dtype=np.int8)
+    a = a.isel(expressions=0)
+    assert all(a == np.asarray([0, 0, 0, 0, 1, 0]))

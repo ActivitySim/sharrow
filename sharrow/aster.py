@@ -3,6 +3,8 @@ import io
 import logging
 import tokenize
 
+import numpy as np
+
 try:
     from ast import unparse
 except ImportError:
@@ -882,7 +884,7 @@ class RewriteForNumba(ast.NodeTransformer):
                             left=ante, ops=[ast.Eq()], comparators=[self.visit(elt)]
                         )
                     )
-                result = ast.BoolOp(op=ast.Or(), values=ors)
+                result = self.visit(ast.BoolOp(op=ast.Or(), values=ors))
         # change `x.between(a,b)` to `(a <= x) & (x <= b)`
         if isinstance(node.func, ast.Attribute) and node.func.attr == "between":
             ante = self.visit(node.func.value)
@@ -969,6 +971,76 @@ class RewriteForNumba(ast.NodeTransformer):
                 keywords=kwds,
             )
         self.log_event("visit_Call", node, result)
+        return result
+
+    def visit_Compare(self, node):
+        result = None
+
+        # devolve XXX == YYY when XXX or YYY is a categorical and the other is a constant category value
+        if len(node.ops) == 1 and isinstance(node.ops[0], ast.Eq):
+            left = self.visit(node.left)
+            right = self.visit(node.comparators[0])
+            left_is_categorical = (
+                isinstance(left, ast.Subscript)
+                and isinstance(left.value, ast.Name)
+                and left.value.id.startswith("__encoding_dict__")
+            )
+            if left_is_categorical and isinstance(right, ast.Constant):
+                # left is categorical, right is a constant
+                left_spacename = left.value.id.split("__")[2]
+                left_varname = left.value.id.split("__")[3]
+                if (
+                    left_spacename == self.spacename
+                    and left_varname in self.digital_encodings
+                ):
+                    left_dictionary = self.digital_encodings[left_varname].get(
+                        "dictionary", np.atleast_1d([])
+                    )
+                    try:
+                        right_decoded = np.where(left_dictionary == right.value)[0][0]
+                    except IndexError:
+                        right_decoded = None
+                    if right_decoded is not None:
+                        result = ast.Compare(
+                            left=left.slice,
+                            ops=[self.visit(i) for i in node.ops],
+                            comparators=[ast_Constant(right_decoded)],
+                        )
+            right_is_categorical = (
+                isinstance(right, ast.Subscript)
+                and isinstance(right.value, ast.Name)
+                and right.value.id.startswith("__encoding_dict__")
+            )
+            if right_is_categorical and isinstance(left, ast.Constant):
+                # right is categorical, left is a constant
+                right_spacename = right.value.id.split("__")[2]
+                right_varname = right.value.id.split("__")[3]
+                if (
+                    right_spacename == self.spacename
+                    and right_varname in self.digital_encodings
+                ):
+                    right_dictionary = self.digital_encodings[right_varname].get(
+                        "dictionary", np.atleast_1d([])
+                    )
+                    try:
+                        left_decoded = np.where(right_dictionary == left.value)[0][0]
+                    except IndexError:
+                        left_decoded = None
+                    if left_decoded is not None:
+                        result = ast.Compare(
+                            left=ast_Constant(left_decoded),
+                            ops=[self.visit(i) for i in node.ops],
+                            comparators=[right.slice],
+                        )
+
+        # if no other changes
+        if result is None:
+            result = ast.Compare(
+                left=self.visit(node.left),
+                ops=[self.visit(i) for i in node.ops],
+                comparators=[self.visit(i) for i in node.comparators],
+            )
+        self.log_event("visit_Compare", node, result)
         return result
 
 
