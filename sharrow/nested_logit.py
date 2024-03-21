@@ -157,7 +157,10 @@ def construct_nesting_tree(alternatives, nesting_settings):
     -------
     NestingTree
     """
-    from larch.model.tree import NestingTree
+    try:
+        from larch.model.tree import NestingTree
+    except ImportError:
+        raise ImportError("larch is required to construct nesting trees") from None
 
     if not isinstance(alternatives, Mapping):
         alt_names = list(alternatives)

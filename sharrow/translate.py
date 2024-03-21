@@ -3,7 +3,6 @@ import logging
 import numpy as np
 import pandas as pd
 import xarray as xr
-from larch import OMX
 
 from sharrow.dataset import Dataset
 
@@ -21,6 +20,11 @@ def omx_to_zarr(
     time_periods=None,
     time_period_sep="__",
 ):
+    try:
+        from larch import OMX
+    except ImportError:
+        raise ImportError("larch is required to read OMX files") from None
+
     bucket = {}
 
     r1 = r2 = None
