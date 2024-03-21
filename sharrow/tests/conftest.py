@@ -41,8 +41,42 @@ def tours_dataset() -> xr.Dataset:
         {
             "TourMode": ["Car", "Bus", "Car", "Car", "Walk"],
             "person_id": [441, 445, 552, 556, 934],
+            "origin": [101, 102, 103, 101, 103],
+            "destination": [102, 103, 103, 101, 102],
+            "time_period": ["AM", "MD", "AM", "AM", "MD"],
+            "origin_idx": [0, 1, 2, 0, 2],
+            "destination_idx": [1, 2, 2, 0, 1],
+            "time_period_alt": ["AM", "MD", "AM", "AM", "MD"],
         },
         index=pd.Index([4411, 4451, 5521, 5561, 9341], name="tour_id"),
     )
     df["TourMode"] = df["TourMode"].astype("category")
+    df["time_period"] = df["time_period"].astype(
+        pd.CategoricalDtype(categories=["AM", "MD"], ordered=False)
+    )
+    # time_period_alt is intentionally constructed backwards to test that bad ordering is handled
+    df["time_period_alt"] = df["time_period_alt"].astype(
+        pd.CategoricalDtype(categories=["MD", "AM"], ordered=False)
+    )
     return construct(df)
+
+
+@pytest.fixture
+def skims_dataset() -> xr.Dataset:
+    """Sample skims dataset with dummy data."""
+    return xr.Dataset(
+        {
+            "cartime": xr.DataArray(
+                [
+                    [[11.1, 22.2, 33.3], [44.4, 55.5, 66.6], [77.7, 88.8, 99.9]],
+                    [[1.1, 2.2, 3.3], [4.4, 5.5, 6.6], [7.7, 8.8, 9.9]],
+                ],
+                dims=["timeperiod", "otaz", "dtaz"],
+                coords={
+                    "timeperiod": ["AM", "MD"],
+                    "otaz": [101, 102, 103],
+                    "dtaz": [101, 102, 103],
+                },
+            )
+        }
+    )
