@@ -4,6 +4,7 @@ from enum import IntEnum
 
 import numpy as np
 import pandas as pd
+import pytest
 import xarray as xr
 
 import sharrow
@@ -115,3 +116,63 @@ def test_int_enum_categorical():
     assert df["TourMode2"].dtype == "category"
     assert all(df["TourMode2"].cat.categories == ["_0", "Car", "Bus", "Walk"])
     assert all(df["TourMode2"].cat.codes == [1, 2, 1, 1, 3])
+
+
+def test_missing_categorical():
+    df = pd.DataFrame(
+        {
+            "TourMode": ["Car", "Bus", "Car", "Car", "Walk", np.nan],
+            "person_id": [441, 445, 552, 556, 934, 998],
+        },
+        index=pd.Index([4411, 4451, 5521, 5561, 9341, 9981], name="tour_id"),
+    )
+    df["TourMode2"] = df["TourMode"].astype(pd.CategoricalDtype(["Car", "Bus", "Walk"]))
+    assert df["TourMode2"].dtype == "category"
+    assert all(df["TourMode2"].cat.categories == ["Car", "Bus", "Walk"])
+    assert all(df["TourMode2"].cat.codes == [0, 1, 0, 0, 2, -1])
+
+    tree = sharrow.DataTree(df=df, root_node_name=False)
+
+    expr = "df.TourMode2 == 'Bus'"
+    f = tree.setup_flow({expr: expr}, with_root_node_name="df")
+    a = f.load_dataarray(dtype=np.int8)
+    a = a.isel(expressions=0)
+    assert all(a == np.asarray([0, 1, 0, 0, 0, 0]))
+
+    expr = "df.TourMode2.isna()"
+    f2 = tree.setup_flow({expr: expr}, with_root_node_name="df")
+    a = f2.load_dataarray(dtype=np.int8)
+    a = a.isel(expressions=0)
+    assert all(a == np.asarray([0, 0, 0, 0, 0, 1]))
+
+    expr = "df.TourMode2 == 'Walk'"
+    f3 = tree.setup_flow({expr: expr}, with_root_node_name="df")
+    a = f3.load_dataarray(dtype=np.int8)
+    a = a.isel(expressions=0)
+    assert all(a == np.asarray([0, 0, 0, 0, 1, 0]))
+
+    expr = "'Walk' == df.TourMode2"
+    f4 = tree.setup_flow({expr: expr}, with_root_node_name="df")
+    a = f4.load_dataarray(dtype=np.int8)
+    a = a.isel(expressions=0)
+    assert all(a == np.asarray([0, 0, 0, 0, 1, 0]))
+
+    expr = "df.TourMode2 == 'BAD'"
+    with pytest.warns(UserWarning):
+        f5 = tree.setup_flow({expr: expr}, with_root_node_name="df")
+    a = f5.load_dataarray(dtype=np.int8)
+    a = a.isel(expressions=0)
+    assert all(a == np.asarray([0, 0, 0, 0, 0, 0]))
+
+    expr = "'BAD' == df.TourMode2"
+    with pytest.warns(UserWarning):
+        f6 = tree.setup_flow({expr: expr}, with_root_node_name="df")
+    a = f6.load_dataarray(dtype=np.int8)
+    a = a.isel(expressions=0)
+    assert all(a == np.asarray([0, 0, 0, 0, 0, 0]))
+
+    expr = "df.TourMode2 != 'Bus'"
+    f7 = tree.setup_flow({expr: expr}, with_root_node_name="df")
+    a = f7.load_dataarray(dtype=np.int8)
+    a = a.isel(expressions=0)
+    assert all(a == np.asarray([1, 0, 1, 1, 1, 1]))
