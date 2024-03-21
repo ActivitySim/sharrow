@@ -196,6 +196,12 @@ def test_categorical_indexing(tours_dataset: xr.Dataset, skims_dataset: xr.Datas
     a = a.isel(expressions=0)
     assert all(a == np.asarray([22.2, 6.6, 99.9, 11.1, 8.8], dtype=np.float32))
 
+    skims_dataset_bad = (
+        skims_dataset["cartime"].sel(timeperiod=["MD", "AM"]).to_dataset()
+    )
+    with pytest.raises(ValueError, match="categoricals have different categories"):
+        tree.replace_datasets(od_skims=skims_dataset_bad)
+
 
 def test_bad_categorical_indexing(tours_dataset: xr.Dataset, skims_dataset: xr.Dataset):
     tree = sharrow.DataTree(tours=tours_dataset)

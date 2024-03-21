@@ -1124,7 +1124,7 @@ class DataTree:
                 raise KeyError(k)
             x = construct(replacements[k])
             if validate:
-                if x.dims != graph.nodes[k]["dataset"].dims:
+                if x.sizes != graph.nodes[k]["dataset"].sizes:
                     # when replacement dimensions do not match, check for
                     # any upstream nodes that reference this dataset by
                     # position... which will potentially be problematic.
@@ -1138,6 +1138,21 @@ class DataTree:
                                     f"receiving {x.dims} "
                                     f"expected {graph.nodes[k]['dataset'].dims}"
                                 )
+                # also if any dim coordinates are changing, redigitize
+                for dim in x.dims:
+                    if dim in graph.nodes[k]["dataset"].coords:
+                        if not np.array_equal(
+                            graph.nodes[k]["dataset"].coords[dim].data,
+                            x.coords[dim].data,
+                        ):
+                            # find all edges with digitized label relationships
+                            # and cast them back to label
+                            for e in graph.edges:
+                                if e[1] == k:
+                                    r = self._get_relationship(e)
+                                    if r.child_name == dim and r.analog:
+                                        graph.edges[e]["indexing"] = "label"
+                                        graph.edges[e]["parent_name"] = r.analog
             if k in self.replacement_filters:
                 x = self.replacement_filters[k](x)
             graph.nodes[k]["dataset"] = x
