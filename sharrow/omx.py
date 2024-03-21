@@ -15,7 +15,10 @@ def split_omx(source_file, dest_directory, global_lookups=False, n_chunks=None):
     global_lookups : bool
 
     """
-    from larch import OMX
+    try:
+        from larch import OMX
+    except ImportError:
+        raise ImportError("larch is required to split OMX files") from None
 
     source = OMX(source_file, mode="r")
     os.makedirs(dest_directory, exist_ok=True)
