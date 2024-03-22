@@ -202,6 +202,28 @@ def test_categorical_indexing(tours_dataset: xr.Dataset, skims_dataset: xr.Datas
     with pytest.raises(ValueError, match="categoricals have different categories"):
         tree.replace_datasets(od_skims=skims_dataset_bad)
 
+    # test with a missing value ...
+    tours_dataset_bad = tours_dataset.copy(deep=True)
+    tours_dataset_bad["time_period"].loc[dict(tour_id=4411)] = -1
+
+    # test with a missing value when creating a tree
+    bad_tree = sharrow.DataTree(tours=tours_dataset_bad)
+    bad_tree.add_dataset(
+        "od_skims",
+        skims_dataset,
+        [
+            "tours.origin @ od_skims.otaz",
+            "tours.destination @ od_skims.dtaz",
+            "tours.time_period @ od_skims.timeperiod",
+        ],
+    )
+    with pytest.raises(ValueError, match="detected missing values"):
+        bad_tree.setup_flow({expr: expr})
+
+    # test with a missing value when replacing datasets
+    with pytest.raises(ValueError, match="detected missing values"):
+        tree.replace_datasets(tours=tours_dataset_bad)
+
 
 def test_bad_categorical_indexing(tours_dataset: xr.Dataset, skims_dataset: xr.Dataset):
     tree = sharrow.DataTree(tours=tours_dataset)

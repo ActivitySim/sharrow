@@ -1338,6 +1338,10 @@ class DataTree:
                     if np.array_equal(upstream.cat.category_array(), downstream):
                         # if so, we can just use the codes
                         offsets = upstream
+                        if (offsets < 0).any():
+                            raise ValueError(
+                                f"detected missing values in digitizing {r.parent_data}.{r.parent_name}"
+                            )
                     else:
                         raise ValueError(
                             f"upstream ({r.parent_data}.{r.parent_name}) and "
