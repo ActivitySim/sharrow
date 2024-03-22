@@ -176,3 +176,69 @@ def test_missing_categorical():
     a = f7.load_dataarray(dtype=np.int8)
     a = a.isel(expressions=0)
     assert all(a == np.asarray([1, 0, 1, 1, 1, 1]))
+
+
+def test_categorical_indexing(tours_dataset: xr.Dataset, skims_dataset: xr.Dataset):
+    tree = sharrow.DataTree(tours=tours_dataset)
+    tree.add_dataset(
+        "od_skims",
+        skims_dataset,
+        [
+            "tours.origin @ od_skims.otaz",
+            "tours.destination @ od_skims.dtaz",
+            "tours.time_period @ od_skims.timeperiod",
+        ],
+    )
+
+    expr = "od_skims.cartime"
+    f = tree.setup_flow({expr: expr})
+    a = f.load_dataarray(dtype=np.float32)
+    a = a.isel(expressions=0)
+    assert all(a == np.asarray([22.2, 6.6, 99.9, 11.1, 8.8], dtype=np.float32))
+
+    skims_dataset_bad = (
+        skims_dataset["cartime"].sel(timeperiod=["MD", "AM"]).to_dataset()
+    )
+    with pytest.raises(ValueError, match="categoricals have different categories"):
+        tree.replace_datasets(od_skims=skims_dataset_bad)
+
+    # test with a missing value ...
+    tours_dataset_bad = tours_dataset.copy(deep=True)
+    tours_dataset_bad["time_period"].loc[dict(tour_id=4411)] = -1
+
+    # test with a missing value when creating a tree
+    bad_tree = sharrow.DataTree(tours=tours_dataset_bad)
+    bad_tree.add_dataset(
+        "od_skims",
+        skims_dataset,
+        [
+            "tours.origin @ od_skims.otaz",
+            "tours.destination @ od_skims.dtaz",
+            "tours.time_period @ od_skims.timeperiod",
+        ],
+    )
+    with pytest.raises(ValueError, match="detected missing values"):
+        bad_tree.setup_flow({expr: expr})
+
+    # test with a missing value when replacing datasets
+    with pytest.raises(ValueError, match="detected missing values"):
+        tree.replace_datasets(tours=tours_dataset_bad)
+
+
+def test_bad_categorical_indexing(tours_dataset: xr.Dataset, skims_dataset: xr.Dataset):
+    tree = sharrow.DataTree(tours=tours_dataset)
+    tree.add_dataset(
+        "od_skims",
+        skims_dataset,
+        [
+            "tours.origin @ od_skims.otaz",
+            "tours.destination @ od_skims.dtaz",
+            "tours.time_period_alt @ od_skims.timeperiod",
+        ],
+    )
+
+    expr = "od_skims.cartime"
+    with pytest.raises(ValueError, match="categoricals have different categories"):
+        # this fails because `time_period_alt` is intentionally constructed backwards
+        # and does not match the `od_skims.timeperiod` categories
+        tree.setup_flow({expr: expr})

@@ -41,6 +41,29 @@ class _Categorical:
     def is_categorical(self) -> bool:
         return "dictionary" in self.dataarray.attrs.get("digital_encoding", {})
 
+    def is_same_categories(self, other: xr.DataArray) -> bool:
+        """Check if the categories of two categorical arrays are the same.
+
+        Parameters
+        ----------
+        other : xr.DataArray or categorical accessor
+            The other array to compare.
+        """
+        if not self.is_categorical():
+            return False
+        if isinstance(other, xr.DataArray):
+            if not other.cat.is_categorical():
+                return False
+            if not np.array_equal(self.categories, other.cat.categories):
+                return False
+            if self.ordered != other.cat.ordered:
+                return False
+            return True
+        elif isinstance(other, _Categorical):
+            return self.is_same_categories(other.dataarray)
+        else:
+            raise TypeError(f"cannot compare categorical array with {type(other)}")
+
 
 def _interpret_enum(e: type[IntEnum], value: int | str) -> IntEnum:
     """

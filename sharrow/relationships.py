@@ -1124,7 +1124,7 @@ class DataTree:
                 raise KeyError(k)
             x = construct(replacements[k])
             if validate:
-                if x.dims != graph.nodes[k]["dataset"].dims:
+                if x.sizes != graph.nodes[k]["dataset"].sizes:
                     # when replacement dimensions do not match, check for
                     # any upstream nodes that reference this dataset by
                     # position... which will potentially be problematic.
@@ -1138,6 +1138,21 @@ class DataTree:
                                     f"receiving {x.dims} "
                                     f"expected {graph.nodes[k]['dataset'].dims}"
                                 )
+                # also if any dim coordinates are changing, redigitize
+                for dim in x.dims:
+                    if dim in graph.nodes[k]["dataset"].coords:
+                        if not np.array_equal(
+                            graph.nodes[k]["dataset"].coords[dim].data,
+                            x.coords[dim].data,
+                        ):
+                            # find all edges with digitized label relationships
+                            # and cast them back to label
+                            for e in graph.edges:
+                                if e[1] == k:
+                                    r = self._get_relationship(e)
+                                    if r.child_name == dim and r.analog:
+                                        graph.edges[e]["indexing"] = "label"
+                                        graph.edges[e]["parent_name"] = r.analog
             if k in self.replacement_filters:
                 x = self.replacement_filters[k](x)
             graph.nodes[k]["dataset"] = x
@@ -1306,26 +1321,51 @@ class DataTree:
                         r.parent_name = r.analog
             if r.indexing == "label":
                 p_dataset = obj._graph.nodes[r.parent_data].get("dataset", None)
+                if p_dataset is None:
+                    raise ValueError(f"no dataset found for {r.parent_data}")
                 c_dataset = obj._graph.nodes[r.child_data].get("dataset", None)
+                if c_dataset is None:
+                    raise ValueError(f"no dataset found for {r.child_data}")
 
                 upstream = p_dataset[r.parent_name]
                 downstream = c_dataset[r.child_name]
 
-                # vectorize version
-                mapper = {i: j for (j, i) in enumerate(_dataarray_to_numpy(downstream))}
-
-                def mapper_get(x, mapper=mapper):
-                    return mapper.get(x, 0)
-
-                if upstream.size:
-                    offsets = xr.apply_ufunc(np.vectorize(mapper_get), upstream)
+                upstream_is_categorical = (
+                    isinstance(upstream, xr.DataArray) and upstream.cat.is_categorical()
+                )
+                # check if both upstream and downstream are categoricals with the same categories
+                if upstream_is_categorical:
+                    if np.array_equal(upstream.cat.category_array(), downstream):
+                        # if so, we can just use the codes
+                        offsets = upstream
+                        if (offsets < 0).any():
+                            raise ValueError(
+                                f"detected missing values in digitizing {r.parent_data}.{r.parent_name}"
+                            )
+                    else:
+                        raise ValueError(
+                            f"upstream ({r.parent_data}.{r.parent_name}) and "
+                            f"downstream ({r.child_data}.{r.child_name}) categoricals "
+                            f"have different categories"
+                        )
                 else:
-                    offsets = xr.DataArray([], dims=["index"])
-                if offsets.dtype.kind != "i":
-                    warnings.warn(
-                        f"detected missing values in digitizing {r.parent_data}.{r.parent_name}",
-                        stacklevel=2,
-                    )
+                    # vectorize version
+                    mapper = {
+                        i: j for (j, i) in enumerate(_dataarray_to_numpy(downstream))
+                    }
+
+                    def mapper_get(x, mapper=mapper):
+                        return mapper.get(x, 0)
+
+                    if upstream.size:
+                        offsets = xr.apply_ufunc(np.vectorize(mapper_get), upstream)
+                    else:
+                        offsets = xr.DataArray([], dims=["index"])
+                    if offsets.dtype.kind != "i":
+                        warnings.warn(
+                            f"detected missing values in digitizing {r.parent_data}.{r.parent_name}",
+                            stacklevel=2,
+                        )
 
                 # candidate name for write back
                 r_parent_name_new = (
