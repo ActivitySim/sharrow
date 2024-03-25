@@ -342,6 +342,7 @@ class RewriteForNumba(ast.NodeTransformer):
         bool_wrapping=False,
         swallow_errors=False,
         get_default=False,
+        original_expr="???",
     ):
         self.spacename = spacename
         self.dim_slots = dim_slots
@@ -355,6 +356,7 @@ class RewriteForNumba(ast.NodeTransformer):
         self.bool_wrapping = bool_wrapping
         self.swallow_errors = swallow_errors
         self.get_default = get_default
+        self.original_expr = original_expr
 
     def log_event(self, tag, node1=None, node2=None):
         if logger.getEffectiveLevel() <= 0:
@@ -1003,7 +1005,9 @@ class RewriteForNumba(ast.NodeTransformer):
                         right_decoded = None
                         warnings.warn(
                             f"right hand value {right.value!r} not found in "
-                            f"categories for {left_varname} in {self.spacename}",
+                            f"categories for {left_varname} in {self.spacename}"
+                            f"\nexpression: {self.original_expr}"
+                            f"\ncategories: {left_dictionary}",
                             stacklevel=2,
                         )
                     if right_decoded is not None:
@@ -1034,7 +1038,9 @@ class RewriteForNumba(ast.NodeTransformer):
                         left_decoded = None
                         warnings.warn(
                             f"left hand value {left.value!r} not found in "
-                            f"categories for {right_varname} in {self.spacename}",
+                            f"categories for {right_varname} in {self.spacename}"
+                            f"\nexpression: {self.original_expr}"
+                            f"\ncategories: {right_dictionary}",
                             stacklevel=2,
                         )
                     if left_decoded is not None:
@@ -1069,6 +1075,7 @@ def expression_for_numba(
     bool_wrapping=False,
     swallow_errors=False,
     get_default=False,
+    original_expr = None,
 ):
     """
     Rewrite an expression so numba can compile it.
@@ -1087,27 +1094,37 @@ def expression_for_numba(
     prefer_name : str, optional
     extra_vars : Mapping, optional
     blenders : Mapping, optional
+    bool_wrapping : bool, optional
+    swallow_errors : bool, optional
+    get_default : bool, optional
+    original_expr : str, optional
+        Original (pre-processing) expression, used for debugging
 
     Returns
     -------
     str
     """
-    return unparse_(
-        RewriteForNumba(
-            spacename,
-            dim_slots,
-            spacevars,
-            rawname,
-            rawalias,
-            digital_encodings,
-            prefer_name,
-            extra_vars,
-            blenders,
-            bool_wrapping,
-            swallow_errors,
-            get_default,
-        ).visit(ast.parse(expr))
-    )
+    with warnings.catch_warnings(record=True) as warning_list:
+        result = unparse_(
+            RewriteForNumba(
+                spacename,
+                dim_slots,
+                spacevars,
+                rawname,
+                rawalias,
+                digital_encodings,
+                prefer_name,
+                extra_vars,
+                blenders,
+                bool_wrapping,
+                swallow_errors,
+                get_default,
+                original_expr=original_expr or expr,
+            ).visit(ast.parse(expr))
+        )
+    for warning in warning_list:
+        warnings.warn(warning.message, warning.category, stacklevel=2)
+    return result
 
 
 class Asterize:

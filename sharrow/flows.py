@@ -1291,6 +1291,7 @@ class Flow:
                             extra_vars=self.tree.extra_vars,
                             blenders=blenders,
                             bool_wrapping=self.bool_wrapping,
+                            original_expr=init_expr,
                         )
                     except KeyError as key_err:
                         # there was an error, but lets make sure we process the
@@ -1306,6 +1307,7 @@ class Flow:
                             blenders=blenders,
                             bool_wrapping=self.bool_wrapping,
                             swallow_errors=True,
+                            original_expr=init_expr,
                         )
                         # Now for the fallback processing...
                         if ".." in key_err.args[0]:
@@ -1330,6 +1332,7 @@ class Flow:
                                     extra_vars=self.tree.extra_vars,
                                     blenders=blenders,
                                     bool_wrapping=self.bool_wrapping,
+                                    original_expr=init_expr,
                                 )
                             except KeyError as err:  # noqa: F841
                                 pass
@@ -1350,6 +1353,7 @@ class Flow:
                                     blenders=blenders,
                                     bool_wrapping=self.bool_wrapping,
                                     get_default=True,
+                                    original_expr=init_expr,
                                 )
                             except KeyError as err:  # noqa: F841
                                 pass
@@ -1376,6 +1380,7 @@ class Flow:
                                         blenders=blenders,
                                         bool_wrapping=self.bool_wrapping,
                                         get_default=True,
+                                        original_expr=init_expr,
                                     )
                                 except KeyError as err:  # noqa: F841
                                     pass
@@ -1417,6 +1422,7 @@ class Flow:
                                 blenders=blenders,
                                 bool_wrapping=self.bool_wrapping,
                                 get_default=gd,
+                                original_expr=init_expr,
                             )
                         except KeyError:
                             # there was an error, but lets make sure we process the
@@ -1434,6 +1440,7 @@ class Flow:
                                 bool_wrapping=self.bool_wrapping,
                                 swallow_errors=True,
                                 get_default=gd,
+                                original_expr=init_expr,
                             )
 
             # now find instances where an identifier is previously created in this flow.
@@ -1445,6 +1452,7 @@ class Flow:
                 "_outputs",
                 extra_vars=self.tree.extra_vars,
                 bool_wrapping=self.bool_wrapping,
+                original_expr=init_expr,
             )
 
             aux_tokens = {
@@ -1461,6 +1469,7 @@ class Flow:
                 prefer_name="aux_var",
                 extra_vars=self.tree.extra_vars,
                 bool_wrapping=self.bool_wrapping,
+                original_expr=init_expr,
             )
 
             if (k == init_expr) and (init_expr == expr) and k.isidentifier():
