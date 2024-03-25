@@ -1075,7 +1075,7 @@ def expression_for_numba(
     bool_wrapping=False,
     swallow_errors=False,
     get_default=False,
-    original_expr = None,
+    original_expr=None,
 ):
     """
     Rewrite an expression so numba can compile it.
