@@ -408,7 +408,7 @@ class RewriteForNumba(ast.NodeTransformer):
                 if self.get_default or (
                     topname == pref_topname and not self.swallow_errors
                 ):
-                    raise KeyError(f"{topname}..{attr}")
+                    raise KeyError(f"{topname}..{attr}\nexpression={self.original_expr}")
                 # we originally raised a KeyError here regardless, but what if
                 # we just give back the original node, and see if other spaces,
                 # possibly fallback spaces, might work?  If nothing works then
