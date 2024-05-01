@@ -248,7 +248,9 @@ class SharedMemDatasetAccessor:
     def delete_shared_memory_files(key):
         delete_shared_memory_files(key)
 
-    def to_shared_memory(self, key=None, mode="r+", _dupe=True, dask_scheduler="threads"):
+    def to_shared_memory(
+        self, key=None, mode="r+", _dupe=True, dask_scheduler="threads"
+    ):
         """
         Load this Dataset into shared memory.
 
@@ -343,7 +345,7 @@ class SharedMemDatasetAccessor:
 
         mem = create_shared_memory_array(key, size=position)
 
-        logger.info(f"declaring shared memory buffer")
+        logger.info("declaring shared memory buffer")
         if key.startswith("memmap:"):
             buffer = memoryview(mem)
         else:
