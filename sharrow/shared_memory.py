@@ -352,6 +352,7 @@ class SharedMemDatasetAccessor:
             buffer = mem.buf
 
         tasks = []
+        task_names = []
         for w in wrappers:
             _is_sparse = w.get("sparse", False)
             _size = w["nbytes"]
@@ -391,12 +392,18 @@ class SharedMemDatasetAccessor:
                 )
                 if isinstance(a, xr.DataArray) and isinstance(a.data, da.Array):
                     tasks.append(da.store(a.data, mem_arr, lock=False, compute=False))
+                    task_names.append(_name)
                 else:
                     mem_arr[:] = a[:]
         if tasks:
             t = time.time()
             logger.info(f"running {len(tasks)} dask data load tasks")
-            dask.compute(tasks, scheduler=dask_scheduler)
+            if dask_scheduler == "synchronous":
+                for task, task_name in zip(tasks, task_names):
+                    logger.info(f"running load task: {task_name}")
+                    dask.compute(task, scheduler=dask_scheduler)
+            else:
+                dask.compute(tasks, scheduler=dask_scheduler)
             logger.info(f"completed dask data load in {time.time()-t:.3f} seconds")
 
         if key.startswith("memmap:"):
