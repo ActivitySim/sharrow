@@ -177,6 +177,48 @@ def test_missing_categorical():
     a = a.isel(expressions=0)
     assert all(a == np.asarray([1, 0, 1, 1, 1, 1]))
 
+    expr = "df.TourMode2 != 'BAD'"
+    with pytest.warns(UserWarning):
+        f8 = tree.setup_flow({expr: expr}, with_root_node_name="df")
+    a = f8.load_dataarray(dtype=np.int8)
+    a = a.isel(expressions=0)
+    assert all(a == np.asarray([1, 1, 1, 1, 1, 1]))
+
+    expr = "'BAD' != df.TourMode2"
+    with pytest.warns(UserWarning):
+        f9 = tree.setup_flow({expr: expr}, with_root_node_name="df")
+    a = f9.load_dataarray(dtype=np.int8)
+    a = a.isel(expressions=0)
+    assert all(a == np.asarray([1, 1, 1, 1, 1, 1]))
+
+    expr = "(df.TourMode2 == 'BAD') * 2"
+    with pytest.warns(UserWarning):
+        fA = tree.setup_flow({expr: expr}, with_root_node_name="df")
+    a = fA.load_dataarray(dtype=np.int8)
+    a = a.isel(expressions=0)
+    assert all(a == np.asarray([0, 0, 0, 0, 0, 0]))
+
+    expr = "(df.TourMode2 == 'BAD') * 2.2"
+    with pytest.warns(UserWarning):
+        fB = tree.setup_flow({expr: expr}, with_root_node_name="df")
+    a = fB.load_dataarray(dtype=np.int8)
+    a = a.isel(expressions=0)
+    assert all(a == np.asarray([0, 0, 0, 0, 0, 0]))
+
+    expr = "np.exp(df.TourMode2 == 'BAD') * 2.2"
+    with pytest.warns(UserWarning):
+        fC = tree.setup_flow({expr: expr}, with_root_node_name="df")
+    a = fC.load_dataarray(dtype=np.float32)
+    a = a.isel(expressions=0)
+    assert all(a == np.asarray([2.2, 2.2, 2.2, 2.2, 2.2, 2.2], dtype=np.float32))
+
+    expr = "(df.TourMode2 != 'BAD') * 2"
+    with pytest.warns(UserWarning):
+        fD = tree.setup_flow({expr: expr}, with_root_node_name="df")
+    a = fD.load_dataarray(dtype=np.int8)
+    a = a.isel(expressions=0)
+    assert all(a == np.asarray([2, 2, 2, 2, 2, 2]))
+
 
 def test_categorical_indexing(tours_dataset: xr.Dataset, skims_dataset: xr.Dataset):
     tree = sharrow.DataTree(tours=tours_dataset)

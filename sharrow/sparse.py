@@ -163,7 +163,7 @@ class RedirectionAccessor:
             raise ImportError("sparse is not installed")
 
         sparse_data = sparse.GCXS(
-            sparse.COO((i_, j_), data, shape=shape), compressed_axes=(0,)
+            sparse.COO(np.stack((i_, j_)), data, shape=shape), compressed_axes=(0,)
         )
         self._obj[f"_s_{name}"] = xr.DataArray(
             sparse_data,

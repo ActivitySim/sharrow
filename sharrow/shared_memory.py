@@ -3,6 +3,7 @@ import hashlib
 import logging
 import os
 import pickle
+import time
 
 import dask
 import dask.array as da
@@ -247,7 +248,9 @@ class SharedMemDatasetAccessor:
     def delete_shared_memory_files(key):
         delete_shared_memory_files(key)
 
-    def to_shared_memory(self, key=None, mode="r+", _dupe=True):
+    def to_shared_memory(
+        self, key=None, mode="r+", _dupe=True, dask_scheduler="threads"
+    ):
         """
         Load this Dataset into shared memory.
 
@@ -262,9 +265,13 @@ class SharedMemDatasetAccessor:
             An identifying key for this shared memory.  Use the same key
             in `from_shared_memory` to recreate this Dataset elsewhere.
         mode : {‘r+’, ‘r’, ‘w+’, ‘c’}, optional
-            This methid returns a copy of the Dataset in shared memory.
+            This method returns a copy of the Dataset in shared memory.
             If memmapped, that copy can be opened in various modes.
             See numpy.memmap() for details.
+        dask_scheduler : str, default 'threads'
+            The scheduler to use when loading dask arrays into shared memory.
+            Typically "threads" for multi-threaded reads or "synchronous"
+            for single-threaded reads. See dask.compute() for details.
 
         Returns
         -------
@@ -287,6 +294,7 @@ class SharedMemDatasetAccessor:
         def emit(k, a, is_coord):
             nonlocal names, wrappers, sizes, position
             if sparse is not None and isinstance(a.data, sparse.GCXS):
+                logger.info(f"preparing sparse array {a.name}")
                 wrappers.append(
                     {
                         "sparse": True,
@@ -308,6 +316,7 @@ class SharedMemDatasetAccessor:
                 )
                 a_nbytes = a.data.nbytes
             else:
+                logger.info(f"preparing dense array {a.name}")
                 wrappers.append(
                     {
                         "dims": a.dims,
@@ -335,12 +344,15 @@ class SharedMemDatasetAccessor:
             emit(k, a, False)
 
         mem = create_shared_memory_array(key, size=position)
+
+        logger.info("declaring shared memory buffer")
         if key.startswith("memmap:"):
             buffer = memoryview(mem)
         else:
             buffer = mem.buf
 
         tasks = []
+        task_names = []
         for w in wrappers:
             _is_sparse = w.get("sparse", False)
             _size = w["nbytes"]
@@ -348,6 +360,7 @@ class SharedMemDatasetAccessor:
             _pos = w["position"]
             a = self._obj[_name]
             if _is_sparse:
+                logger.info(f"running load task: {_name} ({si_units(_size)})")
                 ad = a.data
                 _size_d = w["data.nbytes"]
                 _size_i = w["indices.nbytes"]
@@ -373,19 +386,30 @@ class SharedMemDatasetAccessor:
                 mem_arr_i[:] = ad.indices[:]
                 mem_arr_p[:] = ad.indptr[:]
             else:
+                logger.info(f"preparing load task: {_name} ({si_units(_size)})")
                 mem_arr = np.ndarray(
                     shape=a.shape, dtype=a.dtype, buffer=buffer[_pos : _pos + _size]
                 )
                 if isinstance(a, xr.DataArray) and isinstance(a.data, da.Array):
                     tasks.append(da.store(a.data, mem_arr, lock=False, compute=False))
+                    task_names.append(_name)
                 else:
                     mem_arr[:] = a[:]
         if tasks:
-            dask.compute(tasks, scheduler="threads")
+            t = time.time()
+            logger.info(f"running {len(tasks)} dask data load tasks")
+            if dask_scheduler == "synchronous":
+                for task, task_name in zip(tasks, task_names):
+                    logger.info(f"running load task: {task_name}")
+                    dask.compute(task, scheduler=dask_scheduler)
+            else:
+                dask.compute(tasks, scheduler=dask_scheduler)
+            logger.info(f"completed dask data load in {time.time()-t:.3f} seconds")
 
         if key.startswith("memmap:"):
             mem.flush()
 
+        logger.info("storing metadata in shared memory")
         create_shared_list(
             [pickle.dumps(self._obj.attrs)] + [pickle.dumps(i) for i in wrappers], key
         )

@@ -408,7 +408,9 @@ class RewriteForNumba(ast.NodeTransformer):
                 if self.get_default or (
                     topname == pref_topname and not self.swallow_errors
                 ):
-                    raise KeyError(f"{topname}..{attr}")
+                    raise KeyError(
+                        f"{topname}..{attr}\nexpression={self.original_expr}"
+                    )
                 # we originally raised a KeyError here regardless, but what if
                 # we just give back the original node, and see if other spaces,
                 # possibly fallback spaces, might work?  If nothing works then
@@ -1010,6 +1012,16 @@ class RewriteForNumba(ast.NodeTransformer):
                             f"\ncategories: {left_dictionary}",
                             stacklevel=2,
                         )
+                        # at this point, the right value is not in the left's categories, so
+                        # it is guaranteed to be not equal to any of the categories.
+                        if isinstance(node.ops[0], ast.Eq):
+                            result = ast.Constant(False)
+                        elif isinstance(node.ops[0], ast.NotEq):
+                            result = ast.Constant(True)
+                        else:
+                            raise ValueError(
+                                f"unexpected operator {node.ops[0]}"
+                            ) from None
                     if right_decoded is not None:
                         result = ast.Compare(
                             left=left.slice,
@@ -1043,6 +1055,16 @@ class RewriteForNumba(ast.NodeTransformer):
                             f"\ncategories: {right_dictionary}",
                             stacklevel=2,
                         )
+                        # at this point, the left value is not in the right's categories, so
+                        # it is guaranteed to be not equal to any of the categories.
+                        if isinstance(node.ops[0], ast.Eq):
+                            result = ast.Constant(False)
+                        elif isinstance(node.ops[0], ast.NotEq):
+                            result = ast.Constant(True)
+                        else:
+                            raise ValueError(
+                                f"unexpected operator {node.ops[0]}"
+                            ) from None
                     if left_decoded is not None:
                         result = ast.Compare(
                             left=ast_Constant(left_decoded),
