@@ -10,7 +10,7 @@ dependencies:
   - xarray
   - dask
   - networkx
-  - numba>=0.54
+  - numba>=0.57
   - numexpr
   - sparse
   - filelock
