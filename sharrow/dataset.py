@@ -393,6 +393,7 @@ def from_omx_3d(
     time_periods=None,
     time_period_sep="__",
     max_float_precision=32,
+    ignore=None,
 ):
     """
     Create a Dataset from an OMX file with an implicit third dimension.
@@ -457,6 +458,16 @@ def from_omx_3d(
     import dask.array
 
     data_names = list(omx_data_map.keys())
+    if ignore is not None:
+
+        def should_ignore(x):
+            if ignore is not None:
+                for i in ignore:
+                    if re.match(i, x):
+                        return True
+            return False
+
+        data_names = [i for i in data_names if not should_ignore(i)]
     n1, n2 = omx_shape
     if indexes is None:
         # default reads mapping if only one lookup is included, otherwise one-based
