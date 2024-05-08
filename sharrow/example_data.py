@@ -4,6 +4,11 @@ import numpy as np
 import pandas as pd
 
 
+def get_skims_filename() -> str:
+    """Return the path to the example skims file."""
+    return os.path.join(os.path.dirname(__file__), "example_data", "skims.omx")
+
+
 def get_skims():
     import openmatrix
 

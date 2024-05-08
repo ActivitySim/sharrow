@@ -65,3 +65,43 @@ def test_dataset_categoricals():
 
     recovered_df = hd.single_dim.to_pandas()
     pd.testing.assert_frame_equal(hhs, recovered_df)
+
+
+def test_load_with_ignore():
+    filename = sh.example_data.get_skims_filename()
+    with openmatrix.open_file(filename) as f:
+        skims = sh.dataset.from_omx_3d(
+            f,
+            index_names=("otaz", "dtaz", "time_period"),
+            indexes=None,
+            time_periods=["EA", "AM", "MD", "PM", "EV"],
+            time_period_sep="__",
+            max_float_precision=32,
+        )
+    assert "DRV_COM_WLK_FAR" in skims.variables
+
+    with openmatrix.open_file(filename) as f:
+        skims1 = sh.dataset.from_omx_3d(
+            f,
+            index_names=("otaz", "dtaz", "time_period"),
+            indexes=None,
+            time_periods=["EA", "AM", "MD", "PM", "EV"],
+            time_period_sep="__",
+            max_float_precision=32,
+            ignore=["DRV_COM_WLK_.*"],
+        )
+    assert "DRV_COM_WLK_FAR" not in skims1.variables
+
+    with openmatrix.open_file(filename) as f:
+        skims2 = sh.dataset.from_omx_3d(
+            f,
+            index_names=("otaz", "dtaz", "time_period"),
+            indexes=None,
+            time_periods=["EA", "AM", "MD", "PM", "EV"],
+            time_period_sep="__",
+            max_float_precision=32,
+            ignore="DRV_COM_WLK_.*",
+        )
+    print(skims2)
+    assert "DISTBIKE" in skims2.variables
+    assert "DRV_COM_WLK_FAR" not in skims2.variables

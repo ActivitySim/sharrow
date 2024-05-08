@@ -428,6 +428,12 @@ def from_omx_3d(
         precision, generally to save memory if they were stored as double
         precision but that level of detail is unneeded in the present
         application.
+    ignore : list-like, optional
+        A list of regular expressions that will be used to filter out
+        variables from the dataset.  If any of the regular expressions
+        match the name of a variable, that variable will not be included
+        in the loaded dataset. This is useful for excluding variables that
+        are not needed in the current application.
 
     Returns
     -------
@@ -459,6 +465,8 @@ def from_omx_3d(
 
     data_names = list(omx_data_map.keys())
     if ignore is not None:
+        if isinstance(ignore, str):
+            ignore = [ignore]
 
         def should_ignore(x):
             if ignore is not None:
