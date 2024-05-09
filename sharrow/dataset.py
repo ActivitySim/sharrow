@@ -18,6 +18,7 @@ from xarray import DataArray, Dataset
 from .accessors import register_dataset_method
 from .aster import extract_all_name_tokens
 from .categorical import _Categorical  # noqa
+from .shared_memory import si_units
 from .table import Table
 
 if TYPE_CHECKING:
@@ -624,6 +625,8 @@ def reload_from_omx_3d(
             use_file_handles.append(filename)
     omx = use_file_handles
 
+    bytes_loaded = 0
+
     try:
         t0 = time.time()
         for filename, f in zip(omx, use_file_handles):
@@ -654,8 +657,10 @@ def reload_from_omx_3d(
                         )
                     raw = dataset[data_name].data
                     raw[:, :] = f.root.data[data_name][:, :]
+                bytes_loaded += raw.nbytes
                 logger.info(
-                    f"loaded {data_name} ({filter_note}) to dataset in {time.time() - t1:.2f}s"
+                    f"loaded {data_name} ({filter_note}) to dataset "
+                    f"in {time.time() - t1:.2f}s, {si_units(bytes_loaded)}"
                 )
         logger.info(f"loading to dataset complete in {time.time() - t0:.2f}s")
     finally:
