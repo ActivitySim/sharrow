@@ -5,6 +5,7 @@ import base64
 import hashlib
 import logging
 import re
+import time
 from collections.abc import Hashable, Iterable, Mapping, Sequence
 from typing import TYPE_CHECKING, Any
 
@@ -624,34 +625,39 @@ def reload_from_omx_3d(
     omx = use_file_handles
 
     try:
-        for filename in omx:
-            logger.info(f"loading into dataset from {filename}")
-            import openmatrix
+        t0 = time.time()
+        for filename, f in zip(omx, use_file_handles):
+            if isinstance(filename, str):
+                logger.info(f"loading into dataset from {filename}")
+            for data_name in f.root.data._v_children:
+                if _should_ignore(ignore, data_name):
+                    logger.info(f"ignoring {data_name}")
+                    continue
+                t1 = time.time()
+                filters = f.root.data[data_name].filters
+                filter_note = f"{filters.complib}/{filters.complevel}"
 
-            with openmatrix.open_file(filename) as f:
-                for data_name in f.root.data._v_children:
-                    if _should_ignore(ignore, data_name):
-                        logger.info(f"ignoring {data_name}")
-                        continue
-                    logger.info(f"loading {data_name} to dataset")
-                    if time_period_sep in data_name:
-                        data_name_x, data_name_t = data_name.split(time_period_sep, 1)
-                        if len(dataset[data_name_x].dims) != 3:
-                            raise ValueError(
-                                f"dataset variable {data_name_x} has "
-                                f"{len(dataset[data_name_x].dims)} dimensions, expected 3"
-                            )
-                        raw = dataset[data_name_x].sel(time_period=data_name_t).data
-                        raw[:, :] = f.root.data[data_name][:, :]
-                    else:
-                        if len(dataset[data_name].dims) != 2:
-                            raise ValueError(
-                                f"dataset variable {data_name} has "
-                                f"{len(dataset[data_name].dims)} dimensions, expected 2"
-                            )
-                        raw = dataset[data_name].data
-                        raw[:, :] = f.root.data[data_name][:, :]
-        logger.info("loading to dataset complete")
+                if time_period_sep in data_name:
+                    data_name_x, data_name_t = data_name.split(time_period_sep, 1)
+                    if len(dataset[data_name_x].dims) != 3:
+                        raise ValueError(
+                            f"dataset variable {data_name_x} has "
+                            f"{len(dataset[data_name_x].dims)} dimensions, expected 3"
+                        )
+                    raw = dataset[data_name_x].sel(time_period=data_name_t).data
+                    raw[:, :] = f.root.data[data_name][:, :]
+                else:
+                    if len(dataset[data_name].dims) != 2:
+                        raise ValueError(
+                            f"dataset variable {data_name} has "
+                            f"{len(dataset[data_name].dims)} dimensions, expected 2"
+                        )
+                    raw = dataset[data_name].data
+                    raw[:, :] = f.root.data[data_name][:, :]
+                logger.info(
+                    f"loaded {data_name} ({filter_note}) to dataset in {time.time() - t1:.2f}s"
+                )
+        logger.info(f"loading to dataset complete in {time.time() - t0:.2f}s")
     finally:
         for h in opened_file_handles:
             h.close()

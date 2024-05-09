@@ -300,7 +300,7 @@ class SharedMemDatasetAccessor:
         def emit(k, a, is_coord):
             nonlocal names, wrappers, sizes, position
             if sparse is not None and isinstance(a.data, sparse.GCXS):
-                logger.info(f"preparing sparse array {a.name}")
+                logger.debug(f"preparing sparse array {a.name}")
                 wrappers.append(
                     {
                         "sparse": True,
@@ -322,7 +322,7 @@ class SharedMemDatasetAccessor:
                 )
                 a_nbytes = a.data.nbytes
             else:
-                logger.info(f"preparing dense array {a.name}")
+                logger.debug(f"preparing dense array {a.name}")
                 wrappers.append(
                     {
                         "dims": a.dims,
@@ -351,13 +351,14 @@ class SharedMemDatasetAccessor:
 
         mem = create_shared_memory_array(key, size=position)
 
-        logger.info("declaring shared memory buffer")
+        logger.debug("declaring shared memory buffer")
         if key.startswith("memmap:"):
             buffer = memoryview(mem)
         else:
             buffer = mem.buf
 
         if pre_init:
+            logger.debug("pre-initializing shared memory buffer")
             # gross init with all zeros
             buffer[:] = b"\0" * len(buffer)
 
@@ -396,7 +397,7 @@ class SharedMemDatasetAccessor:
                 mem_arr_i[:] = ad.indices[:]
                 mem_arr_p[:] = ad.indptr[:]
             else:
-                logger.info(f"preparing load task: {_name} ({si_units(_size)})")
+                logger.debug(f"preparing load task: {_name} ({si_units(_size)})")
                 mem_arr = np.ndarray(
                     shape=a.shape, dtype=a.dtype, buffer=buffer[_pos : _pos + _size]
                 )
