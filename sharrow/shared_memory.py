@@ -31,7 +31,11 @@ def si_units(x, kind="B", digits=3, shift=1000):
     tiers = ["n", "µ", "m", "", "K", "M", "G", "T", "P", "E", "Z", "Y"]
 
     tier = 3
-    sign = "-" if x < 0 else ""
+    try:
+        sign = "-" if x < 0 else ""
+    except TypeError:
+        # x is not a number, just return it
+        return x
     x = abs(x)
     if x > 0:
         while x > shift and tier < len(tiers):
