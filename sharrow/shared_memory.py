@@ -280,8 +280,17 @@ class SharedMemDatasetAccessor:
             See numpy.memmap() for details.
         dask_scheduler : str, default 'threads'
             The scheduler to use when loading dask arrays into shared memory.
-            Typically "threads" for multi-threaded reads or "synchronous"
+            Typically, this is "threads" for multithreaded reads or "synchronous"
             for single-threaded reads. See dask.compute() for details.
+        pre_init : bool, default False
+            If True, the shared memory buffer will be pre-initialized with zeros.
+            This is generally not necessary, but can be useful for debugging.
+        load : bool, default True
+            If True, load the data into shared memory immediately, using dask.
+            If False, defer loading until later. Deferred tasks are stored in
+            the `shm.tasks` attribute of the resulting Dataset object, but do not
+            necessarily need to be run if data can be loaded using alternative
+            methods (e.g. `sharrow.dataset.reload_from_omx_3d`).
 
         Returns
         -------
