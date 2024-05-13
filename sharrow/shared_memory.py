@@ -31,7 +31,11 @@ def si_units(x, kind="B", digits=3, shift=1000):
     tiers = ["n", "µ", "m", "", "K", "M", "G", "T", "P", "E", "Z", "Y"]
 
     tier = 3
-    sign = "-" if x < 0 else ""
+    try:
+        sign = "-" if x < 0 else ""
+    except TypeError:
+        # x is not a number, just return it
+        return x
     x = abs(x)
     if x > 0:
         while x > shift and tier < len(tiers):
@@ -249,7 +253,13 @@ class SharedMemDatasetAccessor:
         delete_shared_memory_files(key)
 
     def to_shared_memory(
-        self, key=None, mode="r+", _dupe=True, dask_scheduler="threads"
+        self,
+        key=None,
+        mode="r+",
+        _dupe=True,
+        dask_scheduler="threads",
+        pre_init=False,
+        load=True,
     ):
         """
         Load this Dataset into shared memory.
@@ -270,8 +280,17 @@ class SharedMemDatasetAccessor:
             See numpy.memmap() for details.
         dask_scheduler : str, default 'threads'
             The scheduler to use when loading dask arrays into shared memory.
-            Typically "threads" for multi-threaded reads or "synchronous"
+            Typically, this is "threads" for multithreaded reads or "synchronous"
             for single-threaded reads. See dask.compute() for details.
+        pre_init : bool, default False
+            If True, the shared memory buffer will be pre-initialized with zeros.
+            This is generally not necessary, but can be useful for debugging.
+        load : bool, default True
+            If True, load the data into shared memory immediately, using dask.
+            If False, defer loading until later. Deferred tasks are stored in
+            the `shm.tasks` attribute of the resulting Dataset object, but do not
+            necessarily need to be run if data can be loaded using alternative
+            methods (e.g. `sharrow.dataset.reload_from_omx_3d`).
 
         Returns
         -------
@@ -294,7 +313,7 @@ class SharedMemDatasetAccessor:
         def emit(k, a, is_coord):
             nonlocal names, wrappers, sizes, position
             if sparse is not None and isinstance(a.data, sparse.GCXS):
-                logger.info(f"preparing sparse array {a.name}")
+                logger.debug(f"preparing sparse array {a.name}")
                 wrappers.append(
                     {
                         "sparse": True,
@@ -316,7 +335,7 @@ class SharedMemDatasetAccessor:
                 )
                 a_nbytes = a.data.nbytes
             else:
-                logger.info(f"preparing dense array {a.name}")
+                logger.debug(f"preparing dense array {a.name}")
                 wrappers.append(
                     {
                         "dims": a.dims,
@@ -345,11 +364,16 @@ class SharedMemDatasetAccessor:
 
         mem = create_shared_memory_array(key, size=position)
 
-        logger.info("declaring shared memory buffer")
+        logger.debug("declaring shared memory buffer")
         if key.startswith("memmap:"):
             buffer = memoryview(mem)
         else:
             buffer = mem.buf
+
+        if pre_init:
+            logger.debug("pre-initializing shared memory buffer")
+            # gross init with all zeros
+            buffer[:] = b"\0" * len(buffer)
 
         tasks = []
         task_names = []
@@ -386,7 +410,7 @@ class SharedMemDatasetAccessor:
                 mem_arr_i[:] = ad.indices[:]
                 mem_arr_p[:] = ad.indptr[:]
             else:
-                logger.info(f"preparing load task: {_name} ({si_units(_size)})")
+                logger.debug(f"preparing load task: {_name} ({si_units(_size)})")
                 mem_arr = np.ndarray(
                     shape=a.shape, dtype=a.dtype, buffer=buffer[_pos : _pos + _size]
                 )
@@ -395,16 +419,10 @@ class SharedMemDatasetAccessor:
                     task_names.append(_name)
                 else:
                     mem_arr[:] = a[:]
-        if tasks:
-            t = time.time()
-            logger.info(f"running {len(tasks)} dask data load tasks")
-            if dask_scheduler == "synchronous":
-                for task, task_name in zip(tasks, task_names):
-                    logger.info(f"running load task: {task_name}")
-                    dask.compute(task, scheduler=dask_scheduler)
-            else:
-                dask.compute(tasks, scheduler=dask_scheduler)
-            logger.info(f"completed dask data load in {time.time()-t:.3f} seconds")
+        if tasks and load:
+            self.tasks = tasks
+            self.task_names = task_names
+            self.run_tasks(dask_scheduler=dask_scheduler)
 
         if key.startswith("memmap:"):
             mem.flush()
@@ -413,7 +431,35 @@ class SharedMemDatasetAccessor:
         create_shared_list(
             [pickle.dumps(self._obj.attrs)] + [pickle.dumps(i) for i in wrappers], key
         )
-        return type(self).from_shared_memory(key, own_data=mem, mode=mode)
+        result = type(self).from_shared_memory(key, own_data=mem, mode=mode)
+        if tasks and not load:
+            # attach incompleted tasks to the result
+            result.shm.tasks = tasks
+            result.shm.task_names = task_names
+        result.shm._buffer = buffer
+        result.shm._position = position
+        return result
+
+    def run_tasks(self, dask_scheduler="threads"):
+        """Run any deferred dask tasks."""
+        if not hasattr(self, "tasks"):
+            return
+        else:
+            tasks = self.tasks
+        if not hasattr(self, "task_names"):
+            task_names = ["untitled" for _ in tasks]
+        else:
+            task_names = self.task_names
+        t = time.time()
+        logger.info(f"running {len(tasks)} dask data load tasks")
+        if dask_scheduler == "synchronous":
+            for task, task_name in zip(tasks, task_names):
+                logger.info(f"running load task: {task_name}")
+                dask.compute(task, scheduler=dask_scheduler)
+        else:
+            dask.compute(tasks, scheduler=dask_scheduler)
+        logger.info(f"completed tasks in {time.time() - t:.3f} seconds")
+        del self.tasks
 
     @property
     def shared_memory_key(self):

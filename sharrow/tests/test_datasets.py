@@ -1,9 +1,11 @@
+import secrets
 import tempfile
 from pathlib import Path
 
 import numpy as np
 import openmatrix
 import pandas as pd
+import xarray as xr
 from pytest import approx
 
 import sharrow as sh
@@ -65,3 +67,69 @@ def test_dataset_categoricals():
 
     recovered_df = hd.single_dim.to_pandas()
     pd.testing.assert_frame_equal(hhs, recovered_df)
+
+
+def test_load_with_ignore():
+    filename = sh.example_data.get_skims_filename()
+    with openmatrix.open_file(filename) as f:
+        skims = sh.dataset.from_omx_3d(
+            f,
+            index_names=("otaz", "dtaz", "time_period"),
+            indexes=None,
+            time_periods=["EA", "AM", "MD", "PM", "EV"],
+            time_period_sep="__",
+            max_float_precision=32,
+        )
+    assert "DRV_COM_WLK_FAR" in skims.variables
+
+    with openmatrix.open_file(filename) as f:
+        skims1 = sh.dataset.from_omx_3d(
+            f,
+            index_names=("otaz", "dtaz", "time_period"),
+            indexes=None,
+            time_periods=["EA", "AM", "MD", "PM", "EV"],
+            time_period_sep="__",
+            max_float_precision=32,
+            ignore=["DRV_COM_WLK_.*"],
+        )
+    assert "DRV_COM_WLK_FAR" not in skims1.variables
+
+    with openmatrix.open_file(filename) as f:
+        skims2 = sh.dataset.from_omx_3d(
+            f,
+            index_names=("otaz", "dtaz", "time_period"),
+            indexes=None,
+            time_periods=["EA", "AM", "MD", "PM", "EV"],
+            time_period_sep="__",
+            max_float_precision=32,
+            ignore="DRV_COM_WLK_.*",
+        )
+    print(skims2)
+    assert "DISTBIKE" in skims2.variables
+    assert "DRV_COM_WLK_FAR" not in skims2.variables
+
+
+def test_deferred_load_to_shared_memory():
+    """
+    Test of deferred loading of data into shared memory.
+
+    Checks that skim data is loaded correctly into shared memory
+    when using the `to_shared_memory` method with `load=False`, followed by
+    a call to `reload_from_omx_3d`.
+    """
+    from sharrow.example_data import get_skims_filename
+
+    skims_filename = get_skims_filename()
+    with openmatrix.open_file(skims_filename) as f:
+        d0 = sh.dataset.from_omx_3d(
+            f,
+            index_names=("otaz", "dtaz", "time_period"),
+            time_periods=["EA", "AM", "MD", "PM", "EV"],
+            max_float_precision=32,
+        )
+        token = "skims" + secrets.token_hex(5)
+        d1 = d0.shm.to_shared_memory(token, mode="r", load=False)
+        sh.dataset.reload_from_omx_3d(d1, [skims_filename])
+        xr.testing.assert_equal(d0, d1)
+        d2 = xr.Dataset.shm.from_shared_memory(token)
+        xr.testing.assert_equal(d0, d2)
