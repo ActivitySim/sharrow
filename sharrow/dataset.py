@@ -7,6 +7,7 @@ import logging
 import re
 import time
 from collections.abc import Hashable, Iterable, Mapping, Sequence
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
@@ -615,7 +616,7 @@ def reload_from_omx_3d(
     use_file_handles = []
     opened_file_handles = []
     for filename in omx:
-        if isinstance(filename, str):
+        if isinstance(filename, (str, Path)):
             import openmatrix
 
             h = openmatrix.open_file(filename)
@@ -642,6 +643,11 @@ def reload_from_omx_3d(
 
                 if time_period_sep in data_name:
                     data_name_x, data_name_t = data_name.split(time_period_sep, 1)
+                    if data_name_x not in dataset:
+                        logger.info(
+                            f"skipping {data_name} because {data_name_x} not in dataset"
+                        )
+                        continue
                     if len(dataset[data_name_x].dims) != 3:
                         raise ValueError(
                             f"dataset variable {data_name_x} has "
