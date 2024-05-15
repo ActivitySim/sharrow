@@ -14,7 +14,7 @@ dependencies:
   - nbmake
   - networkx
   - notebook
-  - numba>=0.54
+  - numba>=0.57
   - numexpr
   - numpy>=1.19
   - openmatrix

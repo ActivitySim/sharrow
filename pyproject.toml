@@ -14,7 +14,7 @@ dependencies = [
     "pandas >= 1.2",
     "pyarrow",
     "xarray",
-    "numba >= 0.51.2",
+    "numba >= 0.57",
     "numexpr",
     "filelock",
     "dask",
