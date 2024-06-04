@@ -939,12 +939,12 @@ class RewriteForNumba(ast.NodeTransformer):
         ):
             if len(node.args) == 2 and len(node.keywords) == 0:
                 try:
-                    return self._replacement(
+                    result = self._replacement(
                         ast_String_value(node.args[0]), node.func.value.ctx, node
                     )
                 except KeyError:
                     if self.get_default:
-                        return self.visit(node.args[1])
+                        result = self.visit(node.args[1])
                     else:
                         raise
             if (
@@ -953,17 +953,32 @@ class RewriteForNumba(ast.NodeTransformer):
                 and "default" == node.keywords[0].arg
             ):
                 try:
-                    return self._replacement(
+                    result = self._replacement(
                         ast_String_value(node.args[0]), node.func.value.ctx, node
                     )
                 except KeyError:
                     if self.get_default:
-                        return self.visit(node.keywords[0].value)
+                        result = self.visit(node.keywords[0].value)
                     else:
                         raise
             if len(node.args) == 1 and len(node.keywords) == 0:
-                return self._replacement(
+                result = self._replacement(
                     ast_String_value(node.args[0]), node.func.value.ctx, node
+                )
+
+        # change np.where(x, y, z) to (y if x else z), for performance reasons
+        if (
+            isinstance(node.func, ast.Attribute)
+            and node.func.attr == "where"
+            and isinstance(node.func.value, ast.Name)
+            and (node.func.value.id == "np" or node.func.value.id == "numpy")
+            and len(node.args) == 3
+        ):
+            if len(node.args) == 3 and len(node.keywords) == 0:
+                result = ast.IfExp(
+                    test=self.visit(node.args[0]),
+                    body=self.visit(node.args[1]),
+                    orelse=self.visit(node.args[2]),
                 )
 
         # if no other changes
