@@ -1182,6 +1182,8 @@ def _to_ast_literal(x):
         return _to_ast_literal(x.to_list())
     elif isinstance(x, np.ndarray):
         return _to_ast_literal(list(x))
+    elif isinstance(x, np.str_):
+        return repr(str(x))
     else:
         return repr(x)
 

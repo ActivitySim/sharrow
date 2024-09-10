@@ -10,7 +10,7 @@ name = "sharrow"
 requires-python = ">=3.9"
 dynamic = ["version"]
 dependencies = [
-    "numpy >= 1.19, <2",
+    "numpy >= 1.19",
     "pandas >= 1.2",
     "pyarrow",
     "xarray",
