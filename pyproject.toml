@@ -10,7 +10,7 @@ name = "sharrow"
 requires-python = ">=3.9"
 dynamic = ["version"]
 dependencies = [
-    "numpy >= 1.19, <2",
+    "numpy >= 1.19",
     "pandas >= 1.2",
     "pyarrow",
     "xarray",
@@ -59,7 +59,6 @@ select = [
     "B", # flake8-bugbear
 ]
 ignore = ["B905", "D1"]
-ignore-init-module-imports = true
 per-file-ignores = { "*.ipynb" = [
     "E402", # allow imports to appear anywhere in Jupyter Notebooks
     "E501", # allow long lines in Jupyter Notebooks

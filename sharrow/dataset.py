@@ -91,7 +91,7 @@ def construct(source):
     Parameters
     ----------
     source : pandas.DataFrame, pyarrow.Table, xarray.Dataset, or Sequence[str]
-        The source from which to create a Dataset.  DataFrames and Tables
+        The source from which to create a Dataset.  DataFrame and Table objects
         are converted to Datasets that have one dimension (the rows) and
         separate variables for each of the columns.  A list of strings
         creates a dataset with those named empty variables.
@@ -1065,6 +1065,38 @@ class _iLocIndexer:
         return self.dataset.isel(key)
 
 
+@xr.register_dataarray_accessor("iloc")
+class _iLocArrayIndexer:
+    """
+    Purely integer-location based indexing for selection by position on 1-d DataArrays.
+
+    In many ways, a dataset with a single dimensions is like a pandas DataFrame,
+    with the one dimension giving the rows, and the variables as columns. This
+    analogy eventually breaks down (DataFrame columns are ordered, Dataset
+    variables are not) but the similarities are enough that it’s sometimes
+    convenient to have iloc functionality enabled. This only works for indexing
+    on the rows, but if there’s only the one dimension the complexity of isel
+    is not needed.
+    """
+
+    __slots__ = ("dataarray",)
+
+    def __init__(self, dataarray: DataArray):
+        self.dataarray = dataarray
+
+    def __getitem__(self, key: Mapping[Hashable, Any]) -> DataArray:
+        if not is_dict_like(key):
+            if len(self.dataarray.dims) == 1:
+                dim_name = self.dataarray.dims.__iter__().__next__()
+                key = {dim_name: key}
+            else:
+                raise TypeError(
+                    "can only lookup dictionaries from DataArray.iloc, "
+                    "unless there is only one dimension"
+                )
+        return self.dataarray.isel(key)
+
+
 xr.Dataset.rename_dims_and_coords = xr.Dataset.rename
 
 
@@ -1182,6 +1214,8 @@ def _to_ast_literal(x):
         return _to_ast_literal(x.to_list())
     elif isinstance(x, np.ndarray):
         return _to_ast_literal(list(x))
+    elif isinstance(x, np.str_):
+        return repr(str(x))
     else:
         return repr(x)
 
@@ -1448,7 +1482,7 @@ def from_named_objects(*args):
             raise ValueError(f"argument {n} has no name") from None
         if name is None:
             raise ValueError(f"the name for argument {n} is None")
-        objs[name] = a
+        objs[name] = np.asarray(a)
     return xr.Dataset(objs)
 
 

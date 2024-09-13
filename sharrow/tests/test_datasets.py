@@ -5,6 +5,7 @@ from pathlib import Path
 import numpy as np
 import openmatrix
 import pandas as pd
+import pytest
 import xarray as xr
 from pytest import approx
 
@@ -133,3 +134,47 @@ def test_deferred_load_to_shared_memory():
         xr.testing.assert_equal(d0, d1)
         d2 = xr.Dataset.shm.from_shared_memory(token)
         xr.testing.assert_equal(d0, d2)
+
+
+def test_from_named_objects():
+    from sharrow.dataset import from_named_objects
+
+    s1 = pd.Series([1, 4, 9, 16], name="Squares")
+    s2 = pd.Series([2, 3, 5, 7, 11], name="Primes")
+    i1 = pd.Index([1, 4, 9, 16], name="Squares")
+    a1 = xr.DataArray([1, 4, 9, 16], name="Squares")
+
+    for obj in [s1, i1, a1]:
+        ds = from_named_objects(obj, s2)
+        assert "Squares" in ds.dims
+        assert "Primes" in ds.dims
+        assert ds.sizes == {"Squares": 4, "Primes": 5}
+
+    with pytest.raises(ValueError):
+        from_named_objects([1, 4, 9, 16], s2)
+
+
+def test_dataarray_iloc():
+    arr = xr.DataArray([1, 4, 9, 16, 25, 36], name="Squares", dims="s")
+
+    assert arr.iloc[1] == 4
+    xr.testing.assert_equal(arr.iloc[1:], xr.DataArray([4, 9, 16, 25, 36], dims="s"))
+    xr.testing.assert_equal(arr.iloc[:2], xr.DataArray([1, 4], dims="s"))
+    xr.testing.assert_equal(arr.iloc[2:4], xr.DataArray([9, 16], dims="s"))
+    xr.testing.assert_equal(arr.iloc[:-2], xr.DataArray([1, 4, 9, 16], dims="s"))
+    xr.testing.assert_equal(arr.iloc[-2:], xr.DataArray([25, 36], dims="s"))
+
+    with pytest.raises(TypeError):
+        arr.iloc[1] = 5  # assignment not allowed
+
+    arr2 = xr.DataArray([2, 3, 5, 7, 11], name="Primes", dims="p")
+    arr2d = arr * arr2
+
+    with pytest.raises(TypeError):
+        _tmp = arr2d.iloc[1]  # not allowed for 2D arrays
+
+    assert arr2d.iloc[dict(s=1, p=2)] == 20
+
+    z = arr2d.iloc[dict(s=slice(1, 2), p=slice(2, 4))]
+
+    xr.testing.assert_equal(z, xr.DataArray([[20, 28]], dims=["s", "p"]))
