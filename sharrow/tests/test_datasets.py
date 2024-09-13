@@ -148,14 +148,13 @@ def test_from_named_objects():
         ds = from_named_objects(obj, s2)
         assert "Squares" in ds.dims
         assert "Primes" in ds.dims
-        assert ds.sizes == {'Squares': 4, 'Primes': 5}
+        assert ds.sizes == {"Squares": 4, "Primes": 5}
 
     with pytest.raises(ValueError):
-        from_named_objects([1,4,9,16], s2)
+        from_named_objects([1, 4, 9, 16], s2)
 
 
 def test_dataarray_iloc():
-
     arr = xr.DataArray([1, 4, 9, 16, 25, 36], name="Squares", dims="s")
 
     assert arr.iloc[1] == 4
@@ -176,6 +175,6 @@ def test_dataarray_iloc():
 
     assert arr2d.iloc[dict(s=1, p=2)] == 20
 
-    z = arr2d.iloc[dict(s=slice(1,2), p=slice(2,4))]
+    z = arr2d.iloc[dict(s=slice(1, 2), p=slice(2, 4))]
 
     xr.testing.assert_equal(z, xr.DataArray([[20, 28]], dims=["s", "p"]))
