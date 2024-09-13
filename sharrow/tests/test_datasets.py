@@ -5,6 +5,7 @@ from pathlib import Path
 import numpy as np
 import openmatrix
 import pandas as pd
+import pytest
 import xarray as xr
 from pytest import approx
 
@@ -133,3 +134,21 @@ def test_deferred_load_to_shared_memory():
         xr.testing.assert_equal(d0, d1)
         d2 = xr.Dataset.shm.from_shared_memory(token)
         xr.testing.assert_equal(d0, d2)
+
+
+def test_from_named_objects():
+    from sharrow.dataset import from_named_objects
+
+    s1 = pd.Series([1, 4, 9, 16], name="Squares")
+    s2 = pd.Series([2, 3, 5, 7, 11], name="Primes")
+    i1 = pd.Index([1, 4, 9, 16], name="Squares")
+    a1 = xr.DataArray([1, 4, 9, 16], name="Squares")
+
+    for obj in [s1, i1, a1]:
+        ds = from_named_objects(obj, s2)
+        assert "Squares" in ds.dims
+        assert "Primes" in ds.dims
+        assert ds.sizes == {'Squares': 4, 'Primes': 5}
+
+    with pytest.raises(ValueError):
+        from_named_objects([1,4,9,16], s2)

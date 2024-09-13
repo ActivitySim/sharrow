@@ -1482,10 +1482,7 @@ def from_named_objects(*args):
             raise ValueError(f"argument {n} has no name") from None
         if name is None:
             raise ValueError(f"the name for argument {n} is None")
-        if isinstance(a, pd.Series):
-            objs[name] = a.values
-        else:
-            objs[name] = a
+        objs[name] = np.asarray(a)
     return xr.Dataset(objs)
 
 
