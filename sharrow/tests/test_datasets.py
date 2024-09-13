@@ -152,3 +152,30 @@ def test_from_named_objects():
 
     with pytest.raises(ValueError):
         from_named_objects([1,4,9,16], s2)
+
+
+def test_dataarray_iloc():
+
+    arr = xr.DataArray([1, 4, 9, 16, 25, 36], name="Squares", dims="s")
+
+    assert arr.iloc[1] == 4
+    xr.testing.assert_equal(arr.iloc[1:], xr.DataArray([4, 9, 16, 25, 36], dims="s"))
+    xr.testing.assert_equal(arr.iloc[:2], xr.DataArray([1, 4], dims="s"))
+    xr.testing.assert_equal(arr.iloc[2:4], xr.DataArray([9, 16], dims="s"))
+    xr.testing.assert_equal(arr.iloc[:-2], xr.DataArray([1, 4, 9, 16], dims="s"))
+    xr.testing.assert_equal(arr.iloc[-2:], xr.DataArray([25, 36], dims="s"))
+
+    with pytest.raises(TypeError):
+        arr.iloc[1] = 5  # assignment not allowed
+
+    arr2 = xr.DataArray([2, 3, 5, 7, 11], name="Primes", dims="p")
+    arr2d = arr * arr2
+
+    with pytest.raises(TypeError):
+        _tmp = arr2d.iloc[1]  # not allowed for 2D arrays
+
+    assert arr2d.iloc[dict(s=1, p=2)] == 20
+
+    z = arr2d.iloc[dict(s=slice(1,2), p=slice(2,4))]
+
+    xr.testing.assert_equal(z, xr.DataArray([[20, 28]], dims=["s", "p"]))
