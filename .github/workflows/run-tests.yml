@@ -169,17 +169,18 @@ jobs:
         password: ${{ secrets.PYPI_API_TOKEN }}
   activitysim-examples:
     # test that updates to sharrow will not break the activitysim canonical examples
+    needs: fmt
     env:
       python-version: "3.10"
       label: linux-64
     strategy:
       matrix:
         include:
-          - region: Standard 1-Zone Example (MTC)
+          - region: ActivitySim 1-Zone Example (MTC)
             region-org: ActivitySim
             region-repo: activitysim-prototype-mtc
             region-branch: extended
-          - region: Standard 2-Zone Example (SANDAG)
+          - region: ActivitySim 2-Zone Example (SANDAG)
             region-org: ActivitySim
             region-repo: sandag-abm3-example
             region-branch: main
