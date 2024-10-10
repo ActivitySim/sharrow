@@ -228,7 +228,7 @@ def {fname}(
 IRUNNER_1D_TEMPLATE = """
 @nb.jit(
     cache=True,
-    parallel=True,
+    parallel={parallel_irunner},
     error_model='{error_model}',
     boundscheck={boundscheck},
     nopython={nopython},
@@ -256,7 +256,7 @@ def irunner(
 IRUNNER_2D_TEMPLATE = """
 @nb.jit(
     cache=True,
-    parallel=True,
+    parallel={parallel_irunner},
     error_model='{error_model}',
     boundscheck={boundscheck},
     nopython={nopython},
@@ -285,7 +285,7 @@ def irunner(
 IDOTTER_1D_TEMPLATE = """
 @nb.jit(
     cache=True,
-    parallel=True,
+    parallel={parallel_idotter},
     error_model='{error_model}',
     boundscheck={boundscheck},
     nopython={nopython},
@@ -317,7 +317,7 @@ def idotter(
 IDOTTER_2D_TEMPLATE = """
 @nb.jit(
     cache=True,
-    parallel=True,
+    parallel={parallel_idotter},
     error_model='{error_model}',
     boundscheck={boundscheck},
     nopython={nopython},
@@ -511,7 +511,7 @@ logit_ndims = 1
 
 @nb.jit(
     cache=True,
-    parallel=True,
+    parallel={parallel},
     error_model='{error_model}',
     boundscheck={boundscheck},
     nopython={nopython},
@@ -625,7 +625,7 @@ logit_ndims = 2
 
 @nb.jit(
     cache=True,
-    parallel=True,
+    parallel={parallel},
     error_model='{error_model}',
     boundscheck={boundscheck},
     nopython={nopython},
@@ -696,7 +696,7 @@ def mnl_transform(
 
 @nb.jit(
     cache=True,
-    parallel=True,
+    parallel={parallel},
     error_model='{error_model}',
     boundscheck={boundscheck},
     nopython={nopython},
@@ -772,7 +772,7 @@ from sharrow.nested_logit import _utility_to_probability
 
 @nb.jit(
     cache=True,
-    parallel=True,
+    parallel={parallel},
     error_model='{error_model}',
     boundscheck={boundscheck},
     nopython={nopython},
@@ -918,7 +918,7 @@ class Flow:
         which can improve performance but can result in tiny distortions in
         results.  See numba docs for details.
     parallel : bool, default True
-        Enable or disable parallel computation for certain functions.
+        Enable or disable parallel computation for MNL and NL functions.
     readme : str, optional
         A string to inject as a comment at the top of the flow Python file.
     flow_library : Mapping[str,Flow], optional
@@ -957,6 +957,8 @@ class Flow:
         dim_exclude=None,
         bool_wrapping=False,
         with_root_node_name=None,
+        parallel_irunner=False,
+        parallel_idotter=True,
     ):
         assert isinstance(tree, DataTree)
         tree.digitize_relationships(inplace=True)
@@ -979,6 +981,8 @@ class Flow:
             nopython=nopython,
             fastmath=fastmath,
             bool_wrapping=bool_wrapping,
+            parallel_idotter=parallel_idotter,
+            parallel_irunner=parallel_irunner,
         )
         # return from library if available
         if flow_library is not None and self.flow_hash in flow_library:
@@ -1000,6 +1004,8 @@ class Flow:
             extra_hash_data=extra_hash_data,
             write_hash_audit=write_hash_audit,
             with_root_node_name=with_root_node_name,
+            parallel_idotter=parallel_idotter,
+            parallel_irunner=parallel_irunner,
         )
         if flow_library is not None:
             flow_library[self.flow_hash] = self
@@ -1020,6 +1026,8 @@ class Flow:
         dim_order=None,
         dim_exclude=None,
         bool_wrapping=False,
+        parallel_irunner=False,
+        parallel_idotter=True,
     ):
         """
         Initialize up to the flow_hash.
@@ -1193,6 +1201,8 @@ class Flow:
         _flow_hash_push(f"error_model={error_model}")
         _flow_hash_push(f"fastmath={fastmath}")
         _flow_hash_push(f"bool_wrapping={bool_wrapping}")
+        _flow_hash_push(f"parallel_irunner={parallel_irunner}")
+        _flow_hash_push(f"parallel_idotter={parallel_idotter}")
 
         self.flow_hash = base64.b32encode(flow_hash.digest()).decode()
         self.flow_hash_audit = "]\n# [".join(flow_hash_audit)
@@ -1520,6 +1530,9 @@ class Flow:
         extra_hash_data=(),
         write_hash_audit=True,
         with_root_node_name=None,
+        *,
+        parallel_irunner=False,
+        parallel_idotter=True,
     ):
         """
         Second step in initialization, only used if the flow is not cached.
