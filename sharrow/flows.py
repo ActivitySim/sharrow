@@ -239,7 +239,7 @@ def {fname}_dim2_filler(
     {nametokens}
 ):
     for j0 in nb.prange(result.shape[0]):
-        result[j0, col_num] = {fname}(j0, result[j0, :], {nametokens})
+        result[j0, col_num] = {fname}({f_args_j} result[j0, :], {nametokens})
 
 
 @nb.jit(
@@ -257,7 +257,7 @@ def {fname}_dim3_filler(
 ):
     for j0 in nb.prange(result.shape[0]):
         for j1 in range(result.shape[1]):
-            result[j0, j1, col_num] = {fname}(j0, result[j0, j1, :], {nametokens})
+            result[j0, j1, col_num] = {fname}({f_args_j} result[j0, j1, :], {nametokens})
 """
 
 
@@ -1570,14 +1570,6 @@ class Flow:
                 fastmath=fastmath,
                 init_expr=init_expr if k == init_expr else f"{k}: {init_expr}",
             )
-            func_code += COLUMN_FILLER_TEMPLATE.format(
-                fname=clean(k),
-                nametokens=", ".join(sorted(f_name_tokens)),
-                error_model=error_model,
-                boundscheck=boundscheck,
-                nopython=nopython,
-                fastmath=fastmath,
-            )
             self._raw_functions[k] = (init_expr, expr, f_name_tokens, argtokens)
             self.output_name_positions[k] = n
 
@@ -1800,11 +1792,6 @@ class Flow:
                     for k in extra_hash_data:
                         f_code.write(f"# - {str(k)}\n")
 
-                f_code.write("\n\n# function code\n")
-                f_code.write(f"\n\n{blacken(func_code)}")
-
-                f_code.write("\n\n# machinery code\n\n")
-
                 if self.tree.relationships_are_digitized:
                     if with_root_node_name is None:
                         with_root_node_name = self.tree.root_node_name
@@ -1834,6 +1821,7 @@ class Flow:
 
                     meta_code = []
                     meta_code_dot = []
+                    filler_code = []
                     for n, k in enumerate(self._raw_functions):
                         f_name_tokens = self._raw_functions[k][2]
                         f_arg_tokens = self._raw_functions[k][3]
@@ -1846,6 +1834,11 @@ class Flow:
                         )
                         meta_code_dot.append(
                             f"intermediate[{n}] = ({clean(k)}({f_args_j}intermediate, {f_name_tokens})).item()"
+                        )
+                        filler_code.append(
+                            COLUMN_FILLER_TEMPLATE.format(
+                                fname=clean(k), nametokens=f_name_tokens, **locals()
+                            )
                         )
                     meta_code_stack = textwrap.indent(
                         "\n".join(meta_code), " " * 4
@@ -1904,6 +1897,13 @@ class Flow:
                 else:
                     raise RuntimeError("digitization is now required")
 
+                f_code.write("\n\n# function code\n")
+                # func_code = func_code.replace("___JS_TOKEN___", js)
+                f_code.write(f"\n\n{blacken(func_code)}")
+                f_code.write("\n\n# filler code\n")
+                f_code.write("\n\n")
+                f_code.write(blacken("\n".join(filler_code)))
+                f_code.write("\n\n# machinery code\n\n")
                 f_code.write(blacken(textwrap.dedent(line_template)))
                 f_code.write("\n\n")
                 f_code.write(blacken(textwrap.dedent(mnl_template)))

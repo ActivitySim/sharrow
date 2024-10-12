@@ -30,7 +30,8 @@ def skims():
     return example_data.get_skims()
 
 
-def test_shared_data(dataframe_regression, households, skims):
+@pytest.mark.parametrize("use_array_maker", [True, False])
+def test_shared_data(dataframe_regression, households, skims, use_array_maker: bool):
     tree = DataTree(
         base=households,
         skims=skims,
@@ -48,8 +49,8 @@ def test_shared_data(dataframe_regression, households, skims):
             "sov_cost_by_income": "skims.HOV3_TIME",
         }
     )
-    result = ss._load(tree, as_dataframe=True)
-    dataframe_regression.check(result)
+    result = ss.load_dataframe(tree, use_array_maker=use_array_maker)
+    dataframe_regression.check(result, basename="test_shared_data")
 
     ss_undot = tree.setup_flow(
         {
@@ -58,8 +59,8 @@ def test_shared_data(dataframe_regression, households, skims):
             "sov_cost_by_income": "HOV3_TIME",
         }
     )
-    result = ss_undot._load(tree, as_dataframe=True)
-    dataframe_regression.check(result)
+    result = ss_undot.load_dataframe(tree, use_array_maker=use_array_maker)
+    dataframe_regression.check(result, basename="test_shared_data")
 
     # names that are not valid Python identifiers
     s2 = tree.setup_flow(
@@ -70,11 +71,14 @@ def test_shared_data(dataframe_regression, households, skims):
             "log1p(sov_cost_by_income)": "log1p(skims.HOV3_TIME)",
         }
     )
-    result2 = s2._load(tree, as_dataframe=True)
+    result2 = s2.load_dataframe(tree, use_array_maker=use_array_maker)
     dataframe_regression.check(result2, basename="test_shared_data_2")
 
 
-def test_subspace_fallbacks(dataframe_regression, households, skims):
+@pytest.mark.parametrize("use_array_maker", [True, False])
+def test_subspace_fallbacks(
+    dataframe_regression, households, skims, use_array_maker: bool
+):
     tree = DataTree(
         base=households,
         skims=skims,
@@ -93,7 +97,7 @@ def test_subspace_fallbacks(dataframe_regression, households, skims):
             "sov_cost_by_income": "df['HOV3_TIME']",
         }
     )
-    result1 = flow1._load(tree, as_dataframe=True)
+    result1 = flow1.load_dataframe(tree, use_array_maker=use_array_maker)
     dataframe_regression.check(result1, basename="test_shared_data")
 
     flow2 = tree.setup_flow(
@@ -103,7 +107,7 @@ def test_subspace_fallbacks(dataframe_regression, households, skims):
             "sov_cost_by_income": "HOV3_TIME",
         }
     )
-    result2 = flow2._load(tree, as_dataframe=True)
+    result2 = flow2.load_dataframe(tree, use_array_maker=use_array_maker)
     dataframe_regression.check(result2, basename="test_shared_data")
 
     # names that are not valid Python identifiers
@@ -115,11 +119,14 @@ def test_subspace_fallbacks(dataframe_regression, households, skims):
             "log1p(sov_cost_by_income)": "log1p(df.HOV3_TIME)",
         }
     )
-    result3 = flow3._load(tree, as_dataframe=True)
+    result3 = flow3.load_dataframe(tree, use_array_maker=use_array_maker)
     dataframe_regression.check(result3, basename="test_shared_data_2")
 
 
-def test_shared_data_reversible(dataframe_regression, households, skims):
+@pytest.mark.parametrize("use_array_maker", [True, False])
+def test_shared_data_reversible(
+    dataframe_regression, households, skims, use_array_maker: bool
+):
     tree = DataTree(
         base=households,
         odt_skims=skims,
@@ -142,8 +149,8 @@ def test_shared_data_reversible(dataframe_regression, households, skims):
             "double_hov3_time": "odt_skims.HOV3_TIME * 2",
         }
     )
-    result = ss._load(tree, as_dataframe=True)
-    dataframe_regression.check(result)
+    result = ss.load_dataframe(tree, use_array_maker=use_array_maker)
+    dataframe_regression.check(result, basename="test_shared_data_reversible")
     with raises(AssertionError):
         pd.testing.assert_series_equal(
             result["round_trip_hov3_time"],
@@ -151,7 +158,8 @@ def test_shared_data_reversible(dataframe_regression, households, skims):
         )
 
 
-def test_shared_data_reversible_by_label(dataframe_regression):
+@pytest.mark.parametrize("use_array_maker", [True, False])
+def test_shared_data_reversible_by_label(dataframe_regression, use_array_maker: bool):
     data = example_data.get_data()
     skims = data["skims"]
     households = data["hhs"]
@@ -190,7 +198,7 @@ def test_shared_data_reversible_by_label(dataframe_regression):
             2,
         ),
     )
-    result = ss._load(tree, as_dataframe=True)
+    result = ss.load_dataframe(tree, use_array_maker=use_array_maker)
     dataframe_regression.check(result, basename="test_shared_data_reversible")
     with raises(AssertionError):
         pd.testing.assert_series_equal(
@@ -212,11 +220,12 @@ def test_shared_data_reversible_by_label(dataframe_regression):
             3,
         ),
     )
-    dresult = dss._load(dtree, as_dataframe=True)
+    dresult = dss.load_dataframe(dtree, use_array_maker=use_array_maker)
     dataframe_regression.check(dresult, basename="test_shared_data_reversible")
 
 
-def test_with_2d_base(dataframe_regression):
+@pytest.mark.parametrize("use_array_maker", [False, True])
+def test_with_2d_base(dataframe_regression, use_array_maker: bool):
     pytest.importorskip("scipy", minversion="0.16")
 
     data = example_data.get_data()
@@ -266,11 +275,11 @@ def test_with_2d_base(dataframe_regression):
             "b_trip_hov3_time": "odt_skims.HOV3_TIME",
         }
     )
-    result = ss._load(tree, as_dataarray=True)
+    result = ss.load_dataarray(tree, use_array_maker=use_array_maker)
     assert result.dims == ("HHID", "dtaz", "expressions")
     assert result.shape == (5000, 25, 6)
     result = result.to_dataset("expressions").to_dataframe()
-    dataframe_regression.check(result.iloc[::83])
+    dataframe_regression.check(result.iloc[::83], basename="test_with_2d_base")
 
     dot_result = ss._load(tree, as_dataarray=True, dot=np.ones(6))
     assert dot_result.dims == (
@@ -286,7 +295,8 @@ def test_with_2d_base(dataframe_regression):
     np.testing.assert_array_almost_equal(check_vs, dot_result.to_numpy())
 
 
-def test_mixed_dtypes(dataframe_regression, households, skims):
+@pytest.mark.parametrize("use_array_maker", [True, False])
+def test_mixed_dtypes(dataframe_regression, households, skims, use_array_maker: bool):
     tree = DataTree(
         base=households,
         skims=skims,
@@ -304,8 +314,8 @@ def test_mixed_dtypes(dataframe_regression, households, skims):
             "sov_time_by_workers": "np.where(base.workers > 0, skims.SOV_TIME / base.workers, 0)",
         }
     )
-    result = ss._load(tree, as_dataframe=True, dtype=np.float32)
-    dataframe_regression.check(result)
+    result = ss.load_dataframe(tree, dtype=np.float32, use_array_maker=use_array_maker)
+    dataframe_regression.check(result, basename="test_mixed_dtypes")
 
     ss_undot = tree.setup_flow(
         {
@@ -314,11 +324,14 @@ def test_mixed_dtypes(dataframe_regression, households, skims):
             "sov_time_by_workers": "np.where(workers > 0, SOV_TIME / workers, 0)",
         }
     )
-    result = ss_undot._load(tree, as_dataframe=True, dtype=np.float32)
-    dataframe_regression.check(result)
+    result = ss_undot.load_dataframe(
+        tree, dtype=np.float32, use_array_maker=use_array_maker
+    )
+    dataframe_regression.check(result, basename="test_mixed_dtypes")
 
 
-def test_tuple_slice(dataframe_regression, households, skims):
+@pytest.mark.parametrize("use_array_maker", [True, False])
+def test_tuple_slice(dataframe_regression, households, skims, use_array_maker):
     tree = DataTree(
         base=households,
         skims=skims,
@@ -333,11 +346,12 @@ def test_tuple_slice(dataframe_regression, households, skims):
             "sov_time_md": "skims[('SOV_TIME', 'MD')]",
         }
     )
-    result = ss._load(tree, as_dataframe=True, dtype=np.float32)
-    dataframe_regression.check(result)
+    result = ss.load_dataframe(tree, dtype=np.float32, use_array_maker=use_array_maker)
+    dataframe_regression.check(result, basename="test_tuple_slice")
 
 
-def test_isin(dataframe_regression, households, skims):
+@pytest.mark.parametrize("use_array_maker", [True, False])
+def test_isin(dataframe_regression, households, skims, use_array_maker: bool):
     tree = DataTree(
         base=households,
         skims=skims,
@@ -358,8 +372,8 @@ def test_isin(dataframe_regression, households, skims):
             "income4": "base.income.isin((twenty_two_hundred, 197000))",
         }
     )
-    result = ss._load(tree, as_dataframe=True, dtype=np.float32)
-    dataframe_regression.check(result)
+    result = ss.load_dataframe(tree, dtype=np.float32, use_array_maker=use_array_maker)
+    dataframe_regression.check(result, basename="test_isin")
 
 
 def _get_target(q, token):
