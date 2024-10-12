@@ -224,6 +224,42 @@ def {fname}(
 
 """
 
+COLUMN_FILLER_TEMPLATE = """
+@nb.jit(
+    cache=True,
+    parallel=False,
+    error_model='{error_model}',
+    boundscheck={boundscheck},
+    nopython={nopython},
+    fastmath={fastmath},
+    nogil={nopython})
+def {fname}_dim2_filler(
+    result,
+    col_num,
+    {nametokens}
+):
+    for j0 in nb.prange(result.shape[0]):
+        result[j0, col_num] = {fname}(j0, result[j0, :], {nametokens})
+
+
+@nb.jit(
+    cache=True,
+    parallel=False,
+    error_model='{error_model}',
+    boundscheck={boundscheck},
+    nopython={nopython},
+    fastmath={fastmath},
+    nogil={nopython})
+def {fname}_dim3_filler(
+    result,
+    col_num,
+    {nametokens}
+):
+    for j0 in nb.prange(result.shape[0]):
+        for j1 in range(result.shape[1]):
+            result[j0, j1, col_num] = {fname}(j0, result[j0, j1, :], {nametokens})
+"""
+
 
 IRUNNER_1D_TEMPLATE = """
 @nb.jit(
@@ -281,6 +317,29 @@ def irunner(
             linemaker(result[j0, j1], j0, j1, {joined_namespace_names})
     return result
 """
+
+ARRAY_MAKER_1D_TEMPLATE = """
+def array_maker(
+    argshape,
+    {joined_namespace_names}
+    dtype=np.{dtype},
+):
+    result = np.empty((argshape[0], {len_self_raw_functions}), dtype=dtype)
+    {meta_code_stack}
+    return result
+"""
+
+ARRAY_MAKER_2D_TEMPLATE = """
+def array_maker(
+    argshape,
+    {joined_namespace_names}
+    dtype=np.{dtype},
+):
+    result = np.empty((argshape[0], argshape[1], {len_self_raw_functions}), dtype=dtype)
+    {meta_code_stack}
+    return result
+"""
+
 
 IDOTTER_1D_TEMPLATE = """
 @nb.jit(
@@ -1511,6 +1570,14 @@ class Flow:
                 fastmath=fastmath,
                 init_expr=init_expr if k == init_expr else f"{k}: {init_expr}",
             )
+            func_code += COLUMN_FILLER_TEMPLATE.format(
+                fname=clean(k),
+                nametokens=", ".join(sorted(f_name_tokens)),
+                error_model=error_model,
+                boundscheck=boundscheck,
+                nopython=nopython,
+                fastmath=fastmath,
+            )
             self._raw_functions[k] = (init_expr, expr, f_name_tokens, argtokens)
             self.output_name_positions[k] = n
 
@@ -1775,13 +1842,13 @@ class Flow:
                         if f_args_j:
                             f_args_j += ", "
                         meta_code.append(
-                            f"result[{js}, {n}] = ({clean(k)}({f_args_j}result[{js}], {f_name_tokens})).item()"
+                            f"{clean(k)}_dim{n_root_dims+1}_filler(result, {n}, {f_name_tokens})"
                         )
                         meta_code_dot.append(
                             f"intermediate[{n}] = ({clean(k)}({f_args_j}intermediate, {f_name_tokens})).item()"
                         )
                     meta_code_stack = textwrap.indent(
-                        "\n".join(meta_code), " " * 12
+                        "\n".join(meta_code), " " * 4
                     ).lstrip()
                     meta_code_stack_dot = textwrap.indent(
                         "\n".join(meta_code_dot), " " * 12
@@ -1794,8 +1861,12 @@ class Flow:
                     if not meta_code_stack_dot:
                         meta_code_stack_dot = "pass"
                     if n_root_dims == 1:
-                        meta_template = IRUNNER_1D_TEMPLATE.format(**locals()).format(
-                            **locals()
+                        meta_template = (
+                            IRUNNER_1D_TEMPLATE.format(**locals()).format(**locals())
+                            + "\n\n"
+                            + ARRAY_MAKER_1D_TEMPLATE.format(**locals()).format(
+                                **locals()
+                            )
                         )
                         meta_template_dot = IDOTTER_1D_TEMPLATE.format(
                             **locals()
@@ -1810,8 +1881,12 @@ class Flow:
                             **locals()
                         )
                     elif n_root_dims == 2:
-                        meta_template = IRUNNER_2D_TEMPLATE.format(**locals()).format(
-                            **locals()
+                        meta_template = (
+                            IRUNNER_2D_TEMPLATE.format(**locals()).format(**locals())
+                            + "\n\n"
+                            + ARRAY_MAKER_2D_TEMPLATE.format(**locals()).format(
+                                **locals()
+                            )
                         )
                         meta_template_dot = IDOTTER_2D_TEMPLATE.format(
                             **locals()
@@ -1887,6 +1962,7 @@ class Flow:
         self._inestedlogit = getattr(module, "nl_transform", None)
         self._idotter = getattr(module, "idotter", None)
         self._linemaker = getattr(module, "linemaker", None)
+        self._module = module
         if not writing:
             self.function_names = module.function_names
             self.output_name_positions = module.output_name_positions
@@ -2552,7 +2628,15 @@ class Flow:
             return result, result_p
         return result
 
-    def load(self, source=None, dtype=None, compile_watch=False, mask=None):
+    def load(
+        self,
+        source=None,
+        dtype=None,
+        compile_watch=False,
+        mask=None,
+        *,
+        use_array_maker=False,
+    ):
         """
         Compute the flow outputs as a numpy array.
 
@@ -2574,11 +2658,26 @@ class Flow:
         -------
         numpy.array
         """
+        runner = None
+        if use_array_maker:
+            runner = self._module.array_maker
         return self._load(
-            source=source, dtype=dtype, compile_watch=compile_watch, mask=mask
+            source=source,
+            dtype=dtype,
+            compile_watch=compile_watch,
+            mask=mask,
+            runner=runner,
         )
 
-    def load_dataframe(self, source=None, dtype=None, compile_watch=False, mask=None):
+    def load_dataframe(
+        self,
+        source=None,
+        dtype=None,
+        compile_watch=False,
+        mask=None,
+        *,
+        use_array_maker=False,
+    ):
         """
         Compute the flow outputs as a pandas.DataFrame.
 
@@ -2600,15 +2699,27 @@ class Flow:
         -------
         pandas.DataFrame
         """
+        runner = None
+        if use_array_maker:
+            runner = self._module.array_maker
         return self._load(
             source=source,
             dtype=dtype,
             as_dataframe=True,
             compile_watch=compile_watch,
             mask=mask,
+            runner=runner,
         )
 
-    def load_dataarray(self, source=None, dtype=None, compile_watch=False, mask=None):
+    def load_dataarray(
+        self,
+        source=None,
+        dtype=None,
+        compile_watch=False,
+        mask=None,
+        *,
+        use_array_maker=False,
+    ):
         """
         Compute the flow outputs as a xarray.DataArray.
 
@@ -2630,12 +2741,16 @@ class Flow:
         -------
         xarray.DataArray
         """
+        runner = None
+        if use_array_maker:
+            runner = self._module.array_maker
         return self._load(
             source=source,
             dtype=dtype,
             as_dataarray=True,
             compile_watch=compile_watch,
             mask=mask,
+            runner=runner,
         )
 
     def dot(self, coefficients, source=None, dtype=None, compile_watch=False):
