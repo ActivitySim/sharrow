@@ -224,11 +224,47 @@ def {fname}(
 
 """
 
+COLUMN_FILLER_TEMPLATE = """
+@nb.jit(
+    cache=True,
+    parallel=False,
+    error_model='{error_model}',
+    boundscheck={boundscheck},
+    nopython={nopython},
+    fastmath={fastmath},
+    nogil={nopython})
+def {fname}_dim2_filler(
+    result,
+    col_num,
+    {nametokens}
+):
+    for j0 in nb.prange(result.shape[0]):
+        result[j0, col_num] = {fname}({f_args_j} result[j0, :], {nametokens})
+
+
+@nb.jit(
+    cache=True,
+    parallel=False,
+    error_model='{error_model}',
+    boundscheck={boundscheck},
+    nopython={nopython},
+    fastmath={fastmath},
+    nogil={nopython})
+def {fname}_dim3_filler(
+    result,
+    col_num,
+    {nametokens}
+):
+    for j0 in nb.prange(result.shape[0]):
+        for j1 in range(result.shape[1]):
+            result[j0, j1, col_num] = {fname}({f_args_j} result[j0, j1, :], {nametokens})
+"""
+
 
 IRUNNER_1D_TEMPLATE = """
 @nb.jit(
     cache=True,
-    parallel=True,
+    parallel={parallel_irunner},
     error_model='{error_model}',
     boundscheck={boundscheck},
     nopython={nopython},
@@ -256,7 +292,7 @@ def irunner(
 IRUNNER_2D_TEMPLATE = """
 @nb.jit(
     cache=True,
-    parallel=True,
+    parallel={parallel_irunner},
     error_model='{error_model}',
     boundscheck={boundscheck},
     nopython={nopython},
@@ -282,10 +318,33 @@ def irunner(
     return result
 """
 
+ARRAY_MAKER_1D_TEMPLATE = """
+def array_maker(
+    argshape,
+    {joined_namespace_names}
+    dtype=np.{dtype},
+):
+    result = np.empty((argshape[0], {len_self_raw_functions}), dtype=dtype)
+    {meta_code_stack}
+    return result
+"""
+
+ARRAY_MAKER_2D_TEMPLATE = """
+def array_maker(
+    argshape,
+    {joined_namespace_names}
+    dtype=np.{dtype},
+):
+    result = np.empty((argshape[0], argshape[1], {len_self_raw_functions}), dtype=dtype)
+    {meta_code_stack}
+    return result
+"""
+
+
 IDOTTER_1D_TEMPLATE = """
 @nb.jit(
     cache=True,
-    parallel=True,
+    parallel={parallel_idotter},
     error_model='{error_model}',
     boundscheck={boundscheck},
     nopython={nopython},
@@ -317,7 +376,7 @@ def idotter(
 IDOTTER_2D_TEMPLATE = """
 @nb.jit(
     cache=True,
-    parallel=True,
+    parallel={parallel_idotter},
     error_model='{error_model}',
     boundscheck={boundscheck},
     nopython={nopython},
@@ -511,7 +570,7 @@ logit_ndims = 1
 
 @nb.jit(
     cache=True,
-    parallel=True,
+    parallel={parallel},
     error_model='{error_model}',
     boundscheck={boundscheck},
     nopython={nopython},
@@ -625,7 +684,7 @@ logit_ndims = 2
 
 @nb.jit(
     cache=True,
-    parallel=True,
+    parallel={parallel},
     error_model='{error_model}',
     boundscheck={boundscheck},
     nopython={nopython},
@@ -696,7 +755,7 @@ def mnl_transform(
 
 @nb.jit(
     cache=True,
-    parallel=True,
+    parallel={parallel},
     error_model='{error_model}',
     boundscheck={boundscheck},
     nopython={nopython},
@@ -772,7 +831,7 @@ from sharrow.nested_logit import _utility_to_probability
 
 @nb.jit(
     cache=True,
-    parallel=True,
+    parallel={parallel},
     error_model='{error_model}',
     boundscheck={boundscheck},
     nopython={nopython},
@@ -918,7 +977,7 @@ class Flow:
         which can improve performance but can result in tiny distortions in
         results.  See numba docs for details.
     parallel : bool, default True
-        Enable or disable parallel computation for certain functions.
+        Enable or disable parallel computation for MNL and NL functions.
     readme : str, optional
         A string to inject as a comment at the top of the flow Python file.
     flow_library : Mapping[str,Flow], optional
@@ -957,6 +1016,8 @@ class Flow:
         dim_exclude=None,
         bool_wrapping=False,
         with_root_node_name=None,
+        parallel_irunner=False,
+        parallel_idotter=True,
     ):
         assert isinstance(tree, DataTree)
         tree.digitize_relationships(inplace=True)
@@ -979,6 +1040,8 @@ class Flow:
             nopython=nopython,
             fastmath=fastmath,
             bool_wrapping=bool_wrapping,
+            parallel_idotter=parallel_idotter,
+            parallel_irunner=parallel_irunner,
         )
         # return from library if available
         if flow_library is not None and self.flow_hash in flow_library:
@@ -1000,6 +1063,8 @@ class Flow:
             extra_hash_data=extra_hash_data,
             write_hash_audit=write_hash_audit,
             with_root_node_name=with_root_node_name,
+            parallel_idotter=parallel_idotter,
+            parallel_irunner=parallel_irunner,
         )
         if flow_library is not None:
             flow_library[self.flow_hash] = self
@@ -1020,6 +1085,8 @@ class Flow:
         dim_order=None,
         dim_exclude=None,
         bool_wrapping=False,
+        parallel_irunner=False,
+        parallel_idotter=True,
     ):
         """
         Initialize up to the flow_hash.
@@ -1193,6 +1260,8 @@ class Flow:
         _flow_hash_push(f"error_model={error_model}")
         _flow_hash_push(f"fastmath={fastmath}")
         _flow_hash_push(f"bool_wrapping={bool_wrapping}")
+        _flow_hash_push(f"parallel_irunner={parallel_irunner}")
+        _flow_hash_push(f"parallel_idotter={parallel_idotter}")
 
         self.flow_hash = base64.b32encode(flow_hash.digest()).decode()
         self.flow_hash_audit = "]\n# [".join(flow_hash_audit)
@@ -1520,6 +1589,9 @@ class Flow:
         extra_hash_data=(),
         write_hash_audit=True,
         with_root_node_name=None,
+        *,
+        parallel_irunner=False,
+        parallel_idotter=True,
     ):
         """
         Second step in initialization, only used if the flow is not cached.
@@ -1720,11 +1792,6 @@ class Flow:
                     for k in extra_hash_data:
                         f_code.write(f"# - {str(k)}\n")
 
-                f_code.write("\n\n# function code\n")
-                f_code.write(f"\n\n{blacken(func_code)}")
-
-                f_code.write("\n\n# machinery code\n\n")
-
                 if self.tree.relationships_are_digitized:
                     if with_root_node_name is None:
                         with_root_node_name = self.tree.root_node_name
@@ -1754,6 +1821,7 @@ class Flow:
 
                     meta_code = []
                     meta_code_dot = []
+                    filler_code = []
                     for n, k in enumerate(self._raw_functions):
                         f_name_tokens = self._raw_functions[k][2]
                         f_arg_tokens = self._raw_functions[k][3]
@@ -1762,13 +1830,18 @@ class Flow:
                         if f_args_j:
                             f_args_j += ", "
                         meta_code.append(
-                            f"result[{js}, {n}] = ({clean(k)}({f_args_j}result[{js}], {f_name_tokens})).item()"
+                            f"{clean(k)}_dim{n_root_dims+1}_filler(result, {n}, {f_name_tokens})"
                         )
                         meta_code_dot.append(
                             f"intermediate[{n}] = ({clean(k)}({f_args_j}intermediate, {f_name_tokens})).item()"
                         )
+                        filler_code.append(
+                            COLUMN_FILLER_TEMPLATE.format(
+                                fname=clean(k), nametokens=f_name_tokens, **locals()
+                            )
+                        )
                     meta_code_stack = textwrap.indent(
-                        "\n".join(meta_code), " " * 12
+                        "\n".join(meta_code), " " * 4
                     ).lstrip()
                     meta_code_stack_dot = textwrap.indent(
                         "\n".join(meta_code_dot), " " * 12
@@ -1781,8 +1854,12 @@ class Flow:
                     if not meta_code_stack_dot:
                         meta_code_stack_dot = "pass"
                     if n_root_dims == 1:
-                        meta_template = IRUNNER_1D_TEMPLATE.format(**locals()).format(
-                            **locals()
+                        meta_template = (
+                            IRUNNER_1D_TEMPLATE.format(**locals()).format(**locals())
+                            + "\n\n"
+                            + ARRAY_MAKER_1D_TEMPLATE.format(**locals()).format(
+                                **locals()
+                            )
                         )
                         meta_template_dot = IDOTTER_1D_TEMPLATE.format(
                             **locals()
@@ -1797,8 +1874,12 @@ class Flow:
                             **locals()
                         )
                     elif n_root_dims == 2:
-                        meta_template = IRUNNER_2D_TEMPLATE.format(**locals()).format(
-                            **locals()
+                        meta_template = (
+                            IRUNNER_2D_TEMPLATE.format(**locals()).format(**locals())
+                            + "\n\n"
+                            + ARRAY_MAKER_2D_TEMPLATE.format(**locals()).format(
+                                **locals()
+                            )
                         )
                         meta_template_dot = IDOTTER_2D_TEMPLATE.format(
                             **locals()
@@ -1816,6 +1897,13 @@ class Flow:
                 else:
                     raise RuntimeError("digitization is now required")
 
+                f_code.write("\n\n# function code\n")
+                # func_code = func_code.replace("___JS_TOKEN___", js)
+                f_code.write(f"\n\n{blacken(func_code)}")
+                f_code.write("\n\n# filler code\n")
+                f_code.write("\n\n")
+                f_code.write(blacken("\n".join(filler_code)))
+                f_code.write("\n\n# machinery code\n\n")
                 f_code.write(blacken(textwrap.dedent(line_template)))
                 f_code.write("\n\n")
                 f_code.write(blacken(textwrap.dedent(mnl_template)))
@@ -1874,6 +1962,7 @@ class Flow:
         self._inestedlogit = getattr(module, "nl_transform", None)
         self._idotter = getattr(module, "idotter", None)
         self._linemaker = getattr(module, "linemaker", None)
+        self._module = module
         if not writing:
             self.function_names = module.function_names
             self.output_name_positions = module.output_name_positions
@@ -2539,7 +2628,15 @@ class Flow:
             return result, result_p
         return result
 
-    def load(self, source=None, dtype=None, compile_watch=False, mask=None):
+    def load(
+        self,
+        source=None,
+        dtype=None,
+        compile_watch=False,
+        mask=None,
+        *,
+        use_array_maker=False,
+    ):
         """
         Compute the flow outputs as a numpy array.
 
@@ -2556,16 +2653,34 @@ class Flow:
             modification activity is observed in the cache directory.
         mask : array-like, optional
             Only compute values for items where mask is truthy.
+        use_array_maker : bool, default False
+            Use the array_maker function to create the array. This is useful for
+            reducing compile times for complex flow specifications.
 
         Returns
         -------
         numpy.array
         """
+        runner = None
+        if use_array_maker:
+            runner = self._module.array_maker
         return self._load(
-            source=source, dtype=dtype, compile_watch=compile_watch, mask=mask
+            source=source,
+            dtype=dtype,
+            compile_watch=compile_watch,
+            mask=mask,
+            runner=runner,
         )
 
-    def load_dataframe(self, source=None, dtype=None, compile_watch=False, mask=None):
+    def load_dataframe(
+        self,
+        source=None,
+        dtype=None,
+        compile_watch=False,
+        mask=None,
+        *,
+        use_array_maker=False,
+    ):
         """
         Compute the flow outputs as a pandas.DataFrame.
 
@@ -2582,20 +2697,35 @@ class Flow:
             modification activity is observed in the cache directory.
         mask : array-like, optional
             Only compute values for items where mask is truthy.
+        use_array_maker : bool, default False
+            Use the array_maker function to create the array. This is useful for
+            reducing compile times for complex flow specifications.
 
         Returns
         -------
         pandas.DataFrame
         """
+        runner = None
+        if use_array_maker:
+            runner = self._module.array_maker
         return self._load(
             source=source,
             dtype=dtype,
             as_dataframe=True,
             compile_watch=compile_watch,
             mask=mask,
+            runner=runner,
         )
 
-    def load_dataarray(self, source=None, dtype=None, compile_watch=False, mask=None):
+    def load_dataarray(
+        self,
+        source=None,
+        dtype=None,
+        compile_watch=False,
+        mask=None,
+        *,
+        use_array_maker=False,
+    ):
         """
         Compute the flow outputs as a xarray.DataArray.
 
@@ -2612,17 +2742,24 @@ class Flow:
             modification activity is observed in the cache directory.
         mask : array-like, optional
             Only compute values for items where mask is truthy.
+        use_array_maker : bool, default False
+            Use the array_maker function to create the array. This is useful for
+            reducing compile times for complex flow specifications.
 
         Returns
         -------
         xarray.DataArray
         """
+        runner = None
+        if use_array_maker:
+            runner = self._module.array_maker
         return self._load(
             source=source,
             dtype=dtype,
             as_dataarray=True,
             compile_watch=compile_watch,
             mask=mask,
+            runner=runner,
         )
 
     def dot(self, coefficients, source=None, dtype=None, compile_watch=False):

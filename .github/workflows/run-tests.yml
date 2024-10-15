@@ -84,9 +84,7 @@ jobs:
       - name: Install Python and Dependencies
         uses: conda-incubator/setup-miniconda@v3
         with:
-          miniforge-variant: Mambaforge
           miniforge-version: latest
-          use-mamba: true
           environment-file: envs/testing.yml
           python-version: ${{ matrix.python-version }}
           activate-environment: testing-env
@@ -169,3 +167,90 @@ jobs:
       with:
         user: __token__
         password: ${{ secrets.PYPI_API_TOKEN }}
+  activitysim-examples:
+    # test that updates to sharrow will not break the activitysim canonical examples
+    needs: fmt
+    env:
+      python-version: "3.10"
+      label: linux-64
+    strategy:
+      matrix:
+        include:
+          - region: ActivitySim 1-Zone Example (MTC)
+            region-org: ActivitySim
+            region-repo: activitysim-prototype-mtc
+            region-branch: extended
+          - region: ActivitySim 2-Zone Example (SANDAG)
+            region-org: ActivitySim
+            region-repo: sandag-abm3-example
+            region-branch: main
+      fail-fast: false
+    defaults:
+      run:
+        shell: bash -l {0}
+    name: ${{ matrix.region }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Sharrow
+        uses: actions/checkout@v4
+        with:
+          path: 'sharrow'
+
+      - name: Checkout ActivitySim
+        uses: actions/checkout@v4
+        with:
+          repository: 'ActivitySim/activitysim'
+          ref: 'main'
+          path: 'activitysim'
+
+      - name: Setup Miniforge
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          miniforge-version: latest
+          activate-environment: asim-test
+          python-version: ${{ env.python-version }}
+
+      - name: Set cache date for year and month
+        run: echo "DATE=$(date +'%Y%m')" >> $GITHUB_ENV
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ${{ env.CONDA }}/envs
+            ~/.cache/ActivitySim
+          key: ${{ env.label }}-conda-${{ hashFiles('activitysim/conda-environments/github-actions-tests.yml') }}-${{ env.DATE }}-${{ env.CACHE_NUMBER }}
+        id: cache
+
+      - name: Update environment
+        run: |
+          conda env update -n asim-test -f activitysim/conda-environments/github-actions-tests.yml
+        if: steps.cache.outputs.cache-hit != 'true'
+
+      - name: Install sharrow
+        # installing from source
+        run: |
+          python -m pip install ./sharrow
+
+      - name: Install activitysim
+        # installing without dependencies is faster, we trust that all needed dependencies
+        # are in the conda environment defined above.  Also, this avoids pip getting
+        # confused and reinstalling tables (pytables).
+        run: |
+          python -m pip install ./activitysim --no-deps
+
+      - name: Conda checkup
+        run: |
+          conda info -a
+          conda list
+
+      - name: Checkout Example
+        uses: actions/checkout@v4
+        with:
+          repository: '${{ matrix.region-org }}/${{ matrix.region-repo }}'
+          ref: '${{ matrix.region-branch }}'
+          path: '${{ matrix.region-repo }}'
+
+      - name: Test ${{ matrix.region }}
+        run: |
+          cd ${{ matrix.region-repo }}/test
+          python -m pytest .
