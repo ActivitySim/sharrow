@@ -2653,6 +2653,9 @@ class Flow:
             modification activity is observed in the cache directory.
         mask : array-like, optional
             Only compute values for items where mask is truthy.
+        use_array_maker : bool, default False
+            Use the array_maker function to create the array. This is useful for
+            reducing compile times for complex flow specifications.
 
         Returns
         -------
@@ -2694,6 +2697,9 @@ class Flow:
             modification activity is observed in the cache directory.
         mask : array-like, optional
             Only compute values for items where mask is truthy.
+        use_array_maker : bool, default False
+            Use the array_maker function to create the array. This is useful for
+            reducing compile times for complex flow specifications.
 
         Returns
         -------
@@ -2736,6 +2742,9 @@ class Flow:
             modification activity is observed in the cache directory.
         mask : array-like, optional
             Only compute values for items where mask is truthy.
+        use_array_maker : bool, default False
+            Use the array_maker function to create the array. This is useful for
+            reducing compile times for complex flow specifications.
 
         Returns
         -------
