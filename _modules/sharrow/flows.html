@@ -7,7 +7,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>sharrow.flows &#8212; v2.10.1</title>
+    <title>sharrow.flows &#8212; v2.11.1</title>
   
   
   
@@ -153,8 +153,8 @@
       
     
     
-    <img src="../../_static/logo.png" class="logo__image only-light" alt="v2.10.1 - Home"/>
-    <script>document.write(`<img src="../../_static/logo.png" class="logo__image only-dark" alt="v2.10.1 - Home"/>`);</script>
+    <img src="../../_static/logo.png" class="logo__image only-light" alt="v2.11.1 - Home"/>
+    <script>document.write(`<img src="../../_static/logo.png" class="logo__image only-dark" alt="v2.11.1 - Home"/>`);</script>
   
   
 </a></div>
@@ -558,11 +558,47 @@ document.write(`
 
 <span class="s2">&quot;&quot;&quot;</span>
 
+<span class="n">COLUMN_FILLER_TEMPLATE</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">@nb.jit(</span>
+<span class="s2">    cache=True,</span>
+<span class="s2">    parallel=False,</span>
+<span class="s2">    error_model=&#39;</span><span class="si">{error_model}</span><span class="s2">&#39;,</span>
+<span class="s2">    boundscheck=</span><span class="si">{boundscheck}</span><span class="s2">,</span>
+<span class="s2">    nopython=</span><span class="si">{nopython}</span><span class="s2">,</span>
+<span class="s2">    fastmath=</span><span class="si">{fastmath}</span><span class="s2">,</span>
+<span class="s2">    nogil=</span><span class="si">{nopython}</span><span class="s2">)</span>
+<span class="s2">def </span><span class="si">{fname}</span><span class="s2">_dim2_filler(</span>
+<span class="s2">    result,</span>
+<span class="s2">    col_num,</span>
+<span class="s2">    </span><span class="si">{nametokens}</span>
+<span class="s2">):</span>
+<span class="s2">    for j0 in nb.prange(result.shape[0]):</span>
+<span class="s2">        result[j0, col_num] = </span><span class="si">{fname}</span><span class="s2">(</span><span class="si">{f_args_j}</span><span class="s2"> result[j0, :], </span><span class="si">{nametokens}</span><span class="s2">)</span>
+
+
+<span class="s2">@nb.jit(</span>
+<span class="s2">    cache=True,</span>
+<span class="s2">    parallel=False,</span>
+<span class="s2">    error_model=&#39;</span><span class="si">{error_model}</span><span class="s2">&#39;,</span>
+<span class="s2">    boundscheck=</span><span class="si">{boundscheck}</span><span class="s2">,</span>
+<span class="s2">    nopython=</span><span class="si">{nopython}</span><span class="s2">,</span>
+<span class="s2">    fastmath=</span><span class="si">{fastmath}</span><span class="s2">,</span>
+<span class="s2">    nogil=</span><span class="si">{nopython}</span><span class="s2">)</span>
+<span class="s2">def </span><span class="si">{fname}</span><span class="s2">_dim3_filler(</span>
+<span class="s2">    result,</span>
+<span class="s2">    col_num,</span>
+<span class="s2">    </span><span class="si">{nametokens}</span>
+<span class="s2">):</span>
+<span class="s2">    for j0 in nb.prange(result.shape[0]):</span>
+<span class="s2">        for j1 in range(result.shape[1]):</span>
+<span class="s2">            result[j0, j1, col_num] = </span><span class="si">{fname}</span><span class="s2">(</span><span class="si">{f_args_j}</span><span class="s2"> result[j0, j1, :], </span><span class="si">{nametokens}</span><span class="s2">)</span>
+<span class="s2">&quot;&quot;&quot;</span>
+
 
 <span class="n">IRUNNER_1D_TEMPLATE</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
 <span class="s2">@nb.jit(</span>
 <span class="s2">    cache=True,</span>
-<span class="s2">    parallel=True,</span>
+<span class="s2">    parallel=</span><span class="si">{parallel_irunner}</span><span class="s2">,</span>
 <span class="s2">    error_model=&#39;</span><span class="si">{error_model}</span><span class="s2">&#39;,</span>
 <span class="s2">    boundscheck=</span><span class="si">{boundscheck}</span><span class="s2">,</span>
 <span class="s2">    nopython=</span><span class="si">{nopython}</span><span class="s2">,</span>
@@ -590,7 +626,7 @@ document.write(`
 <span class="n">IRUNNER_2D_TEMPLATE</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
 <span class="s2">@nb.jit(</span>
 <span class="s2">    cache=True,</span>
-<span class="s2">    parallel=True,</span>
+<span class="s2">    parallel=</span><span class="si">{parallel_irunner}</span><span class="s2">,</span>
 <span class="s2">    error_model=&#39;</span><span class="si">{error_model}</span><span class="s2">&#39;,</span>
 <span class="s2">    boundscheck=</span><span class="si">{boundscheck}</span><span class="s2">,</span>
 <span class="s2">    nopython=</span><span class="si">{nopython}</span><span class="s2">,</span>
@@ -616,10 +652,33 @@ document.write(`
 <span class="s2">    return result</span>
 <span class="s2">&quot;&quot;&quot;</span>
 
+<span class="n">ARRAY_MAKER_1D_TEMPLATE</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">def array_maker(</span>
+<span class="s2">    argshape,</span>
+<span class="s2">    </span><span class="si">{joined_namespace_names}</span>
+<span class="s2">    dtype=np.</span><span class="si">{dtype}</span><span class="s2">,</span>
+<span class="s2">):</span>
+<span class="s2">    result = np.empty((argshape[0], </span><span class="si">{len_self_raw_functions}</span><span class="s2">), dtype=dtype)</span>
+<span class="s2">    </span><span class="si">{meta_code_stack}</span>
+<span class="s2">    return result</span>
+<span class="s2">&quot;&quot;&quot;</span>
+
+<span class="n">ARRAY_MAKER_2D_TEMPLATE</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">def array_maker(</span>
+<span class="s2">    argshape,</span>
+<span class="s2">    </span><span class="si">{joined_namespace_names}</span>
+<span class="s2">    dtype=np.</span><span class="si">{dtype}</span><span class="s2">,</span>
+<span class="s2">):</span>
+<span class="s2">    result = np.empty((argshape[0], argshape[1], </span><span class="si">{len_self_raw_functions}</span><span class="s2">), dtype=dtype)</span>
+<span class="s2">    </span><span class="si">{meta_code_stack}</span>
+<span class="s2">    return result</span>
+<span class="s2">&quot;&quot;&quot;</span>
+
+
 <span class="n">IDOTTER_1D_TEMPLATE</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
 <span class="s2">@nb.jit(</span>
 <span class="s2">    cache=True,</span>
-<span class="s2">    parallel=True,</span>
+<span class="s2">    parallel=</span><span class="si">{parallel_idotter}</span><span class="s2">,</span>
 <span class="s2">    error_model=&#39;</span><span class="si">{error_model}</span><span class="s2">&#39;,</span>
 <span class="s2">    boundscheck=</span><span class="si">{boundscheck}</span><span class="s2">,</span>
 <span class="s2">    nopython=</span><span class="si">{nopython}</span><span class="s2">,</span>
@@ -651,7 +710,7 @@ document.write(`
 <span class="n">IDOTTER_2D_TEMPLATE</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
 <span class="s2">@nb.jit(</span>
 <span class="s2">    cache=True,</span>
-<span class="s2">    parallel=True,</span>
+<span class="s2">    parallel=</span><span class="si">{parallel_idotter}</span><span class="s2">,</span>
 <span class="s2">    error_model=&#39;</span><span class="si">{error_model}</span><span class="s2">&#39;,</span>
 <span class="s2">    boundscheck=</span><span class="si">{boundscheck}</span><span class="s2">,</span>
 <span class="s2">    nopython=</span><span class="si">{nopython}</span><span class="s2">,</span>
@@ -845,7 +904,7 @@ document.write(`
 
 <span class="s2">@nb.jit(</span>
 <span class="s2">    cache=True,</span>
-<span class="s2">    parallel=True,</span>
+<span class="s2">    parallel=</span><span class="si">{parallel}</span><span class="s2">,</span>
 <span class="s2">    error_model=&#39;</span><span class="si">{error_model}</span><span class="s2">&#39;,</span>
 <span class="s2">    boundscheck=</span><span class="si">{boundscheck}</span><span class="s2">,</span>
 <span class="s2">    nopython=</span><span class="si">{nopython}</span><span class="s2">,</span>
@@ -959,7 +1018,7 @@ document.write(`
 
 <span class="s2">@nb.jit(</span>
 <span class="s2">    cache=True,</span>
-<span class="s2">    parallel=True,</span>
+<span class="s2">    parallel=</span><span class="si">{parallel}</span><span class="s2">,</span>
 <span class="s2">    error_model=&#39;</span><span class="si">{error_model}</span><span class="s2">&#39;,</span>
 <span class="s2">    boundscheck=</span><span class="si">{boundscheck}</span><span class="s2">,</span>
 <span class="s2">    nopython=</span><span class="si">{nopython}</span><span class="s2">,</span>
@@ -1030,7 +1089,7 @@ document.write(`
 
 <span class="s2">@nb.jit(</span>
 <span class="s2">    cache=True,</span>
-<span class="s2">    parallel=True,</span>
+<span class="s2">    parallel=</span><span class="si">{parallel}</span><span class="s2">,</span>
 <span class="s2">    error_model=&#39;</span><span class="si">{error_model}</span><span class="s2">&#39;,</span>
 <span class="s2">    boundscheck=</span><span class="si">{boundscheck}</span><span class="s2">,</span>
 <span class="s2">    nopython=</span><span class="si">{nopython}</span><span class="s2">,</span>
@@ -1106,7 +1165,7 @@ document.write(`
 
 <span class="s2">@nb.jit(</span>
 <span class="s2">    cache=True,</span>
-<span class="s2">    parallel=True,</span>
+<span class="s2">    parallel=</span><span class="si">{parallel}</span><span class="s2">,</span>
 <span class="s2">    error_model=&#39;</span><span class="si">{error_model}</span><span class="s2">&#39;,</span>
 <span class="s2">    boundscheck=</span><span class="si">{boundscheck}</span><span class="s2">,</span>
 <span class="s2">    nopython=</span><span class="si">{nopython}</span><span class="s2">,</span>
@@ -1254,7 +1313,7 @@ document.write(`
 <span class="sd">        which can improve performance but can result in tiny distortions in</span>
 <span class="sd">        results.  See numba docs for details.</span>
 <span class="sd">    parallel : bool, default True</span>
-<span class="sd">        Enable or disable parallel computation for certain functions.</span>
+<span class="sd">        Enable or disable parallel computation for MNL and NL functions.</span>
 <span class="sd">    readme : str, optional</span>
 <span class="sd">        A string to inject as a comment at the top of the flow Python file.</span>
 <span class="sd">    flow_library : Mapping[str,Flow], optional</span>
@@ -1293,6 +1352,8 @@ document.write(`
         <span class="n">dim_exclude</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">bool_wrapping</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
         <span class="n">with_root_node_name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">parallel_irunner</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">parallel_idotter</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
     <span class="p">):</span>
         <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">tree</span><span class="p">,</span> <span class="n">DataTree</span><span class="p">)</span>
         <span class="n">tree</span><span class="o">.</span><span class="n">digitize_relationships</span><span class="p">(</span><span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
@@ -1315,6 +1376,8 @@ document.write(`
             <span class="n">nopython</span><span class="o">=</span><span class="n">nopython</span><span class="p">,</span>
             <span class="n">fastmath</span><span class="o">=</span><span class="n">fastmath</span><span class="p">,</span>
             <span class="n">bool_wrapping</span><span class="o">=</span><span class="n">bool_wrapping</span><span class="p">,</span>
+            <span class="n">parallel_idotter</span><span class="o">=</span><span class="n">parallel_idotter</span><span class="p">,</span>
+            <span class="n">parallel_irunner</span><span class="o">=</span><span class="n">parallel_irunner</span><span class="p">,</span>
         <span class="p">)</span>
         <span class="c1"># return from library if available</span>
         <span class="k">if</span> <span class="n">flow_library</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">flow_hash</span> <span class="ow">in</span> <span class="n">flow_library</span><span class="p">:</span>
@@ -1336,6 +1399,8 @@ document.write(`
             <span class="n">extra_hash_data</span><span class="o">=</span><span class="n">extra_hash_data</span><span class="p">,</span>
             <span class="n">write_hash_audit</span><span class="o">=</span><span class="n">write_hash_audit</span><span class="p">,</span>
             <span class="n">with_root_node_name</span><span class="o">=</span><span class="n">with_root_node_name</span><span class="p">,</span>
+            <span class="n">parallel_idotter</span><span class="o">=</span><span class="n">parallel_idotter</span><span class="p">,</span>
+            <span class="n">parallel_irunner</span><span class="o">=</span><span class="n">parallel_irunner</span><span class="p">,</span>
         <span class="p">)</span>
         <span class="k">if</span> <span class="n">flow_library</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">flow_library</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">flow_hash</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span>
@@ -1356,6 +1421,8 @@ document.write(`
         <span class="n">dim_order</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">dim_exclude</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">bool_wrapping</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">parallel_irunner</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">parallel_idotter</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
     <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Initialize up to the flow_hash.</span>
@@ -1529,6 +1596,8 @@ document.write(`
         <span class="n">_flow_hash_push</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;error_model=</span><span class="si">{</span><span class="n">error_model</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="n">_flow_hash_push</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;fastmath=</span><span class="si">{</span><span class="n">fastmath</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="n">_flow_hash_push</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;bool_wrapping=</span><span class="si">{</span><span class="n">bool_wrapping</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">_flow_hash_push</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;parallel_irunner=</span><span class="si">{</span><span class="n">parallel_irunner</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">_flow_hash_push</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;parallel_idotter=</span><span class="si">{</span><span class="n">parallel_idotter</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">flow_hash</span> <span class="o">=</span> <span class="n">base64</span><span class="o">.</span><span class="n">b32encode</span><span class="p">(</span><span class="n">flow_hash</span><span class="o">.</span><span class="n">digest</span><span class="p">())</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">flow_hash_audit</span> <span class="o">=</span> <span class="s2">&quot;]</span><span class="se">\n</span><span class="s2"># [&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">flow_hash_audit</span><span class="p">)</span>
@@ -1856,6 +1925,9 @@ document.write(`
         <span class="n">extra_hash_data</span><span class="o">=</span><span class="p">(),</span>
         <span class="n">write_hash_audit</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
         <span class="n">with_root_node_name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="o">*</span><span class="p">,</span>
+        <span class="n">parallel_irunner</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">parallel_idotter</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
     <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Second step in initialization, only used if the flow is not cached.</span>
@@ -2056,11 +2128,6 @@ document.write(`
                     <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">extra_hash_data</span><span class="p">:</span>
                         <span class="n">f_code</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;# - </span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">k</span><span class="p">)</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
 
-                <span class="n">f_code</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n\n</span><span class="s2"># function code</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
-                <span class="n">f_code</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n\n</span><span class="si">{</span><span class="n">blacken</span><span class="p">(</span><span class="n">func_code</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-
-                <span class="n">f_code</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n\n</span><span class="s2"># machinery code</span><span class="se">\n\n</span><span class="s2">&quot;</span><span class="p">)</span>
-
                 <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">tree</span><span class="o">.</span><span class="n">relationships_are_digitized</span><span class="p">:</span>
                     <span class="k">if</span> <span class="n">with_root_node_name</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
                         <span class="n">with_root_node_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tree</span><span class="o">.</span><span class="n">root_node_name</span>
@@ -2090,6 +2157,7 @@ document.write(`
 
                     <span class="n">meta_code</span> <span class="o">=</span> <span class="p">[]</span>
                     <span class="n">meta_code_dot</span> <span class="o">=</span> <span class="p">[]</span>
+                    <span class="n">filler_code</span> <span class="o">=</span> <span class="p">[]</span>
                     <span class="k">for</span> <span class="n">n</span><span class="p">,</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_raw_functions</span><span class="p">):</span>
                         <span class="n">f_name_tokens</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_raw_functions</span><span class="p">[</span><span class="n">k</span><span class="p">][</span><span class="mi">2</span><span class="p">]</span>
                         <span class="n">f_arg_tokens</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_raw_functions</span><span class="p">[</span><span class="n">k</span><span class="p">][</span><span class="mi">3</span><span class="p">]</span>
@@ -2098,13 +2166,18 @@ document.write(`
                         <span class="k">if</span> <span class="n">f_args_j</span><span class="p">:</span>
                             <span class="n">f_args_j</span> <span class="o">+=</span> <span class="s2">&quot;, &quot;</span>
                         <span class="n">meta_code</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
-                            <span class="sa">f</span><span class="s2">&quot;result[</span><span class="si">{</span><span class="n">js</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">n</span><span class="si">}</span><span class="s2">] = (</span><span class="si">{</span><span class="n">clean</span><span class="p">(</span><span class="n">k</span><span class="p">)</span><span class="si">}</span><span class="s2">(</span><span class="si">{</span><span class="n">f_args_j</span><span class="si">}</span><span class="s2">result[</span><span class="si">{</span><span class="n">js</span><span class="si">}</span><span class="s2">], </span><span class="si">{</span><span class="n">f_name_tokens</span><span class="si">}</span><span class="s2">)).item()&quot;</span>
+                            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">clean</span><span class="p">(</span><span class="n">k</span><span class="p">)</span><span class="si">}</span><span class="s2">_dim</span><span class="si">{</span><span class="n">n_root_dims</span><span class="o">+</span><span class="mi">1</span><span class="si">}</span><span class="s2">_filler(result, </span><span class="si">{</span><span class="n">n</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">f_name_tokens</span><span class="si">}</span><span class="s2">)&quot;</span>
                         <span class="p">)</span>
                         <span class="n">meta_code_dot</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
                             <span class="sa">f</span><span class="s2">&quot;intermediate[</span><span class="si">{</span><span class="n">n</span><span class="si">}</span><span class="s2">] = (</span><span class="si">{</span><span class="n">clean</span><span class="p">(</span><span class="n">k</span><span class="p">)</span><span class="si">}</span><span class="s2">(</span><span class="si">{</span><span class="n">f_args_j</span><span class="si">}</span><span class="s2">intermediate, </span><span class="si">{</span><span class="n">f_name_tokens</span><span class="si">}</span><span class="s2">)).item()&quot;</span>
                         <span class="p">)</span>
+                        <span class="n">filler_code</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                            <span class="n">COLUMN_FILLER_TEMPLATE</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                                <span class="n">fname</span><span class="o">=</span><span class="n">clean</span><span class="p">(</span><span class="n">k</span><span class="p">),</span> <span class="n">nametokens</span><span class="o">=</span><span class="n">f_name_tokens</span><span class="p">,</span> <span class="o">**</span><span class="nb">locals</span><span class="p">()</span>
+                            <span class="p">)</span>
+                        <span class="p">)</span>
                     <span class="n">meta_code_stack</span> <span class="o">=</span> <span class="n">textwrap</span><span class="o">.</span><span class="n">indent</span><span class="p">(</span>
-                        <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">meta_code</span><span class="p">),</span> <span class="s2">&quot; &quot;</span> <span class="o">*</span> <span class="mi">12</span>
+                        <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">meta_code</span><span class="p">),</span> <span class="s2">&quot; &quot;</span> <span class="o">*</span> <span class="mi">4</span>
                     <span class="p">)</span><span class="o">.</span><span class="n">lstrip</span><span class="p">()</span>
                     <span class="n">meta_code_stack_dot</span> <span class="o">=</span> <span class="n">textwrap</span><span class="o">.</span><span class="n">indent</span><span class="p">(</span>
                         <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">meta_code_dot</span><span class="p">),</span> <span class="s2">&quot; &quot;</span> <span class="o">*</span> <span class="mi">12</span>
@@ -2117,8 +2190,12 @@ document.write(`
                     <span class="k">if</span> <span class="ow">not</span> <span class="n">meta_code_stack_dot</span><span class="p">:</span>
                         <span class="n">meta_code_stack_dot</span> <span class="o">=</span> <span class="s2">&quot;pass&quot;</span>
                     <span class="k">if</span> <span class="n">n_root_dims</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-                        <span class="n">meta_template</span> <span class="o">=</span> <span class="n">IRUNNER_1D_TEMPLATE</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">**</span><span class="nb">locals</span><span class="p">())</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
-                            <span class="o">**</span><span class="nb">locals</span><span class="p">()</span>
+                        <span class="n">meta_template</span> <span class="o">=</span> <span class="p">(</span>
+                            <span class="n">IRUNNER_1D_TEMPLATE</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">**</span><span class="nb">locals</span><span class="p">())</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">**</span><span class="nb">locals</span><span class="p">())</span>
+                            <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n\n</span><span class="s2">&quot;</span>
+                            <span class="o">+</span> <span class="n">ARRAY_MAKER_1D_TEMPLATE</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">**</span><span class="nb">locals</span><span class="p">())</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                                <span class="o">**</span><span class="nb">locals</span><span class="p">()</span>
+                            <span class="p">)</span>
                         <span class="p">)</span>
                         <span class="n">meta_template_dot</span> <span class="o">=</span> <span class="n">IDOTTER_1D_TEMPLATE</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
                             <span class="o">**</span><span class="nb">locals</span><span class="p">()</span>
@@ -2133,8 +2210,12 @@ document.write(`
                             <span class="o">**</span><span class="nb">locals</span><span class="p">()</span>
                         <span class="p">)</span>
                     <span class="k">elif</span> <span class="n">n_root_dims</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
-                        <span class="n">meta_template</span> <span class="o">=</span> <span class="n">IRUNNER_2D_TEMPLATE</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">**</span><span class="nb">locals</span><span class="p">())</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
-                            <span class="o">**</span><span class="nb">locals</span><span class="p">()</span>
+                        <span class="n">meta_template</span> <span class="o">=</span> <span class="p">(</span>
+                            <span class="n">IRUNNER_2D_TEMPLATE</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">**</span><span class="nb">locals</span><span class="p">())</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">**</span><span class="nb">locals</span><span class="p">())</span>
+                            <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n\n</span><span class="s2">&quot;</span>
+                            <span class="o">+</span> <span class="n">ARRAY_MAKER_2D_TEMPLATE</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">**</span><span class="nb">locals</span><span class="p">())</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                                <span class="o">**</span><span class="nb">locals</span><span class="p">()</span>
+                            <span class="p">)</span>
                         <span class="p">)</span>
                         <span class="n">meta_template_dot</span> <span class="o">=</span> <span class="n">IDOTTER_2D_TEMPLATE</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
                             <span class="o">**</span><span class="nb">locals</span><span class="p">()</span>
@@ -2152,6 +2233,13 @@ document.write(`
                 <span class="k">else</span><span class="p">:</span>
                     <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;digitization is now required&quot;</span><span class="p">)</span>
 
+                <span class="n">f_code</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n\n</span><span class="s2"># function code</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="c1"># func_code = func_code.replace(&quot;___JS_TOKEN___&quot;, js)</span>
+                <span class="n">f_code</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n\n</span><span class="si">{</span><span class="n">blacken</span><span class="p">(</span><span class="n">func_code</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="n">f_code</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n\n</span><span class="s2"># filler code</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="n">f_code</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n\n</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="n">f_code</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">blacken</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">filler_code</span><span class="p">)))</span>
+                <span class="n">f_code</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n\n</span><span class="s2"># machinery code</span><span class="se">\n\n</span><span class="s2">&quot;</span><span class="p">)</span>
                 <span class="n">f_code</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">blacken</span><span class="p">(</span><span class="n">textwrap</span><span class="o">.</span><span class="n">dedent</span><span class="p">(</span><span class="n">line_template</span><span class="p">)))</span>
                 <span class="n">f_code</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n\n</span><span class="s2">&quot;</span><span class="p">)</span>
                 <span class="n">f_code</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">blacken</span><span class="p">(</span><span class="n">textwrap</span><span class="o">.</span><span class="n">dedent</span><span class="p">(</span><span class="n">mnl_template</span><span class="p">)))</span>
@@ -2210,6 +2298,7 @@ document.write(`
         <span class="bp">self</span><span class="o">.</span><span class="n">_inestedlogit</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">module</span><span class="p">,</span> <span class="s2">&quot;nl_transform&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_idotter</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">module</span><span class="p">,</span> <span class="s2">&quot;idotter&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_linemaker</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">module</span><span class="p">,</span> <span class="s2">&quot;linemaker&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_module</span> <span class="o">=</span> <span class="n">module</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">writing</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">function_names</span> <span class="o">=</span> <span class="n">module</span><span class="o">.</span><span class="n">function_names</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">output_name_positions</span> <span class="o">=</span> <span class="n">module</span><span class="o">.</span><span class="n">output_name_positions</span>
@@ -2877,7 +2966,15 @@ document.write(`
 
 <div class="viewcode-block" id="Flow.load">
 <a class="viewcode-back" href="../../api.html#sharrow.Flow.load">[docs]</a>
-    <span class="k">def</span> <span class="nf">load</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">source</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">compile_watch</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">mask</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">load</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">source</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">dtype</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">compile_watch</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">mask</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="o">*</span><span class="p">,</span>
+        <span class="n">use_array_maker</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Compute the flow outputs as a numpy array.</span>
 
@@ -2894,19 +2991,37 @@ document.write(`
 <span class="sd">            modification activity is observed in the cache directory.</span>
 <span class="sd">        mask : array-like, optional</span>
 <span class="sd">            Only compute values for items where mask is truthy.</span>
+<span class="sd">        use_array_maker : bool, default False</span>
+<span class="sd">            Use the array_maker function to create the array. This is useful for</span>
+<span class="sd">            reducing compile times for complex flow specifications.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        numpy.array</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">runner</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">use_array_maker</span><span class="p">:</span>
+            <span class="n">runner</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_module</span><span class="o">.</span><span class="n">array_maker</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load</span><span class="p">(</span>
-            <span class="n">source</span><span class="o">=</span><span class="n">source</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="n">compile_watch</span><span class="o">=</span><span class="n">compile_watch</span><span class="p">,</span> <span class="n">mask</span><span class="o">=</span><span class="n">mask</span>
+            <span class="n">source</span><span class="o">=</span><span class="n">source</span><span class="p">,</span>
+            <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span>
+            <span class="n">compile_watch</span><span class="o">=</span><span class="n">compile_watch</span><span class="p">,</span>
+            <span class="n">mask</span><span class="o">=</span><span class="n">mask</span><span class="p">,</span>
+            <span class="n">runner</span><span class="o">=</span><span class="n">runner</span><span class="p">,</span>
         <span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="Flow.load_dataframe">
 <a class="viewcode-back" href="../../api.html#sharrow.Flow.load_dataframe">[docs]</a>
-    <span class="k">def</span> <span class="nf">load_dataframe</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">source</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">compile_watch</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">mask</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">load_dataframe</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">source</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">dtype</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">compile_watch</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">mask</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="o">*</span><span class="p">,</span>
+        <span class="n">use_array_maker</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Compute the flow outputs as a pandas.DataFrame.</span>
 
@@ -2923,23 +3038,38 @@ document.write(`
 <span class="sd">            modification activity is observed in the cache directory.</span>
 <span class="sd">        mask : array-like, optional</span>
 <span class="sd">            Only compute values for items where mask is truthy.</span>
+<span class="sd">        use_array_maker : bool, default False</span>
+<span class="sd">            Use the array_maker function to create the array. This is useful for</span>
+<span class="sd">            reducing compile times for complex flow specifications.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        pandas.DataFrame</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">runner</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">use_array_maker</span><span class="p">:</span>
+            <span class="n">runner</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_module</span><span class="o">.</span><span class="n">array_maker</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load</span><span class="p">(</span>
             <span class="n">source</span><span class="o">=</span><span class="n">source</span><span class="p">,</span>
             <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span>
             <span class="n">as_dataframe</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
             <span class="n">compile_watch</span><span class="o">=</span><span class="n">compile_watch</span><span class="p">,</span>
             <span class="n">mask</span><span class="o">=</span><span class="n">mask</span><span class="p">,</span>
+            <span class="n">runner</span><span class="o">=</span><span class="n">runner</span><span class="p">,</span>
         <span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="Flow.load_dataarray">
 <a class="viewcode-back" href="../../api.html#sharrow.Flow.load_dataarray">[docs]</a>
-    <span class="k">def</span> <span class="nf">load_dataarray</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">source</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">compile_watch</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">mask</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">load_dataarray</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">source</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">dtype</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">compile_watch</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">mask</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="o">*</span><span class="p">,</span>
+        <span class="n">use_array_maker</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Compute the flow outputs as a xarray.DataArray.</span>
 
@@ -2956,17 +3086,24 @@ document.write(`
 <span class="sd">            modification activity is observed in the cache directory.</span>
 <span class="sd">        mask : array-like, optional</span>
 <span class="sd">            Only compute values for items where mask is truthy.</span>
+<span class="sd">        use_array_maker : bool, default False</span>
+<span class="sd">            Use the array_maker function to create the array. This is useful for</span>
+<span class="sd">            reducing compile times for complex flow specifications.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        xarray.DataArray</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">runner</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">use_array_maker</span><span class="p">:</span>
+            <span class="n">runner</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_module</span><span class="o">.</span><span class="n">array_maker</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load</span><span class="p">(</span>
             <span class="n">source</span><span class="o">=</span><span class="n">source</span><span class="p">,</span>
             <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span>
             <span class="n">as_dataarray</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
             <span class="n">compile_watch</span><span class="o">=</span><span class="n">compile_watch</span><span class="p">,</span>
             <span class="n">mask</span><span class="o">=</span><span class="n">mask</span><span class="p">,</span>
+            <span class="n">runner</span><span class="o">=</span><span class="n">runner</span><span class="p">,</span>
         <span class="p">)</span></div>
 
 
