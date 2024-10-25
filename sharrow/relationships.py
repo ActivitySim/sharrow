@@ -844,7 +844,9 @@ class DataTree:
 
         raise KeyError(item)
 
-    def get_expr(self, expression, engine="sharrow", allow_native=True):
+    def get_expr(
+        self, expression, engine="sharrow", allow_native=True, *, dtype="float32"
+    ):
         """
         Access or evaluate an expression.
 
@@ -857,6 +859,10 @@ class DataTree:
             If the expression is an array in a dataset of this tree, return
             that array directly.  Set to false to force evaluation, which
             will also ensure proper broadcasting consistent with this data tree.
+        dtype : str or dtype, default 'float32'
+            The dtype to use when creating new arrays.  This only applies when
+            the engine is 'sharrow', and the expression is not returned as a
+            native variable from the tree.
 
         Returns
         -------
@@ -870,7 +876,7 @@ class DataTree:
         except (KeyError, IndexError):
             if engine == "sharrow":
                 result = (
-                    self.setup_flow({expression: expression})
+                    self.setup_flow({expression: expression}, dtype=dtype)
                     .load_dataarray()
                     .isel(expressions=0)
                 )
@@ -878,7 +884,9 @@ class DataTree:
                 from xarray import DataArray
 
                 result = DataArray(
-                    pd.eval(expression, resolvers=[self], engine="numexpr"),
+                    pd.eval(
+                        expression, resolvers=[self.root_dataset], engine="numexpr"
+                    ),
                 )
             else:
                 raise ValueError(f"unknown engine {engine}") from None
