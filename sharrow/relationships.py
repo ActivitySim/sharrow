@@ -91,7 +91,10 @@ def _at(source, *, _names=None, _load=False, _index_name=None, **idxs):
         return f"index{inum}"
 
     for k, v in idxs.items():
-        loaders[k] = xr.DataArray(v, dims=[_ixname() for n in range(v.ndim)])
+        if isinstance(v, xr.DataArray):
+            loaders[k] = v
+        else:
+            loaders[k] = xr.DataArray(v, dims=[_ixname() for n in range(v.ndim)])
     if _names:
         ds = source[_names]
     else:
@@ -621,6 +624,8 @@ class DataTree:
         )
 
     def __getitem__(self, item):
+        if hasattr(self, "_eval_cache") and item in self._eval_cache:
+            return self._eval_cache[item]
         return self.get(item)
 
     def get(self, item, default=None, broadcast=True, coords=True):
@@ -828,6 +833,32 @@ class DataTree:
                             _positions[r.child_name] = _idx
                         if top_dim_name is not None:
                             top_dim_names[r.child_name] = top_dim_name
+                    if len(top_dim_names) > 1:
+                        if len(set(top_dim_names.values())) == 1:
+                            # capture the situation where all top dims are the same
+                            _positions = {
+                                k: xr.DataArray(v, dims=[top_dim_names[k]])
+                                for (k, v) in _positions.items()
+                            }
+                            _labels = {
+                                k: xr.DataArray(v, dims=[top_dim_names[k]])
+                                for (k, v) in _labels.items()
+                            }
+                            # the top dim names have served their purpose, so clear them
+                            top_dim_names = {}
+                        elif len(set(top_dim_names.values())) < len(top_dim_names):
+                            # capture the situation where some but not all top dims are the same
+                            # same as above?
+                            _positions = {
+                                k: xr.DataArray(v, dims=[top_dim_names[k]])
+                                for (k, v) in _positions.items()
+                            }
+                            _labels = {
+                                k: xr.DataArray(v, dims=[top_dim_names[k]])
+                                for (k, v) in _labels.items()
+                            }
+                            # the top dim names have served their purpose, so clear them
+                            top_dim_names = {}
                     y = xgather(result, _positions, _labels)
                     if len(result.dims) == 1 and len(y.dims) == 1:
                         y = y.rename({y.dims[0]: result.dims[0]})
@@ -883,11 +914,11 @@ class DataTree:
             elif engine == "numexpr":
                 from xarray import DataArray
 
+                self._eval_cache = {}
                 result = DataArray(
-                    pd.eval(
-                        expression, resolvers=[self.root_dataset], engine="numexpr"
-                    ),
+                    pd.eval(expression, resolvers=[self], engine="numexpr"),
                 )
+                del self._eval_cache
             else:
                 raise ValueError(f"unknown engine {engine}") from None
         return result
@@ -1591,3 +1622,19 @@ class DataTree:
         if coords:
             result.assign_coords(coords)
         return result
+
+    def __iter__(self):
+        """Iterate over all the datasets."""
+        import itertools
+
+        if hasattr(self, "_eval_cache"):
+            z = (self._eval_cache,)
+        else:
+            z = ()
+        return itertools.chain(*z, *(v for k, v in self.subspaces_iter()))
+
+    def __setitem__(self, key, value):
+        if hasattr(self, "_eval_cache"):
+            self._eval_cache[key] = value
+        else:
+            raise NotImplementedError("setitem not supported")
