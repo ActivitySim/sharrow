@@ -1063,8 +1063,6 @@ class DataTree:
                 for (k, v) in expressions.items()
             }
             result = xr.concat(list(arrays.values()), "expressions")
-            print("expressions.index\n", expressions.index)
-            print("expressions.values\n", expressions.values)
             result = result.assign_coords(
                 expressions=expressions.index,
                 source=xr.DataArray(expressions.values, dims="expressions"),
