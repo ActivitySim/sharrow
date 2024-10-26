@@ -1,6 +1,7 @@
 import ast
 import logging
 import warnings
+from typing import Literal
 
 import networkx as nx
 import numpy as np
@@ -69,7 +70,10 @@ def _iat(source, *, _names=None, _load=False, _index_name=None, **idxs):
         return f"index{inum}"
 
     for k, v in idxs.items():
-        loaders[k] = xr.DataArray(v, dims=[_ixname() for n in range(v.ndim)])
+        if isinstance(v, xr.DataArray):
+            loaders[k] = v
+        else:
+            loaders[k] = xr.DataArray(v, dims=[_ixname() for n in range(v.ndim)])
     if _names:
         ds = source[_names]
     else:
@@ -884,7 +888,7 @@ class DataTree:
         Parameters
         ----------
         expression : str
-        engine : {'sharrow', 'numexpr'}
+        engine : {'sharrow', 'numexpr', 'python'}
             The engine used to resolve expressions.
         allow_native : bool, default True
             If the expression is an array in a dataset of this tree, return
@@ -892,8 +896,7 @@ class DataTree:
             will also ensure proper broadcasting consistent with this data tree.
         dtype : str or dtype, default 'float32'
             The dtype to use when creating new arrays.  This only applies when
-            the engine is 'sharrow', and the expression is not returned as a
-            native variable from the tree.
+            the expression is not returned as a native variable from the tree.
 
         Returns
         -------
@@ -906,6 +909,8 @@ class DataTree:
                 raise KeyError
         except (KeyError, IndexError):
             if engine == "sharrow":
+                if dtype is None:
+                    dtype = "float32"
                 result = (
                     self.setup_flow({expression: expression}, dtype=dtype)
                     .load_dataarray()
@@ -915,12 +920,88 @@ class DataTree:
                 from xarray import DataArray
 
                 self._eval_cache = {}
-                result = DataArray(
-                    pd.eval(expression, resolvers=[self], engine="numexpr"),
-                )
-                del self._eval_cache
+                try:
+                    result = DataArray(
+                        pd.eval(expression, resolvers=[self], engine="numexpr"),
+                    ).astype(dtype)
+                except NotImplementedError:
+                    result = DataArray(
+                        pd.eval(expression, resolvers=[self], engine="python"),
+                    ).astype(dtype)
+                else:
+                    # numexpr doesn't carry over the dimension names or coords
+                    result = result.rename(
+                        {result.dims[i]: self.root_dims[i] for i in range(result.ndim)}
+                    )
+                    result = result.assign_coords(self.root_dataset.coords)
+                finally:
+                    del self._eval_cache
+            elif engine == "python":
+                from xarray import DataArray
+
+                self._eval_cache = {}
+                try:
+                    result = DataArray(
+                        pd.eval(expression, resolvers=[self], engine="python"),
+                    ).astype(dtype)
+                finally:
+                    del self._eval_cache
             else:
                 raise ValueError(f"unknown engine {engine}") from None
+        return result
+
+    def eval(
+        self,
+        expression: str,
+        engine: Literal[None, "numexpr", "sharrow", "python"] = None,
+        *,
+        dtype: np.dtype | str | None = None,
+        name: str | None = None,
+    ):
+        """
+        Evaluate an expression.
+
+        The resulting DataArray will have dimensions that match the root
+        Dataset of this tree, and the content will be broadcast to those
+        dimensions if necessary.  The expression evaluated will be assigned
+        as a scalar coordinate named 'expressions', to facilitate concatenation
+        with other `eval` results if desired.
+
+        Parameters
+        ----------
+        expression : str
+        engine : {None, 'numexpr', 'sharrow', 'python'}
+            The engine used to resolve expressions. If None, the default is
+            to try 'numexpr' first, then 'sharrow' if that fails.
+        dtype : str or dtype, optional
+            The dtype to use for the result.  If the engine is `sharrow` and
+            no value is given, this will default to `float32`, otherwise the
+            default is to use the dtype of the result of the expression.
+        name : str, optional
+            The name to give the resulting DataArray.
+
+        Returns
+        -------
+        DataArray
+        """
+        if not isinstance(expression, str):
+            raise TypeError("expression must be a string")
+        if engine is None:
+            try:
+                result = self.get_expr(
+                    expression, "numexpr", allow_native=False, dtype=dtype
+                )
+            except Exception:
+                result = self.get_expr(
+                    expression, "sharrow", allow_native=False, dtype=dtype
+                )
+        else:
+            result = self.get_expr(expression, engine, allow_native=False, dtype=dtype)
+        if "expressions" not in result.coords:
+            # add the expression as a scalar coordinate (with no dimension)
+            result = result.assign_coords(expressions=xr.DataArray(expression))
+        if name is not None:
+            result.name = name
         return result
 
     @property
