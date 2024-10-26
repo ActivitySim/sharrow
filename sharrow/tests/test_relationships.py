@@ -1076,6 +1076,7 @@ def test_eval_1d_root(force_digitization: bool, engine: str | None):
             "tourtime": prng.choice(["EA", "AM", "MD", "PM", "EV"], n_tours),
         }
     ).set_index("tour_id")
+    skim.load()
 
     tree = DataTree(
         tour=tours,
@@ -1136,65 +1137,52 @@ def test_eval_1d_root(force_digitization: bool, engine: str | None):
         [5.61832071e-04, 5.50485444e-05, 2.99029119e-05]
     )
 
-    # dotted names only works with the sharrow engine for now...
+    t = tree.eval("dot_skims.SOV_TIME", engine=engine)
+    assert "expressions" in t.coords, f"missing expression coords with engine={engine}"
+    assert t.coords["expressions"] == "dot_skims.SOV_TIME"
+    xr.testing.assert_allclose(t.drop_vars("expressions"), dot_time)
 
-    if engine in ["sharrow", None]:
-        t = tree.eval("dot_skims.SOV_TIME", engine=engine)
-        assert (
-            "expressions" in t.coords
-        ), f"missing expression coords with engine={engine}"
-        assert t.coords["expressions"] == "dot_skims.SOV_TIME"
-        xr.testing.assert_allclose(t.drop_vars("expressions"), dot_time)
+    t = tree.eval("dot_skims.SOV_TIME / income", engine=engine)
+    assert "expressions" in t.coords, f"missing expression coords with engine={engine}"
+    assert t.coords["expressions"] == "dot_skims.SOV_TIME / income"
+    xr.testing.assert_allclose(t.drop_vars("expressions"), dot_time_by_income)
 
-        t = tree.eval("dot_skims.SOV_TIME / income", engine=engine)
-        assert (
-            "expressions" in t.coords
-        ), f"missing expression coords with engine={engine}"
-        assert t.coords["expressions"] == "dot_skims.SOV_TIME / income"
-        xr.testing.assert_allclose(t.drop_vars("expressions"), dot_time_by_income)
+    tm = tree.eval_many(
+        {"SOV_TIME": "SOV_TIME", "SOV_TIME_by_income": "SOV_TIME/income"},
+        engine=engine,
+        result_type="dataarray",
+    )
+    assert tm.dims == ("tour_id", "expressions")
+    assert tm.coords["expressions"].values.tolist() == [
+        "SOV_TIME",
+        "SOV_TIME_by_income",
+    ]
+    xr.testing.assert_allclose(
+        tm.drop_vars(["expressions", "source"]),
+        xr.concat(
+            [
+                sov_time.expand_dims("expressions", -1),
+                sov_time_by_income.expand_dims("expressions", -1),
+            ],
+            "expressions",
+        ),
+    )
 
-        tm = tree.eval_many(
-            {"SOV_TIME": "SOV_TIME", "SOV_TIME_by_income": "SOV_TIME/income"},
-            engine=engine,
-            result_type="dataarray",
-        )
-        assert tm.dims == ("tour_id", "expressions")
-        assert tm.coords["expressions"].values.tolist() == [
-            "SOV_TIME",
-            "SOV_TIME_by_income",
-        ]
-        xr.testing.assert_allclose(
-            tm.drop_vars(["expressions", "source"]),
-            xr.concat(
-                [
-                    sov_time.expand_dims("expressions", -1),
-                    sov_time_by_income.expand_dims("expressions", -1),
-                ],
-                "expressions",
-            ),
-        )
-
-        tm = tree.eval_many(
-            {"SOV_TIME": "SOV_TIME", "SOV_TIME_by_income": "SOV_TIME/income"},
-            engine=engine,
-            result_type="dataset",
-        )
-        assert tm.sizes == {"tour_id": 7563}
-        xr.testing.assert_allclose(
-            tm,
-            xr.merge(
-                [
-                    sov_time.rename("SOV_TIME"),
-                    sov_time_by_income.rename("SOV_TIME_by_income"),
-                ]
-            ),
-        )
-
-    else:
-        with raises(pd.errors.UndefinedVariableError):
-            tree.eval("dot_skims.SOV_TIME", engine=engine)
-        with raises(pd.errors.UndefinedVariableError):
-            tree.eval("dot_skims.SOV_TIME / hh.income", engine=engine)
+    tm = tree.eval_many(
+        {"SOV_TIME": "SOV_TIME", "SOV_TIME_by_income": "SOV_TIME/income"},
+        engine=engine,
+        result_type="dataset",
+    )
+    assert tm.sizes == {"tour_id": 7563}
+    xr.testing.assert_allclose(
+        tm,
+        xr.merge(
+            [
+                sov_time.rename("SOV_TIME"),
+                sov_time_by_income.rename("SOV_TIME_by_income"),
+            ]
+        ),
+    )
 
 
 @pytest.mark.parametrize("force_digitization", [True, False])
@@ -1223,6 +1211,8 @@ def test_eval_2d_root(
     assert blank.coords["HHID"].dims == ("HHID",)
     assert blank.coords["dtaz"].dims == ("dtaz",)
 
+    skims.load()
+
     tree = DataTree(
         root_node_name="base",
         base=blank,
@@ -1245,6 +1235,7 @@ def test_eval_2d_root(
         "income": "income",
         "sov_time_by_income": "SOV_TIME/income",
         "a_trip_hov_time": "log(exp(HOV2_TIME / 0.5) + exp(HOV3_TIME / 0.5)) * 0.5",
+        "round_trip_hov3_time": "dot_skims.HOV3_TIME + odt_skims.HOV3_TIME",
     }
 
     arrays = {

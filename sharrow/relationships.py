@@ -10,6 +10,7 @@ import pandas as pd
 import xarray as xr
 
 from .dataset import Dataset, construct
+from .tree_branch import DataTreeBranch
 
 try:
     from dask.array import Array as dask_array_type
@@ -629,7 +630,13 @@ class DataTree:
     def __getitem__(self, item):
         if hasattr(self, "_eval_cache") and item in self._eval_cache:
             return self._eval_cache[item]
-        return self.get(item)
+        try:
+            return self.get(item)
+        except KeyError as err:
+            s = self._graph.nodes.get(item, {}).get("dataset", None)
+            if s is not None:
+                return DataTreeBranch(self, item)
+            raise err
 
     def get(self, item, default=None, broadcast=True, coords=True):
         """
