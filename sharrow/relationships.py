@@ -702,6 +702,11 @@ class DataTree:
                             add_coords[i] = base_dataset.coords[i]
                     if add_coords:
                         result = result.assign_coords(add_coords)
+        if broadcast:
+            if self.dim_order is None:
+                result = result.transpose(*self.root_dims)
+            else:
+                result = result.transpose(*self.dim_order)
         return result
 
     def finditem(self, item, maybe_in=None):
