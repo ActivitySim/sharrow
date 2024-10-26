@@ -1,6 +1,7 @@
 import ast
 import logging
 import warnings
+from collections.abc import Mapping, Sequence
 from typing import Literal
 
 import networkx as nx
@@ -582,8 +583,6 @@ class DataTree:
             self.digitize_relationships(inplace=True)
 
     def add_items(self, items):
-        from collections.abc import Mapping, Sequence
-
         if isinstance(items, Sequence):
             for i in items:
                 self.add_items(i)
@@ -1002,6 +1001,74 @@ class DataTree:
             result = result.assign_coords(expressions=xr.DataArray(expression))
         if name is not None:
             result.name = name
+        return result
+
+    def eval_many(
+        self,
+        expressions: Sequence[str] | Mapping[str, str] | pd.Series,
+        *,
+        engine: Literal[None, "numexpr", "sharrow", "python"] = None,
+        dtype=None,
+        result_type: Literal["dataset", "dataarray"] = "dataset",
+    ) -> xr.Dataset | xr.DataArray:
+        """
+        Evaluate multiple expressions.
+
+        Parameters
+        ----------
+        expressions : Sequence[str] or Mapping[str,str] or pd.Series
+            The expressions to evaluate.  If a sequence, the names of the
+            resulting DataArrays will be the same as the expressions.  If a
+            mapping or Series, the keys or index will be used as the names.
+        engine : {None, 'numexpr', 'sharrow', 'python'}
+            The engine used to resolve expressions. If None, the default depends
+            on the number of dimensions in the root dataset of this tree. If the
+            root dataset has only one dimension, the default is to try 'numexpr'
+            first, then 'sharrow' if that fails. If the root dataset has more
+            than one dimension, the default is to use 'sharrow'.
+        dtype : str or dtype, optional
+            The dtype to use for the result.  If the engine is `sharrow` and
+            no value is given, this will default to `float32`, otherwise the
+            default is to use the dtype of the result of the concatenation of
+            the expressions.
+        result_type : {'dataset', 'dataarray'}
+            Whether to return a Dataset (with a variable for each expression)
+            or a DataArray (with a dimension across all expressions).
+
+        Returns
+        -------
+        Dataset or DataArray
+        """
+        if engine is None and len(self.root_dataset.dims) > 1:
+            engine = "sharrow"
+        if result_type not in {"dataset", "dataarray"}:
+            raise ValueError("result_type must be one of ['dataset', 'dataarray']")
+        if not isinstance(expressions, (Mapping, pd.Series)):
+            expressions = pd.Series(expressions, index=expressions)
+        if isinstance(expressions, Mapping):
+            expressions = pd.Series(expressions)
+        if result_type == "dataset":
+            arrays = {
+                k: self.eval(v, engine=engine, dtype=dtype, name=k)
+                .drop_vars("expressions")
+                .assign_attrs(expression=v)
+                for (k, v) in expressions.items()
+            }
+            result = xr.Dataset(arrays)
+        else:
+            arrays = {
+                k: self.eval(v, engine=engine, dtype=dtype, name=k).expand_dims(
+                    "expressions", -1
+                )
+                for (k, v) in expressions.items()
+            }
+            result = xr.concat(list(arrays.values()), "expressions")
+            print("expressions.index\n", expressions.index)
+            print("expressions.values\n", expressions.values)
+            result = result.assign_coords(
+                expressions=expressions.index,
+                source=xr.DataArray(expressions.values, dims="expressions"),
+            )
         return result
 
     @property

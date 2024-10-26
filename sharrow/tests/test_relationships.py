@@ -1153,6 +1153,43 @@ def test_eval_1d_root(force_digitization: bool, engine: str | None):
         assert t.coords["expressions"] == "dot_skims.SOV_TIME / income"
         xr.testing.assert_allclose(t.drop_vars("expressions"), dot_time_by_income)
 
+        tm = tree.eval_many(
+            {"SOV_TIME": "SOV_TIME", "SOV_TIME_by_income": "SOV_TIME/income"},
+            engine=engine,
+            result_type="dataarray",
+        )
+        assert tm.dims == ("tour_id", "expressions")
+        assert tm.coords["expressions"].values.tolist() == [
+            "SOV_TIME",
+            "SOV_TIME_by_income",
+        ]
+        xr.testing.assert_allclose(
+            tm.drop_vars(["expressions", "source"]),
+            xr.concat(
+                [
+                    sov_time.expand_dims("expressions", -1),
+                    sov_time_by_income.expand_dims("expressions", -1),
+                ],
+                "expressions",
+            ),
+        )
+
+        tm = tree.eval_many(
+            {"SOV_TIME": "SOV_TIME", "SOV_TIME_by_income": "SOV_TIME/income"},
+            engine=engine,
+            result_type="dataset",
+        )
+        assert tm.sizes == {"tour_id": 7563}
+        xr.testing.assert_allclose(
+            tm,
+            xr.merge(
+                [
+                    sov_time.rename("SOV_TIME"),
+                    sov_time_by_income.rename("SOV_TIME_by_income"),
+                ]
+            ),
+        )
+
     else:
         with raises(pd.errors.UndefinedVariableError):
             tree.eval("dot_skims.SOV_TIME", engine=engine)
@@ -1219,3 +1256,6 @@ def test_eval_2d_root(
     # result = xr.concat(list(arrays.values()), "expressions")
     result = xr.Dataset(arrays).to_dataframe()
     dataframe_regression.check(result.iloc[::83], basename="test_eval_2d_root")
+
+    result2 = tree.eval_many(exprs, engine=engine, result_type="dataset").to_dataframe()
+    dataframe_regression.check(result2.iloc[::83], basename="test_eval_2d_root")
