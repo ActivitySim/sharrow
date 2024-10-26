@@ -879,7 +879,13 @@ class DataTree:
         raise KeyError(item)
 
     def get_expr(
-        self, expression, engine="sharrow", allow_native=True, *, dtype="float32"
+        self,
+        expression,
+        engine="sharrow",
+        allow_native=True,
+        *,
+        dtype="float32",
+        with_coords: bool = True,
     ):
         """
         Access or evaluate an expression.
@@ -896,6 +902,10 @@ class DataTree:
         dtype : str or dtype, default 'float32'
             The dtype to use when creating new arrays.  This only applies when
             the expression is not returned as a native variable from the tree.
+        with_coords : bool, default True
+            Attach coordinates from the root node of the tree to the result.
+            If the coordinates are not needed in the result, the process
+            of attaching them can be skipped.
 
         Returns
         -------
@@ -932,7 +942,8 @@ class DataTree:
                     result = result.rename(
                         {result.dims[i]: self.root_dims[i] for i in range(result.ndim)}
                     )
-                    result = result.assign_coords(self.root_dataset.coords)
+                    if with_coords:
+                        result = result.assign_coords(self.root_dataset.coords)
                 finally:
                     del self._eval_cache
             elif engine == "python":
@@ -956,6 +967,7 @@ class DataTree:
         *,
         dtype: np.dtype | str | None = None,
         name: str | None = None,
+        with_coords: bool = True,
     ):
         """
         Evaluate an expression.
@@ -988,15 +1000,29 @@ class DataTree:
         if engine is None:
             try:
                 result = self.get_expr(
-                    expression, "numexpr", allow_native=False, dtype=dtype
+                    expression,
+                    "numexpr",
+                    allow_native=False,
+                    dtype=dtype,
+                    with_coords=with_coords,
                 )
             except Exception:
                 result = self.get_expr(
-                    expression, "sharrow", allow_native=False, dtype=dtype
+                    expression,
+                    "sharrow",
+                    allow_native=False,
+                    dtype=dtype,
+                    with_coords=with_coords,
                 )
         else:
-            result = self.get_expr(expression, engine, allow_native=False, dtype=dtype)
-        if "expressions" not in result.coords:
+            result = self.get_expr(
+                expression,
+                engine,
+                allow_native=False,
+                dtype=dtype,
+                with_coords=with_coords,
+            )
+        if with_coords and "expressions" not in result.coords:
             # add the expression as a scalar coordinate (with no dimension)
             result = result.assign_coords(expressions=xr.DataArray(expression))
         if name is not None:
@@ -1010,6 +1036,7 @@ class DataTree:
         engine: Literal[None, "numexpr", "sharrow", "python"] = None,
         dtype=None,
         result_type: Literal["dataset", "dataarray"] = "dataset",
+        with_coords: bool = True,
     ) -> xr.Dataset | xr.DataArray:
         """
         Evaluate multiple expressions.
@@ -1048,25 +1075,31 @@ class DataTree:
         if isinstance(expressions, Mapping):
             expressions = pd.Series(expressions)
         if result_type == "dataset":
-            arrays = {
-                k: self.eval(v, engine=engine, dtype=dtype, name=k)
-                .drop_vars("expressions")
-                .assign_attrs(expression=v)
-                for (k, v) in expressions.items()
-            }
+            arrays = {}
+            for k, v in expressions.items():
+                a = self.eval(
+                    v, engine=engine, dtype=dtype, name=k, with_coords=with_coords
+                )
+                if "expressions" in a.coords:
+                    a = a.drop_vars("expressions")
+                arrays[k] = a.assign_attrs(expression=v)
             result = xr.Dataset(arrays)
         else:
-            arrays = {
-                k: self.eval(v, engine=engine, dtype=dtype, name=k).expand_dims(
-                    "expressions", -1
+            arrays = {}
+            for k, v in expressions.items():
+                a = self.eval(
+                    v, engine=engine, dtype=dtype, name=k, with_coords=with_coords
                 )
-                for (k, v) in expressions.items()
-            }
+                if "expressions" in a.coords:
+                    a = a.drop_vars("expressions")
+                a = a.expand_dims("expressions", -1)
+                arrays[k] = a
             result = xr.concat(list(arrays.values()), "expressions")
-            result = result.assign_coords(
-                expressions=expressions.index,
-                source=xr.DataArray(expressions.values, dims="expressions"),
-            )
+            if with_coords:
+                result = result.assign_coords(
+                    expressions=expressions.index,
+                    source=xr.DataArray(expressions.values, dims="expressions"),
+                )
         return result
 
     @property
