@@ -1060,11 +1060,8 @@ class DataTree:
             resulting DataArrays will be the same as the expressions.  If a
             mapping or Series, the keys or index will be used as the names.
         engine : {None, 'numexpr', 'sharrow', 'python'}
-            The engine used to resolve expressions. If None, the default depends
-            on the number of dimensions in the root dataset of this tree. If the
-            root dataset has only one dimension, the default is to try 'numexpr'
-            first, then 'sharrow' if that fails. If the root dataset has more
-            than one dimension, the default is to use 'sharrow'.
+            The engine used to resolve expressions. If None, the default is to
+            try 'numexpr' first, then 'sharrow' if that fails.
         dtype : str or dtype, optional
             The dtype to use for the result.  If the engine is `sharrow` and
             no value is given, this will default to `float32`, otherwise the
@@ -1078,8 +1075,6 @@ class DataTree:
         -------
         Dataset or DataArray
         """
-        if engine is None and len(self.root_dataset.dims) > 1:
-            engine = "sharrow"
         if result_type not in {"dataset", "dataarray"}:
             raise ValueError("result_type must be one of ['dataset', 'dataarray']")
         if not isinstance(expressions, (Mapping, pd.Series)):
