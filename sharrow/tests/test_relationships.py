@@ -1047,3 +1047,206 @@ def test_streaming_2d(households, skims):
     assert streamer(0).shape == (25, 6)
     for i in range(len(households)):
         assert (result[i] == streamer(i)).all()
+
+
+@pytest.mark.parametrize("force_digitization", [True, False])
+@pytest.mark.parametrize("engine", ["sharrow", "numexpr", "python", None])
+def test_eval_1d_root(force_digitization: bool, engine: str | None):
+    data = example_data.get_data()
+    skim = data["skims"]
+    hh = data["hhs"]
+
+    prng = default_rng(SeedSequence(42))
+    hh["otaz"] = hh["TAZ"]
+    hh["otaz_idx"] = hh["TAZ"] - 1
+    hh["dtaz"] = prng.choice(np.arange(1, 26), 5000)
+    hh["timeperiod5"] = prng.choice(np.arange(5), 5000)
+    hh["timeperiod3"] = np.clip(hh["timeperiod5"], 1, 3) - 1
+    hh["rownum"] = np.arange(len(hh))
+    hh["time5"] = prng.choice(["EA", "AM", "MD", "PM", "EV"], 5000)
+    hh["time3"] = prng.choice(["AM", "MD", "PM"], 5000)
+    hh["n_tours"] = prng.choice([0, 1, 2, 3], 5000)
+
+    n_tours = hh["n_tours"].sum()
+    tours = pd.DataFrame(
+        {
+            "HHID": np.repeat(hh.index, hh["n_tours"]),
+            "tour_id": np.arange(1, n_tours + 1),
+            "dtaz": prng.choice(np.arange(1, 26), n_tours),
+            "tourtime": prng.choice(["EA", "AM", "MD", "PM", "EV"], n_tours),
+        }
+    ).set_index("tour_id")
+    skim.load()
+
+    tree = DataTree(
+        tour=tours,
+        hh=hh,
+        odt_skims=skim,
+        dot_skims=skim,
+        relationships=(
+            "tour.HHID @ hh.HHID",
+            "tour.dtaz @ odt_skims.dtaz",
+            "tour.dtaz @ dot_skims.otaz",
+            "hh.otaz_idx -> odt_skims.otaz",
+            "tour.tourtime @ odt_skims.time_period",
+            "hh.otaz_idx -> dot_skims.dtaz",
+            "tour.tourtime @ dot_skims.time_period",
+        ),
+        force_digitization=force_digitization,
+    )
+
+    sov_time = tree["SOV_TIME"]
+    assert sov_time.shape == (7563,)
+    assert sov_time.dims == ("tour_id",)
+    assert sov_time[:3].values == approx([4.94, 5.02, 3.61])
+    assert sov_time[-3:].values == approx([7.17, 5.53, 2.65])
+
+    sov_time_by_income = tree["SOV_TIME"] / tree["income"]
+    assert sov_time_by_income.shape == (7563,)
+    assert sov_time_by_income.dims == ("tour_id",)
+    assert sov_time_by_income[:3].values == approx(
+        [8.34177652e-05, 8.47686589e-05, 1.64090904e-03]
+    )
+    assert sov_time_by_income[-3:].values == approx(
+        [5.47328250e-04, 5.36893224e-05, 2.57281563e-05]
+    )
+
+    t = tree.eval("SOV_TIME", engine=engine)
+    assert "expressions" in t.coords, f"missing expression coords with engine={engine}"
+    assert t.coords["expressions"] == "SOV_TIME"
+    xr.testing.assert_allclose(t.drop_vars("expressions"), sov_time)
+
+    t = tree.eval("SOV_TIME / income", engine=engine)
+    assert "expressions" in t.coords, f"missing expression coords with engine={engine}"
+    assert t.coords["expressions"] == "SOV_TIME / income"
+    xr.testing.assert_allclose(t.drop_vars("expressions"), sov_time_by_income)
+
+    dot_time = tree["dot_skims.SOV_TIME"]
+    assert dot_time.shape == (7563,)
+    assert dot_time.dims == ("tour_id",)
+    assert dot_time[:3].values == approx([5.3, 4.69, 3.58])
+    assert dot_time[-3:].values == approx([7.36, 5.67, 3.08])
+
+    dot_time_by_income = tree["dot_skims.SOV_TIME"] / tree["hh.income"]
+    assert dot_time_by_income.shape == (7563,)
+    assert dot_time_by_income.dims == ("tour_id",)
+    assert dot_time_by_income[:3].values == approx(
+        [8.94967948e-05, 7.91962185e-05, 1.62727269e-03]
+    )
+    assert dot_time_by_income[-3:].values == approx(
+        [5.61832071e-04, 5.50485444e-05, 2.99029119e-05]
+    )
+
+    t = tree.eval("dot_skims.SOV_TIME", engine=engine)
+    assert "expressions" in t.coords, f"missing expression coords with engine={engine}"
+    assert t.coords["expressions"] == "dot_skims.SOV_TIME"
+    xr.testing.assert_allclose(t.drop_vars("expressions"), dot_time)
+
+    t = tree.eval("dot_skims.SOV_TIME / income", engine=engine)
+    assert "expressions" in t.coords, f"missing expression coords with engine={engine}"
+    assert t.coords["expressions"] == "dot_skims.SOV_TIME / income"
+    xr.testing.assert_allclose(t.drop_vars("expressions"), dot_time_by_income)
+
+    tm = tree.eval_many(
+        {"SOV_TIME": "SOV_TIME", "SOV_TIME_by_income": "SOV_TIME/income"},
+        engine=engine,
+        result_type="dataarray",
+    )
+    assert tm.dims == ("tour_id", "expressions")
+    assert tm.coords["expressions"].values.tolist() == [
+        "SOV_TIME",
+        "SOV_TIME_by_income",
+    ]
+    xr.testing.assert_allclose(
+        tm.drop_vars(["expressions", "source"]),
+        xr.concat(
+            [
+                sov_time.expand_dims("expressions", -1),
+                sov_time_by_income.expand_dims("expressions", -1),
+            ],
+            "expressions",
+        ),
+    )
+
+    tm = tree.eval_many(
+        {"SOV_TIME": "SOV_TIME", "SOV_TIME_by_income": "SOV_TIME/income"},
+        engine=engine,
+        result_type="dataset",
+    )
+    assert tm.sizes == {"tour_id": 7563}
+    xr.testing.assert_allclose(
+        tm,
+        xr.merge(
+            [
+                sov_time.rename("SOV_TIME"),
+                sov_time_by_income.rename("SOV_TIME_by_income"),
+            ]
+        ),
+    )
+
+
+@pytest.mark.parametrize("force_digitization", [True, False])
+@pytest.mark.parametrize("engine", ["sharrow", "numexpr", "python", None])
+def test_eval_2d_root(
+    force_digitization: bool, dataframe_regression, engine: str | None
+):
+    pytest.importorskip("scipy", minversion="0.16")
+
+    data = example_data.get_data()
+    skims = data["skims"]
+    households = data["hhs"]
+
+    prng = default_rng(SeedSequence(42))
+    households["otaz"] = households["TAZ"]
+    households["otaz_idx"] = households["TAZ"] - 1
+    households["dtaz"] = prng.choice(np.arange(1, 26), 5000)
+    households["timeperiod5"] = prng.choice(np.arange(5), 5000)
+    households["timeperiod3"] = np.clip(households["timeperiod5"], 1, 3) - 1
+    households["rownum"] = np.arange(len(households))
+    households["time5"] = prng.choice(["EA", "AM", "MD", "PM", "EV"], 5000)
+    households["time3"] = prng.choice(["AM", "MD", "PM"], 5000)
+
+    blank = from_named_objects(households.index, skims["dtaz"])
+    assert sorted(blank.coords) == ["HHID", "dtaz"]
+    assert blank.coords["HHID"].dims == ("HHID",)
+    assert blank.coords["dtaz"].dims == ("dtaz",)
+
+    skims.load()
+
+    tree = DataTree(
+        root_node_name="base",
+        base=blank,
+        hh=households,
+        odt_skims=skims.rename({"otaz": "ptaz", "dtaz": "ataz"}),
+        dot_skims=skims.rename({"otaz": "ataz", "dtaz": "ptaz"}),
+        relationships=(
+            "base.HHID @ hh.HHID",
+            "base.dtaz @ odt_skims.ataz",
+            "base.dtaz @ dot_skims.ataz",
+            "hh.otaz @ odt_skims.ptaz",
+            "hh.time5 @ odt_skims.time_period",
+            "hh.otaz @ dot_skims.ptaz",
+            "hh.time5 @ dot_skims.time_period",
+        ),
+        force_digitization=force_digitization,
+    )
+
+    exprs = {
+        "income": "income",
+        "sov_time_by_income": "SOV_TIME/income",
+        "a_trip_hov_time": "log(exp(HOV2_TIME / 0.5) + exp(HOV3_TIME / 0.5)) * 0.5",
+        "round_trip_hov3_time": "dot_skims.HOV3_TIME + odt_skims.HOV3_TIME",
+    }
+
+    arrays = {
+        k: tree.eval(v, engine=engine, name=k)
+        .drop_vars("expressions")
+        .assign_attrs(expression=v)
+        for (k, v) in exprs.items()
+    }
+    # result = xr.concat(list(arrays.values()), "expressions")
+    result = xr.Dataset(arrays).to_dataframe()
+    dataframe_regression.check(result.iloc[::83], basename="test_eval_2d_root")
+
+    result2 = tree.eval_many(exprs, engine=engine, result_type="dataset").to_dataframe()
+    dataframe_regression.check(result2.iloc[::83], basename="test_eval_2d_root")
