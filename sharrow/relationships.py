@@ -2,6 +2,7 @@ import ast
 import logging
 import warnings
 from collections.abc import Mapping, Sequence
+from numbers import Number
 from typing import Literal
 
 import networkx as nx
@@ -974,7 +975,7 @@ class DataTree:
 
     def eval(
         self,
-        expression: str,
+        expression: str | Number,
         engine: Literal[None, "numexpr", "sharrow", "python"] = None,
         *,
         dtype: np.dtype | str | None = None,
@@ -992,7 +993,7 @@ class DataTree:
 
         Parameters
         ----------
-        expression : str
+        expression : str | Number
         engine : {None, 'numexpr', 'sharrow', 'python'}
             The engine used to resolve expressions. If None, the default is
             to try 'numexpr' first, then 'sharrow' if that fails.
@@ -1007,8 +1008,10 @@ class DataTree:
         -------
         DataArray
         """
+        if isinstance(expression, Number):
+            expression = str(expression)
         if not isinstance(expression, str):
-            raise TypeError("expression must be a string")
+            raise TypeError(f"expression must be a string, not a {type(expression)}")
         if engine is None:
             try:
                 result = self.get_expr(
