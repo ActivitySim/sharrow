@@ -964,6 +964,13 @@ class DataTree:
                 else:
                     if dtype is not None:
                         result = result.astype(dtype)
+                    # numexpr doesn't carry over the dimension names or coords
+                    result = result.rename(
+                        {result.dims[i]: self.root_dims[i] for i in range(result.ndim)}
+                    )
+                    if with_coords:
+                        result = result.assign_coords(self.root_dataset.coords)
+
             elif engine == "pandas-numexpr":
                 from xarray import DataArray
 
