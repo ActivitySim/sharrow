@@ -11,7 +11,7 @@ import pandas as pd
 import xarray as xr
 
 from .dataset import Dataset, construct
-from .tree_branch import DataTreeBranch
+from .tree_branch import DataTreeBranch, CachedTree
 
 try:
     from dask.array import Array as dask_array_type
@@ -899,6 +899,7 @@ class DataTree:
         *,
         dtype="float32",
         with_coords: bool = True,
+        parser: Literal["pandas", "python"] = "pandas",
     ):
         """
         Access or evaluate an expression.
@@ -906,8 +907,10 @@ class DataTree:
         Parameters
         ----------
         expression : str
-        engine : {'sharrow', 'numexpr', 'python'}
-            The engine used to resolve expressions.
+        engine : {'sharrow', 'numexpr', 'python', 'pandas-numexpr'}
+            The engine used to resolve expressions.  The numexpr engine uses
+            that library directly, while the pandas-numexpr engine uses the
+            pandas `eval` method with the numexpr engine.
         allow_native : bool, default True
             If the expression is an array in a dataset of this tree, return
             that array directly.  Set to false to force evaluation, which
@@ -919,6 +922,10 @@ class DataTree:
             Attach coordinates from the root node of the tree to the result.
             If the coordinates are not needed in the result, the process
             of attaching them can be skipped.
+        parser : {'pandas', 'python'}
+            The parser to use when evaluating the expression. This argument
+            only applies to pandas-based engines ('python' and 'pandas-numexpr').
+            It is ignored when using the 'sharrow' or 'numexpr' engines.
 
         Returns
         -------
@@ -940,15 +947,34 @@ class DataTree:
                 )
             elif engine == "numexpr":
                 from xarray import DataArray
+                import numexpr as ne
+
+                try:
+                    result = (DataArray(
+                        ne.evaluate(expression, local_dict=CachedTree(self)),
+                    ))
+                except Exception:
+                    if dtype is None:
+                        dtype = "float32"
+                    result = (
+                        self.setup_flow({expression: expression}, dtype=dtype)
+                        .load_dataarray()
+                        .isel(expressions=0)
+                    )
+                else:
+                    if dtype is not None:
+                        result = result.astype(dtype)
+            elif engine == "pandas-numexpr":
+                from xarray import DataArray
 
                 self._eval_cache = {}
                 try:
                     result = DataArray(
-                        pd.eval(expression, resolvers=[self], engine="numexpr"),
+                        pd.eval(expression, resolvers=[self], engine="numexpr", parser=parser),
                     ).astype(dtype)
                 except NotImplementedError:
                     result = DataArray(
-                        pd.eval(expression, resolvers=[self], engine="python"),
+                        pd.eval(expression, resolvers=[self], engine="python", parser=parser),
                     ).astype(dtype)
                 else:
                     # numexpr doesn't carry over the dimension names or coords
@@ -965,7 +991,7 @@ class DataTree:
                 self._eval_cache = {}
                 try:
                     result = DataArray(
-                        pd.eval(expression, resolvers=[self], engine="python"),
+                        pd.eval(expression, resolvers=[self], engine="python", parser=parser),
                     ).astype(dtype)
                 finally:
                     del self._eval_cache
