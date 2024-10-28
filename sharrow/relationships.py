@@ -1081,6 +1081,8 @@ class DataTree:
             expressions = pd.Series(expressions, index=expressions)
         if isinstance(expressions, Mapping):
             expressions = pd.Series(expressions)
+        if len(expressions) == 0:
+            raise ValueError("no expressions provided")
         if result_type == "dataset":
             arrays = {}
             for k, v in expressions.items():
