@@ -1008,35 +1008,41 @@ class DataTree:
         -------
         DataArray
         """
+        # when passing in a numeric value or boolean, simply broadcast it to the root dims
+        if isinstance(expression, bool):
+            expression = int(expression)
         if isinstance(expression, Number):
+            this_shape = [self.root_dataset.sizes.get(i) for i in self.root_dims]
+            result = xr.DataArray(np.broadcast_to(expression, this_shape), dims=self.root_dims)
             expression = str(expression)
-        if not isinstance(expression, str):
-            raise TypeError(f"expression must be a string, not a {type(expression)}")
-        if engine is None:
-            try:
-                result = self.get_expr(
-                    expression,
-                    "numexpr",
-                    allow_native=False,
-                    dtype=dtype,
-                    with_coords=with_coords,
-                )
-            except Exception:
-                result = self.get_expr(
-                    expression,
-                    "sharrow",
-                    allow_native=False,
-                    dtype=dtype,
-                    with_coords=with_coords,
-                )
         else:
-            result = self.get_expr(
-                expression,
-                engine,
-                allow_native=False,
-                dtype=dtype,
-                with_coords=with_coords,
-            )
+            if not isinstance(expression, str):
+                raise TypeError(f"expression must be a string, not a {type(expression)}")
+            if engine is None:
+                try:
+                    result = self.get_expr(
+                        expression,
+                        "numexpr",
+                        allow_native=False,
+                        dtype=dtype,
+                        with_coords=with_coords,
+                    )
+                except Exception:
+                    result = self.get_expr(
+                        expression,
+                        "sharrow",
+                        allow_native=False,
+                        dtype=dtype,
+                        with_coords=with_coords,
+                    )
+            else:
+                result = self.get_expr(
+                    expression,
+                    engine,
+                    allow_native=False,
+                    dtype=dtype,
+                    with_coords=with_coords,
+                )
         if with_coords and "expressions" not in result.coords:
             # add the expression as a scalar coordinate (with no dimension)
             result = result.assign_coords(expressions=xr.DataArray(expression))
