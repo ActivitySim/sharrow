@@ -11,7 +11,7 @@ import pandas as pd
 import xarray as xr
 
 from .dataset import Dataset, construct
-from .tree_branch import DataTreeBranch, CachedTree
+from .tree_branch import CachedTree, DataTreeBranch
 
 try:
     from dask.array import Array as dask_array_type
@@ -946,13 +946,13 @@ class DataTree:
                     .isel(expressions=0)
                 )
             elif engine == "numexpr":
-                from xarray import DataArray
                 import numexpr as ne
+                from xarray import DataArray
 
                 try:
-                    result = (DataArray(
+                    result = DataArray(
                         ne.evaluate(expression, local_dict=CachedTree(self)),
-                    ))
+                    )
                 except Exception:
                     if dtype is None:
                         dtype = "float32"
@@ -970,11 +970,18 @@ class DataTree:
                 self._eval_cache = {}
                 try:
                     result = DataArray(
-                        pd.eval(expression, resolvers=[self], engine="numexpr", parser=parser),
+                        pd.eval(
+                            expression,
+                            resolvers=[self],
+                            engine="numexpr",
+                            parser=parser,
+                        ),
                     ).astype(dtype)
                 except NotImplementedError:
                     result = DataArray(
-                        pd.eval(expression, resolvers=[self], engine="python", parser=parser),
+                        pd.eval(
+                            expression, resolvers=[self], engine="python", parser=parser
+                        ),
                     ).astype(dtype)
                 else:
                     # numexpr doesn't carry over the dimension names or coords
@@ -991,7 +998,9 @@ class DataTree:
                 self._eval_cache = {}
                 try:
                     result = DataArray(
-                        pd.eval(expression, resolvers=[self], engine="python", parser=parser),
+                        pd.eval(
+                            expression, resolvers=[self], engine="python", parser=parser
+                        ),
                     ).astype(dtype)
                 finally:
                     del self._eval_cache
@@ -1039,11 +1048,15 @@ class DataTree:
             expression = int(expression)
         if isinstance(expression, Number):
             this_shape = [self.root_dataset.sizes.get(i) for i in self.root_dims]
-            result = xr.DataArray(np.broadcast_to(expression, this_shape), dims=self.root_dims)
+            result = xr.DataArray(
+                np.broadcast_to(expression, this_shape), dims=self.root_dims
+            )
             expression = str(expression)
         else:
             if not isinstance(expression, str):
-                raise TypeError(f"expression must be a string, not a {type(expression)}")
+                raise TypeError(
+                    f"expression must be a string, not a {type(expression)}"
+                )
             if engine is None:
                 try:
                     result = self.get_expr(

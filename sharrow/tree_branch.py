@@ -43,4 +43,3 @@ class CachedTree:
         if x is None:
             x = self._cache[item] = self._tree[item]
         return x
-
