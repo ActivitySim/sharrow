@@ -931,6 +931,10 @@ class DataTree:
         -------
         DataArray
         """
+        if np.issubdtype(dtype, np.number):
+            dtype = dtype.__name__
+        elif dtype is bool:
+            dtype = "bool"
         try:
             if allow_native:
                 result = self[expression]
