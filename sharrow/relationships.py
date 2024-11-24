@@ -931,7 +931,7 @@ class DataTree:
         -------
         DataArray
         """
-        if np.issubdtype(dtype, np.number) and not isinstance(dtype, str):
+        if np.issubdtype(dtype, np.number) and isinstance(dtype, type):
             dtype = dtype.__name__
         elif dtype is bool:
             dtype = "bool"
