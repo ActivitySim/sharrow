@@ -269,7 +269,7 @@ def from_table(
     result = xr.Dataset()
     if isinstance(index, pd.MultiIndex):
         dims = tuple(
-            name if name is not None else "level_%i" % n
+            name if name is not None else f"level_{n}"
             for n, name in enumerate(index.names)
         )
         for dim, lev in zip(dims, index.levels):
