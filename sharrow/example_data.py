@@ -1,9 +1,8 @@
 import os
+from importlib.resources import as_file, files
 
 import numpy as np
 import pandas as pd
-from importlib.resources import files, as_file
-
 
 
 def get_skims_filename() -> str:
@@ -16,7 +15,7 @@ def get_skims_omx():
 
     from . import dataset
 
-    with as_file(files("sharrow").joinpath('example_data/skims.omx')) as filename:
+    with as_file(files("sharrow").joinpath("example_data/skims.omx")) as filename:
         skims = None
         with openmatrix.open_file(str(filename)) as f:
             skims = dataset.from_omx_3d(
@@ -33,7 +32,7 @@ def get_skims_omx():
 def get_skims_zarr():
     from . import dataset
 
-    f = files("sharrow").joinpath('example_data/skims.zarr')
+    f = files("sharrow").joinpath("example_data/skims.zarr")
     with as_file(f) as zfile:
         if zfile.exists():
             skims = dataset.from_zarr(zfile, consolidated=False)
@@ -45,7 +44,7 @@ def get_skims_zarr():
 def get_skims():
     from . import dataset
 
-    f = files("sharrow").joinpath('example_data/skims.zarr')
+    f = files("sharrow").joinpath("example_data/skims.zarr")
     with as_file(f) as zfile:
         if zfile.exists():
             skims = dataset.from_zarr(zfile, consolidated=False)
@@ -55,27 +54,27 @@ def get_skims():
 
 
 def get_households():
-    with as_file(files("sharrow").joinpath('example_data/households.csv.gz')) as f:
+    with as_file(files("sharrow").joinpath("example_data/households.csv.gz")) as f:
         return pd.read_csv(f, index_col="HHID")
 
 
 def get_persons():
-    with as_file(files("sharrow").joinpath('example_data/persons.csv.gz')) as f:
+    with as_file(files("sharrow").joinpath("example_data/persons.csv.gz")) as f:
         return pd.read_csv(f, index_col="PERID")
 
 
 def get_land_use():
-    with as_file(files("sharrow").joinpath('example_data/land_use.csv.gz')) as f:
+    with as_file(files("sharrow").joinpath("example_data/land_use.csv.gz")) as f:
         return pd.read_csv(f, index_col="TAZ")
 
 
 def get_maz_to_taz():
-    with as_file(files("sharrow").joinpath('example_data/maz_to_taz.csv')) as f:
+    with as_file(files("sharrow").joinpath("example_data/maz_to_taz.csv")) as f:
         return pd.read_csv(f, index_col="MAZ")
 
 
 def get_maz_to_maz_walk():
-    with as_file(files("sharrow").joinpath('example_data/maz_to_maz_walk.csv')) as f:
+    with as_file(files("sharrow").joinpath("example_data/maz_to_maz_walk.csv")) as f:
         return pd.read_csv(f)
 
 
