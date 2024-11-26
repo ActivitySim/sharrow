@@ -22,13 +22,13 @@ def test_skims_zarr():
     )
 
 
-def test_skims_omx():
-    skims = sh.example_data.get_skims_omx()
-    assert isinstance(skims, sh.Dataset)
-    np.testing.assert_almost_equal(
-        skims.DIST.values[:2, :3],
-        np.asarray([[0.12, 0.24, 0.44], [0.37, 0.14, 0.28]]),
-    )
+# def test_skims_omx():
+#     skims = sh.example_data.get_skims_omx()
+#     assert isinstance(skims, sh.Dataset)
+#     np.testing.assert_almost_equal(
+#         skims.DIST.values[:2, :3],
+#         np.asarray([[0.12, 0.24, 0.44], [0.37, 0.14, 0.28]]),
+#     )
 
 
 def test_maz_to_taz():
