@@ -10,7 +10,6 @@ dependencies:
   - filelock
   - ruff
   - jupyter
-  - larch>=5.7.1
   - nbmake
   - networkx
   - notebook
@@ -29,4 +28,5 @@ dependencies:
   - zarr
 
   - pip:
+    - larch6
     - -e ..

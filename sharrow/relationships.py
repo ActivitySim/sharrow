@@ -2,6 +2,7 @@ import ast
 import logging
 import warnings
 from collections.abc import Mapping, Sequence
+from numbers import Number
 from typing import Literal
 
 import networkx as nx
@@ -10,7 +11,7 @@ import pandas as pd
 import xarray as xr
 
 from .dataset import Dataset, construct
-from .tree_branch import DataTreeBranch
+from .tree_branch import CachedTree, DataTreeBranch
 
 try:
     from dask.array import Array as dask_array_type
@@ -898,6 +899,7 @@ class DataTree:
         *,
         dtype="float32",
         with_coords: bool = True,
+        parser: Literal["pandas", "python"] = "pandas",
     ):
         """
         Access or evaluate an expression.
@@ -905,8 +907,10 @@ class DataTree:
         Parameters
         ----------
         expression : str
-        engine : {'sharrow', 'numexpr', 'python'}
-            The engine used to resolve expressions.
+        engine : {'sharrow', 'numexpr', 'python', 'pandas-numexpr'}
+            The engine used to resolve expressions.  The numexpr engine uses
+            that library directly, while the pandas-numexpr engine uses the
+            pandas `eval` method with the numexpr engine.
         allow_native : bool, default True
             If the expression is an array in a dataset of this tree, return
             that array directly.  Set to false to force evaluation, which
@@ -918,11 +922,19 @@ class DataTree:
             Attach coordinates from the root node of the tree to the result.
             If the coordinates are not needed in the result, the process
             of attaching them can be skipped.
+        parser : {'pandas', 'python'}
+            The parser to use when evaluating the expression. This argument
+            only applies to pandas-based engines ('python' and 'pandas-numexpr').
+            It is ignored when using the 'sharrow' or 'numexpr' engines.
 
         Returns
         -------
         DataArray
         """
+        if np.issubdtype(dtype, np.number) and isinstance(dtype, type):
+            dtype = dtype.__name__
+        elif dtype is bool:
+            dtype = "bool"
         try:
             if allow_native:
                 result = self[expression]
@@ -938,16 +950,49 @@ class DataTree:
                     .isel(expressions=0)
                 )
             elif engine == "numexpr":
+                import numexpr as ne
+                from xarray import DataArray
+
+                try:
+                    result = DataArray(
+                        ne.evaluate(expression, local_dict=CachedTree(self)),
+                    )
+                except Exception:
+                    if dtype is None:
+                        dtype = "float32"
+                    result = (
+                        self.setup_flow({expression: expression}, dtype=dtype)
+                        .load_dataarray()
+                        .isel(expressions=0)
+                    )
+                else:
+                    if dtype is not None:
+                        result = result.astype(dtype)
+                    # numexpr doesn't carry over the dimension names or coords
+                    result = result.rename(
+                        {result.dims[i]: self.root_dims[i] for i in range(result.ndim)}
+                    )
+                    if with_coords:
+                        result = result.assign_coords(self.root_dataset.coords)
+
+            elif engine == "pandas-numexpr":
                 from xarray import DataArray
 
                 self._eval_cache = {}
                 try:
                     result = DataArray(
-                        pd.eval(expression, resolvers=[self], engine="numexpr"),
+                        pd.eval(
+                            expression,
+                            resolvers=[self],
+                            engine="numexpr",
+                            parser=parser,
+                        ),
                     ).astype(dtype)
                 except NotImplementedError:
                     result = DataArray(
-                        pd.eval(expression, resolvers=[self], engine="python"),
+                        pd.eval(
+                            expression, resolvers=[self], engine="python", parser=parser
+                        ),
                     ).astype(dtype)
                 else:
                     # numexpr doesn't carry over the dimension names or coords
@@ -964,7 +1009,9 @@ class DataTree:
                 self._eval_cache = {}
                 try:
                     result = DataArray(
-                        pd.eval(expression, resolvers=[self], engine="python"),
+                        pd.eval(
+                            expression, resolvers=[self], engine="python", parser=parser
+                        ),
                     ).astype(dtype)
                 finally:
                     del self._eval_cache
@@ -974,7 +1021,7 @@ class DataTree:
 
     def eval(
         self,
-        expression: str,
+        expression: str | Number,
         engine: Literal[None, "numexpr", "sharrow", "python"] = None,
         *,
         dtype: np.dtype | str | None = None,
@@ -992,7 +1039,7 @@ class DataTree:
 
         Parameters
         ----------
-        expression : str
+        expression : str | Number
         engine : {None, 'numexpr', 'sharrow', 'python'}
             The engine used to resolve expressions. If None, the default is
             to try 'numexpr' first, then 'sharrow' if that fails.
@@ -1007,33 +1054,45 @@ class DataTree:
         -------
         DataArray
         """
-        if not isinstance(expression, str):
-            raise TypeError("expression must be a string")
-        if engine is None:
-            try:
-                result = self.get_expr(
-                    expression,
-                    "numexpr",
-                    allow_native=False,
-                    dtype=dtype,
-                    with_coords=with_coords,
-                )
-            except Exception:
-                result = self.get_expr(
-                    expression,
-                    "sharrow",
-                    allow_native=False,
-                    dtype=dtype,
-                    with_coords=with_coords,
-                )
-        else:
-            result = self.get_expr(
-                expression,
-                engine,
-                allow_native=False,
-                dtype=dtype,
-                with_coords=with_coords,
+        # when passing in a numeric value or boolean, simply broadcast it to the root dims
+        if isinstance(expression, bool):
+            expression = int(expression)
+        if isinstance(expression, Number):
+            this_shape = [self.root_dataset.sizes.get(i) for i in self.root_dims]
+            result = xr.DataArray(
+                np.broadcast_to(expression, this_shape), dims=self.root_dims
             )
+            expression = str(expression)
+        else:
+            if not isinstance(expression, str):
+                raise TypeError(
+                    f"expression must be a string, not a {type(expression)}"
+                )
+            if engine is None:
+                try:
+                    result = self.get_expr(
+                        expression,
+                        "numexpr",
+                        allow_native=False,
+                        dtype=dtype,
+                        with_coords=with_coords,
+                    )
+                except Exception:
+                    result = self.get_expr(
+                        expression,
+                        "sharrow",
+                        allow_native=False,
+                        dtype=dtype,
+                        with_coords=with_coords,
+                    )
+            else:
+                result = self.get_expr(
+                    expression,
+                    engine,
+                    allow_native=False,
+                    dtype=dtype,
+                    with_coords=with_coords,
+                )
         if with_coords and "expressions" not in result.coords:
             # add the expression as a scalar coordinate (with no dimension)
             result = result.assign_coords(expressions=xr.DataArray(expression))
@@ -1081,6 +1140,8 @@ class DataTree:
             expressions = pd.Series(expressions, index=expressions)
         if isinstance(expressions, Mapping):
             expressions = pd.Series(expressions)
+        if len(expressions) == 0:
+            raise ValueError("no expressions provided")
         if result_type == "dataset":
             arrays = {}
             for k, v in expressions.items():

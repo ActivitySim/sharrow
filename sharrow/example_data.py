@@ -1,4 +1,5 @@
 import os
+from importlib.resources import as_file, files
 
 import numpy as np
 import pandas as pd
@@ -9,17 +10,14 @@ def get_skims_filename() -> str:
     return os.path.join(os.path.dirname(__file__), "example_data", "skims.omx")
 
 
-def get_skims():
+def get_skims_omx():
     import openmatrix
 
     from . import dataset
 
-    zfilename = os.path.join(os.path.dirname(__file__), "example_data", "skims.zarr")
-    if os.path.exists(zfilename):
-        skims = dataset.from_zarr(zfilename, consolidated=False)
-    else:
-        filename = os.path.join(os.path.dirname(__file__), "example_data", "skims.omx")
-        with openmatrix.open_file(filename) as f:
+    with as_file(files("sharrow").joinpath("example_data/skims.omx")) as filename:
+        skims = None
+        with openmatrix.open_file(str(filename)) as f:
             skims = dataset.from_omx_3d(
                 f,
                 index_names=("otaz", "dtaz", "time_period"),
@@ -28,39 +26,56 @@ def get_skims():
                 time_period_sep="__",
                 max_float_precision=32,
             ).compute()
-        skims.to_zarr(zfilename)
+    return skims
+
+
+def get_skims_zarr():
+    from . import dataset
+
+    f = files("sharrow").joinpath("example_data/skims.zarr")
+    with as_file(f) as zfile:
+        if zfile.exists():
+            skims = dataset.from_zarr(zfile, consolidated=False)
+        else:
+            skims = None
+    return skims
+
+
+def get_skims():
+    from . import dataset
+
+    f = files("sharrow").joinpath("example_data/skims.zarr")
+    with as_file(f) as zfile:
+        if zfile.exists():
+            skims = dataset.from_zarr(zfile, consolidated=False)
+        else:
+            skims = get_skims_omx()
     return skims
 
 
 def get_households():
-    filename = os.path.join(
-        os.path.dirname(__file__), "example_data", "households.csv.gz"
-    )
-    return pd.read_csv(filename, index_col="HHID")
+    with as_file(files("sharrow").joinpath("example_data/households.csv.gz")) as f:
+        return pd.read_csv(f, index_col="HHID")
 
 
 def get_persons():
-    filename = os.path.join(os.path.dirname(__file__), "example_data", "persons.csv.gz")
-    return pd.read_csv(filename, index_col="PERID")
+    with as_file(files("sharrow").joinpath("example_data/persons.csv.gz")) as f:
+        return pd.read_csv(f, index_col="PERID")
 
 
 def get_land_use():
-    filename = os.path.join(
-        os.path.dirname(__file__), "example_data", "land_use.csv.gz"
-    )
-    return pd.read_csv(filename, index_col="TAZ")
+    with as_file(files("sharrow").joinpath("example_data/land_use.csv.gz")) as f:
+        return pd.read_csv(f, index_col="TAZ")
 
 
 def get_maz_to_taz():
-    filename = os.path.join(os.path.dirname(__file__), "example_data", "maz_to_taz.csv")
-    return pd.read_csv(filename, index_col="MAZ")
+    with as_file(files("sharrow").joinpath("example_data/maz_to_taz.csv")) as f:
+        return pd.read_csv(f, index_col="MAZ")
 
 
 def get_maz_to_maz_walk():
-    filename = os.path.join(
-        os.path.dirname(__file__), "example_data", "maz_to_maz_walk.csv"
-    )
-    return pd.read_csv(filename)
+    with as_file(files("sharrow").joinpath("example_data/maz_to_maz_walk.csv")) as f:
+        return pd.read_csv(f)
 
 
 def get_data():
