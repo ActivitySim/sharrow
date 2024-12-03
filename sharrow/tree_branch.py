@@ -29,3 +29,17 @@ class DataTreeBranch:
             return self.tree[self.branch + "." + item]
         else:
             raise AttributeError(f"{item} not found in {self.branch}")
+
+
+class CachedTree:
+    """A wrapper that caches the results of getitem calls."""
+
+    def __init__(self, tree):
+        self._tree = tree
+        self._cache = {}
+
+    def __getitem__(self, item):
+        x = self._cache.get(item, None)
+        if x is None:
+            x = self._cache[item] = self._tree[item]
+        return x

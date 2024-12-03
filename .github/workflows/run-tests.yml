@@ -92,7 +92,7 @@ jobs:
           auto-update-conda: false
       - name: Install sharrow
         run: |
-          python -m pip install -e .
+          python -m pip install .
       - name: Conda checkup
         run: |
           conda info -a
@@ -137,7 +137,7 @@ jobs:
         conda install jupyter-book ruamel.yaml sphinx-autosummary-accessors -c conda-forge
     - name: Install sharrow
       run: |
-        python -m pip install --no-deps -e .
+        python -m pip install --no-deps .
     - name: Conda checkup
       run: |
         conda info -a
