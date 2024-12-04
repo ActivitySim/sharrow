@@ -7,7 +7,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>sharrow.relationships &#8212; v2.12.0</title>
+    <title>sharrow.relationships &#8212; v2.13.0</title>
   
   
   
@@ -146,8 +146,8 @@
       
     
     
-    <img src="../../_static/logo.png" class="logo__image only-light" alt="v2.12.0 - Home"/>
-    <img src="../../_static/logo.png" class="logo__image only-dark pst-js-only" alt="v2.12.0 - Home"/>
+    <img src="../../_static/logo.png" class="logo__image only-light" alt="v2.13.0 - Home"/>
+    <img src="../../_static/logo.png" class="logo__image only-dark pst-js-only" alt="v2.13.0 - Home"/>
   
   
 </a></div>
@@ -317,6 +317,7 @@
 <span class="kn">import</span> <span class="nn">logging</span>
 <span class="kn">import</span> <span class="nn">warnings</span>
 <span class="kn">from</span> <span class="nn">collections.abc</span> <span class="kn">import</span> <span class="n">Mapping</span><span class="p">,</span> <span class="n">Sequence</span>
+<span class="kn">from</span> <span class="nn">numbers</span> <span class="kn">import</span> <span class="n">Number</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Literal</span>
 
 <span class="kn">import</span> <span class="nn">networkx</span> <span class="k">as</span> <span class="nn">nx</span>
@@ -325,7 +326,7 @@
 <span class="kn">import</span> <span class="nn">xarray</span> <span class="k">as</span> <span class="nn">xr</span>
 
 <span class="kn">from</span> <span class="nn">.dataset</span> <span class="kn">import</span> <span class="n">Dataset</span><span class="p">,</span> <span class="n">construct</span>
-<span class="kn">from</span> <span class="nn">.tree_branch</span> <span class="kn">import</span> <span class="n">DataTreeBranch</span>
+<span class="kn">from</span> <span class="nn">.tree_branch</span> <span class="kn">import</span> <span class="n">CachedTree</span><span class="p">,</span> <span class="n">DataTreeBranch</span>
 
 <span class="k">try</span><span class="p">:</span>
     <span class="kn">from</span> <span class="nn">dask.array</span> <span class="kn">import</span> <span class="n">Array</span> <span class="k">as</span> <span class="n">dask_array_type</span>
@@ -1224,6 +1225,7 @@
         <span class="o">*</span><span class="p">,</span>
         <span class="n">dtype</span><span class="o">=</span><span class="s2">&quot;float32&quot;</span><span class="p">,</span>
         <span class="n">with_coords</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">parser</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;pandas&quot;</span><span class="p">,</span> <span class="s2">&quot;python&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;pandas&quot;</span><span class="p">,</span>
     <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Access or evaluate an expression.</span>
@@ -1231,8 +1233,10 @@
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        expression : str</span>
-<span class="sd">        engine : {&#39;sharrow&#39;, &#39;numexpr&#39;, &#39;python&#39;}</span>
-<span class="sd">            The engine used to resolve expressions.</span>
+<span class="sd">        engine : {&#39;sharrow&#39;, &#39;numexpr&#39;, &#39;python&#39;, &#39;pandas-numexpr&#39;}</span>
+<span class="sd">            The engine used to resolve expressions.  The numexpr engine uses</span>
+<span class="sd">            that library directly, while the pandas-numexpr engine uses the</span>
+<span class="sd">            pandas `eval` method with the numexpr engine.</span>
 <span class="sd">        allow_native : bool, default True</span>
 <span class="sd">            If the expression is an array in a dataset of this tree, return</span>
 <span class="sd">            that array directly.  Set to false to force evaluation, which</span>
@@ -1244,11 +1248,19 @@
 <span class="sd">            Attach coordinates from the root node of the tree to the result.</span>
 <span class="sd">            If the coordinates are not needed in the result, the process</span>
 <span class="sd">            of attaching them can be skipped.</span>
+<span class="sd">        parser : {&#39;pandas&#39;, &#39;python&#39;}</span>
+<span class="sd">            The parser to use when evaluating the expression. This argument</span>
+<span class="sd">            only applies to pandas-based engines (&#39;python&#39; and &#39;pandas-numexpr&#39;).</span>
+<span class="sd">            It is ignored when using the &#39;sharrow&#39; or &#39;numexpr&#39; engines.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        DataArray</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">issubdtype</span><span class="p">(</span><span class="n">dtype</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">number</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">dtype</span><span class="p">,</span> <span class="nb">type</span><span class="p">):</span>
+            <span class="n">dtype</span> <span class="o">=</span> <span class="n">dtype</span><span class="o">.</span><span class="vm">__name__</span>
+        <span class="k">elif</span> <span class="n">dtype</span> <span class="ow">is</span> <span class="nb">bool</span><span class="p">:</span>
+            <span class="n">dtype</span> <span class="o">=</span> <span class="s2">&quot;bool&quot;</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">allow_native</span><span class="p">:</span>
                 <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="p">[</span><span class="n">expression</span><span class="p">]</span>
@@ -1264,16 +1276,49 @@
                     <span class="o">.</span><span class="n">isel</span><span class="p">(</span><span class="n">expressions</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
                 <span class="p">)</span>
             <span class="k">elif</span> <span class="n">engine</span> <span class="o">==</span> <span class="s2">&quot;numexpr&quot;</span><span class="p">:</span>
+                <span class="kn">import</span> <span class="nn">numexpr</span> <span class="k">as</span> <span class="nn">ne</span>
+                <span class="kn">from</span> <span class="nn">xarray</span> <span class="kn">import</span> <span class="n">DataArray</span>
+
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">result</span> <span class="o">=</span> <span class="n">DataArray</span><span class="p">(</span>
+                        <span class="n">ne</span><span class="o">.</span><span class="n">evaluate</span><span class="p">(</span><span class="n">expression</span><span class="p">,</span> <span class="n">local_dict</span><span class="o">=</span><span class="n">CachedTree</span><span class="p">(</span><span class="bp">self</span><span class="p">)),</span>
+                    <span class="p">)</span>
+                <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">dtype</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                        <span class="n">dtype</span> <span class="o">=</span> <span class="s2">&quot;float32&quot;</span>
+                    <span class="n">result</span> <span class="o">=</span> <span class="p">(</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">setup_flow</span><span class="p">({</span><span class="n">expression</span><span class="p">:</span> <span class="n">expression</span><span class="p">},</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
+                        <span class="o">.</span><span class="n">load_dataarray</span><span class="p">()</span>
+                        <span class="o">.</span><span class="n">isel</span><span class="p">(</span><span class="n">expressions</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+                    <span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">dtype</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                        <span class="n">result</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">dtype</span><span class="p">)</span>
+                    <span class="c1"># numexpr doesn&#39;t carry over the dimension names or coords</span>
+                    <span class="n">result</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span>
+                        <span class="p">{</span><span class="n">result</span><span class="o">.</span><span class="n">dims</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span> <span class="bp">self</span><span class="o">.</span><span class="n">root_dims</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">ndim</span><span class="p">)}</span>
+                    <span class="p">)</span>
+                    <span class="k">if</span> <span class="n">with_coords</span><span class="p">:</span>
+                        <span class="n">result</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">assign_coords</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">root_dataset</span><span class="o">.</span><span class="n">coords</span><span class="p">)</span>
+
+            <span class="k">elif</span> <span class="n">engine</span> <span class="o">==</span> <span class="s2">&quot;pandas-numexpr&quot;</span><span class="p">:</span>
                 <span class="kn">from</span> <span class="nn">xarray</span> <span class="kn">import</span> <span class="n">DataArray</span>
 
                 <span class="bp">self</span><span class="o">.</span><span class="n">_eval_cache</span> <span class="o">=</span> <span class="p">{}</span>
                 <span class="k">try</span><span class="p">:</span>
                     <span class="n">result</span> <span class="o">=</span> <span class="n">DataArray</span><span class="p">(</span>
-                        <span class="n">pd</span><span class="o">.</span><span class="n">eval</span><span class="p">(</span><span class="n">expression</span><span class="p">,</span> <span class="n">resolvers</span><span class="o">=</span><span class="p">[</span><span class="bp">self</span><span class="p">],</span> <span class="n">engine</span><span class="o">=</span><span class="s2">&quot;numexpr&quot;</span><span class="p">),</span>
+                        <span class="n">pd</span><span class="o">.</span><span class="n">eval</span><span class="p">(</span>
+                            <span class="n">expression</span><span class="p">,</span>
+                            <span class="n">resolvers</span><span class="o">=</span><span class="p">[</span><span class="bp">self</span><span class="p">],</span>
+                            <span class="n">engine</span><span class="o">=</span><span class="s2">&quot;numexpr&quot;</span><span class="p">,</span>
+                            <span class="n">parser</span><span class="o">=</span><span class="n">parser</span><span class="p">,</span>
+                        <span class="p">),</span>
                     <span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">dtype</span><span class="p">)</span>
                 <span class="k">except</span> <span class="ne">NotImplementedError</span><span class="p">:</span>
                     <span class="n">result</span> <span class="o">=</span> <span class="n">DataArray</span><span class="p">(</span>
-                        <span class="n">pd</span><span class="o">.</span><span class="n">eval</span><span class="p">(</span><span class="n">expression</span><span class="p">,</span> <span class="n">resolvers</span><span class="o">=</span><span class="p">[</span><span class="bp">self</span><span class="p">],</span> <span class="n">engine</span><span class="o">=</span><span class="s2">&quot;python&quot;</span><span class="p">),</span>
+                        <span class="n">pd</span><span class="o">.</span><span class="n">eval</span><span class="p">(</span>
+                            <span class="n">expression</span><span class="p">,</span> <span class="n">resolvers</span><span class="o">=</span><span class="p">[</span><span class="bp">self</span><span class="p">],</span> <span class="n">engine</span><span class="o">=</span><span class="s2">&quot;python&quot;</span><span class="p">,</span> <span class="n">parser</span><span class="o">=</span><span class="n">parser</span>
+                        <span class="p">),</span>
                     <span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">dtype</span><span class="p">)</span>
                 <span class="k">else</span><span class="p">:</span>
                     <span class="c1"># numexpr doesn&#39;t carry over the dimension names or coords</span>
@@ -1290,7 +1335,9 @@
                 <span class="bp">self</span><span class="o">.</span><span class="n">_eval_cache</span> <span class="o">=</span> <span class="p">{}</span>
                 <span class="k">try</span><span class="p">:</span>
                     <span class="n">result</span> <span class="o">=</span> <span class="n">DataArray</span><span class="p">(</span>
-                        <span class="n">pd</span><span class="o">.</span><span class="n">eval</span><span class="p">(</span><span class="n">expression</span><span class="p">,</span> <span class="n">resolvers</span><span class="o">=</span><span class="p">[</span><span class="bp">self</span><span class="p">],</span> <span class="n">engine</span><span class="o">=</span><span class="s2">&quot;python&quot;</span><span class="p">),</span>
+                        <span class="n">pd</span><span class="o">.</span><span class="n">eval</span><span class="p">(</span>
+                            <span class="n">expression</span><span class="p">,</span> <span class="n">resolvers</span><span class="o">=</span><span class="p">[</span><span class="bp">self</span><span class="p">],</span> <span class="n">engine</span><span class="o">=</span><span class="s2">&quot;python&quot;</span><span class="p">,</span> <span class="n">parser</span><span class="o">=</span><span class="n">parser</span>
+                        <span class="p">),</span>
                     <span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">dtype</span><span class="p">)</span>
                 <span class="k">finally</span><span class="p">:</span>
                     <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">_eval_cache</span>
@@ -1300,7 +1347,7 @@
 
     <span class="k">def</span> <span class="nf">eval</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
-        <span class="n">expression</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">expression</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Number</span><span class="p">,</span>
         <span class="n">engine</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="s2">&quot;numexpr&quot;</span><span class="p">,</span> <span class="s2">&quot;sharrow&quot;</span><span class="p">,</span> <span class="s2">&quot;python&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="o">*</span><span class="p">,</span>
         <span class="n">dtype</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">dtype</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -1318,7 +1365,7 @@
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        expression : str</span>
+<span class="sd">        expression : str | Number</span>
 <span class="sd">        engine : {None, &#39;numexpr&#39;, &#39;sharrow&#39;, &#39;python&#39;}</span>
 <span class="sd">            The engine used to resolve expressions. If None, the default is</span>
 <span class="sd">            to try &#39;numexpr&#39; first, then &#39;sharrow&#39; if that fails.</span>
@@ -1333,33 +1380,45 @@
 <span class="sd">        -------</span>
 <span class="sd">        DataArray</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">expression</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;expression must be a string&quot;</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">engine</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">try</span><span class="p">:</span>
-                <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_expr</span><span class="p">(</span>
-                    <span class="n">expression</span><span class="p">,</span>
-                    <span class="s2">&quot;numexpr&quot;</span><span class="p">,</span>
-                    <span class="n">allow_native</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-                    <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span>
-                    <span class="n">with_coords</span><span class="o">=</span><span class="n">with_coords</span><span class="p">,</span>
-                <span class="p">)</span>
-            <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
-                <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_expr</span><span class="p">(</span>
-                    <span class="n">expression</span><span class="p">,</span>
-                    <span class="s2">&quot;sharrow&quot;</span><span class="p">,</span>
-                    <span class="n">allow_native</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-                    <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span>
-                    <span class="n">with_coords</span><span class="o">=</span><span class="n">with_coords</span><span class="p">,</span>
-                <span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_expr</span><span class="p">(</span>
-                <span class="n">expression</span><span class="p">,</span>
-                <span class="n">engine</span><span class="p">,</span>
-                <span class="n">allow_native</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-                <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span>
-                <span class="n">with_coords</span><span class="o">=</span><span class="n">with_coords</span><span class="p">,</span>
+        <span class="c1"># when passing in a numeric value or boolean, simply broadcast it to the root dims</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">expression</span><span class="p">,</span> <span class="nb">bool</span><span class="p">):</span>
+            <span class="n">expression</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">expression</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">expression</span><span class="p">,</span> <span class="n">Number</span><span class="p">):</span>
+            <span class="n">this_shape</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">root_dataset</span><span class="o">.</span><span class="n">sizes</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">root_dims</span><span class="p">]</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span>
+                <span class="n">np</span><span class="o">.</span><span class="n">broadcast_to</span><span class="p">(</span><span class="n">expression</span><span class="p">,</span> <span class="n">this_shape</span><span class="p">),</span> <span class="n">dims</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">root_dims</span>
             <span class="p">)</span>
+            <span class="n">expression</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">expression</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">expression</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;expression must be a string, not a </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">expression</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="p">)</span>
+            <span class="k">if</span> <span class="n">engine</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_expr</span><span class="p">(</span>
+                        <span class="n">expression</span><span class="p">,</span>
+                        <span class="s2">&quot;numexpr&quot;</span><span class="p">,</span>
+                        <span class="n">allow_native</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                        <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span>
+                        <span class="n">with_coords</span><span class="o">=</span><span class="n">with_coords</span><span class="p">,</span>
+                    <span class="p">)</span>
+                <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+                    <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_expr</span><span class="p">(</span>
+                        <span class="n">expression</span><span class="p">,</span>
+                        <span class="s2">&quot;sharrow&quot;</span><span class="p">,</span>
+                        <span class="n">allow_native</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                        <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span>
+                        <span class="n">with_coords</span><span class="o">=</span><span class="n">with_coords</span><span class="p">,</span>
+                    <span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_expr</span><span class="p">(</span>
+                    <span class="n">expression</span><span class="p">,</span>
+                    <span class="n">engine</span><span class="p">,</span>
+                    <span class="n">allow_native</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                    <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span>
+                    <span class="n">with_coords</span><span class="o">=</span><span class="n">with_coords</span><span class="p">,</span>
+                <span class="p">)</span>
         <span class="k">if</span> <span class="n">with_coords</span> <span class="ow">and</span> <span class="s2">&quot;expressions&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">coords</span><span class="p">:</span>
             <span class="c1"># add the expression as a scalar coordinate (with no dimension)</span>
             <span class="n">result</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">assign_coords</span><span class="p">(</span><span class="n">expressions</span><span class="o">=</span><span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span><span class="n">expression</span><span class="p">))</span>
@@ -1407,6 +1466,8 @@
             <span class="n">expressions</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">expressions</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="n">expressions</span><span class="p">)</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">expressions</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">):</span>
             <span class="n">expressions</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">expressions</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">expressions</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;no expressions provided&quot;</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">result_type</span> <span class="o">==</span> <span class="s2">&quot;dataset&quot;</span><span class="p">:</span>
             <span class="n">arrays</span> <span class="o">=</span> <span class="p">{}</span>
             <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">expressions</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
