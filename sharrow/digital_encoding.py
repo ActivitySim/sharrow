@@ -359,9 +359,9 @@ def multivalue_digitize_by_dictionary(ds, encode_vars=None, encoding_name=None):
 
     encode_var_dims = ds[encode_vars[0]].dims
     for v in encode_vars[1:]:
-        assert (
-            encode_var_dims == ds[v].dims
-        ), f"dims must match, {encode_var_dims} != {ds[v].dims}"
+        assert encode_var_dims == ds[v].dims, (
+            f"dims must match, {encode_var_dims} != {ds[v].dims}"
+        )
     logger.info("assembling data stack")
     conjoined = np.stack(
         [array_decode(ds[v].compute(), aux_data=ds) for v in encode_vars], axis=-1

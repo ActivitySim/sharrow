@@ -44,7 +44,7 @@ def si_units(x, kind="B", digits=3, shift=1000):
         while x < 1 and tier >= 0:
             x *= shift
             tier -= 1
-    return f"{sign}{round(x,digits)} {tiers[tier]}{kind}"
+    return f"{sign}{round(x, digits)} {tiers[tier]}{kind}"
 
 
 def _hexhash(t, size=10, prefix="sharr"):

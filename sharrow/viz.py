@@ -16,7 +16,7 @@ def make_graph(datatree, fontname="Arial", fontsize=12, ignore_joined_dims=True)
     if viz is None:
         raise ModuleNotFoundError("pygraphviz is not installed")
 
-    small = f"{fontsize * .7:.1f}"
+    small = f"{fontsize * 0.7:.1f}"
     g = viz.AGraph(rankdir="LR", strict=False, fontname=fontname, fontsize=fontsize)
 
     connected_nodes = set()
@@ -117,7 +117,7 @@ def make_graph(datatree, fontname="Arial", fontsize=12, ignore_joined_dims=True)
 
         out = f"""< <TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" >
         <TR><TD PORT="f0" COLSPAN="2" BGCOLOR="gray80"><B>{k}</B></TD></TR>
-        {''.join(cells)}
+        {"".join(cells)}
         </TABLE> >"""
         return out
 
