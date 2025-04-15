@@ -1749,7 +1749,7 @@ class Flow:
                     textwrap.dedent(
                         f"""
                 # this module generated automatically using sharrow version {__version__}
-                # generation time: {time.strftime('%d %B %Y %I:%M:%S %p')}
+                # generation time: {time.strftime("%d %B %Y %I:%M:%S %p")}
                 """
                     )[1:]
                 )
@@ -1830,7 +1830,7 @@ class Flow:
                         if f_args_j:
                             f_args_j += ", "
                         meta_code.append(
-                            f"{clean(k)}_dim{n_root_dims+1}_filler(result, {n}, {f_name_tokens})"
+                            f"{clean(k)}_dim{n_root_dims + 1}_filler(result, {n}, {f_name_tokens})"
                         )
                         meta_code_dot.append(
                             f"intermediate[{n}] = ({clean(k)}({f_args_j}intermediate, {f_name_tokens})).item()"
@@ -2268,9 +2268,9 @@ class Flow:
                         )
                         if isinstance(timers, float):
                             if timers < 1e-3:
-                                timers = f"{timers/1e-6:.0f} µs"
+                                timers = f"{timers / 1e-6:.0f} µs"
                             elif timers < 1:
-                                timers = f"{timers/1e-3:.1f} ms"
+                                timers = f"{timers / 1e-3:.1f} ms"
                             else:
                                 timers = f"{timers:.2f} s"
                         logger.warning(
