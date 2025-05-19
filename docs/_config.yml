@@ -73,5 +73,5 @@ sphinx:
       - https://arrow.apache.org/docs/
       -
       numba:
-      - https://numba.pydata.org/numba-doc/latest
+      - https://numba.readthedocs.io/en/latest
       -
