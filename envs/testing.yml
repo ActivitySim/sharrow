@@ -25,4 +25,4 @@ dependencies:
   - h5py
   - zarr
   - pip:
-    - larch6
+    - larch>=6

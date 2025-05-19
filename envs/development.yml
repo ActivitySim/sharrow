@@ -28,5 +28,5 @@ dependencies:
   - zarr
 
   - pip:
-    - larch6
+    - larch>=6
     - -e ..
