@@ -3,11 +3,47 @@ import contextlib
 import filecmp
 import os
 import uuid
+from pathlib import Path
 
 from filelock import FileLock, Timeout
 
+# by default, blackening is disabled for performance reasons,
+# but it can be enabled by setting the environment variable SHARROW_BLACKEN=1
+SHARROW_BLACKEN = os.environ.get("SHARROW_BLACKEN", "0") == "1"
+
 
 def blacken(code):
+    if not SHARROW_BLACKEN:
+        return code
+
+    # Ruff is much faster than black, so we try to use it first.
+    import subprocess
+
+    which_ruff = subprocess.run(["which", "ruff"], capture_output=True, text=True)
+    which_ruff.check_returncode()
+    ruff_bin = which_ruff.stdout.strip()
+    if ruff_bin:
+        try:
+            result = subprocess.run(
+                [ruff_bin, "format", "-"],
+                input=code,
+                text=True,
+                capture_output=True,
+                check=True,
+                cwd=Path.cwd(),
+            )
+            result.check_returncode()
+            return result.stdout
+        except subprocess.CalledProcessError as err:
+            import warnings
+
+            warnings.warn(f"error in ruffen: {err!r}", stacklevel=2)
+            return code
+    else:
+        import warnings
+
+        warnings.warn("ruff not found, trying black instead", stacklevel=2)
+
     try:
         import black
     except ImportError:
