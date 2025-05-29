@@ -1,6 +1,6 @@
 # sharrow
 
-The sharrow package is an extension of [numba](https://numba.pydata.org/), and
+The sharrow package is an extension of [numba](https://numba.readthedocs.io/), and
 offers access to data formatting and a just-in-time compiler specifically for
 converting ActivitySim-style “specification” files into optimized, runnable
 functions that “can approach the speeds of C or FORTRAN”. The idea is to pay the
@@ -8,7 +8,7 @@ cost of compiling these specification files only once, and then re-use the
 optimized results many times.
 
 This system depends only on widely used free open-source libraries, including
-[numba](https://numba.pydata.org/) and [xarray](https://xarray.pydata.org/) and
+[numba](https://numba.readthedocs.io/) and [xarray](https://xarray.pydata.org/) and
 is tested to be compatible with Windows, Linux, and macOS. Most importantly,
 using sharrow is very user friendly and requires almost no knowledge of the
 underlying mechanisms that make it speedy.  The first time a data flow is run on
