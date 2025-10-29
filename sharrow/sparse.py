@@ -172,8 +172,8 @@ class RedirectionAccessor:
                 f"Creating zero backing array for sparse blender {name}"
             )
             backing_shape = (
-                self._obj.dims[backing_i_dim],
-                self._obj.dims[backing_j_dim],
+                self._obj.sizes[backing_i_dim],
+                self._obj.sizes[backing_j_dim],
             )
             self._obj[name] = xr.DataArray(
                 np.broadcast_to(np.zeros([1], dtype=data.dtype), backing_shape),
