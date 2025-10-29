@@ -141,6 +141,9 @@ class RedirectionAccessor:
         index=None,
         i_dim="omaz",
         j_dim="dmaz",
+        *,
+        backing_i_dim="otaz",
+        backing_j_dim="dtaz",
     ):
         i = np.asarray(i)
         j = np.asarray(j)
@@ -161,6 +164,17 @@ class RedirectionAccessor:
 
         if sparse is None:
             raise ImportError("sparse is not installed")
+
+        if name not in self._obj:
+            # the TAZ level backing array does not exist yet, so create it with zeros
+            backing_shape = (
+                self._obj.dims[backing_i_dim],
+                self._obj.dims[backing_j_dim],
+            )
+            self._obj[name] = xr.DataArray(
+                np.broadcast_to(np.zeros([1], dtype=data.dtype), backing_shape),
+                dims=(backing_i_dim, backing_j_dim),
+            )
 
         sparse_data = sparse.GCXS(
             sparse.COO(np.stack((i_, j_)), data, shape=shape), compressed_axes=(0,)

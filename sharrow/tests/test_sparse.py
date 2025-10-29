@@ -41,16 +41,14 @@ def sparse_skims_setup():
     )
 
     # Create DISTJUMP variable as zeros
-    import xarray as xr
 
-    zz = xr.DataArray(
-        np.broadcast_to(np.zeros([1]), skims["DISTWALK"].shape),
-        dims=skims["DISTWALK"].dims,
-        coords=skims["DISTWALK"].coords,
-    )
-    skims = skims.assign(DISTJUMP=zz)
+    # skims = skims.assign(DISTJUMP=xr.DataArray(
+    #     np.broadcast_to(np.zeros([1]), skims["DISTWALK"].shape),
+    #     dims=skims["DISTWALK"].dims,
+    #     coords=skims["DISTWALK"].coords,
+    # ))
 
-    # Add sparse blender for DISTJUMP
+    # Add sparse blender for DISTJUMP, which has no backing in the TAZ data
     skims.redirection.sparse_blender(
         "DISTJUMP",
         maz_to_maz_walk.OMAZ,
