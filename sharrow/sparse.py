@@ -1,3 +1,4 @@
+import logging
 import math
 
 import numba as nb
@@ -167,6 +168,9 @@ class RedirectionAccessor:
 
         if name not in self._obj:
             # the TAZ level backing array does not exist yet, so create it with zeros
+            logging.getLogger(__name__).warning(
+                f"Creating zero backing array for sparse blender {name}"
+            )
             backing_shape = (
                 self._obj.dims[backing_i_dim],
                 self._obj.dims[backing_j_dim],
