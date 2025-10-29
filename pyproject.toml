@@ -84,3 +84,16 @@ testpaths = [
     "sharrow/tests",
     "docs",
 ]
+
+[dependency-groups]
+dev = [
+    "ipykernel>=6.31.0",
+    "larch>=4.0",
+    "nbmake>=1.5.5",
+    "openmatrix>=0.3.5.0",
+    "pytest>=8.4.2",
+    "pytest-regressions>=2.8.3",
+    "scipy>=1.13.1",
+    "sparse>=0.15.5",
+    "zarr>=2.18.2",
+]
