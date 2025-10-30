@@ -21,16 +21,11 @@ jobs:
         shell: bash -l {0}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Code Quality Check with Ruff
+        # code quality check, stop the build for any errors
+        uses: astral-sh/ruff-action@v3
         with:
-          python-version: '3.11'
-      - name: Install Ruff
-        run: |
-          python -m pip install ruff
-      - name: Lint with Ruff
-        run: |
-          # code quality check, stop the build for any errors
-          ruff check . --show-fixes --exit-non-zero-on-fix
+          args: "check . --show-fixes --exit-non-zero-on-fix"
 
   test-minimal:
     needs: fmt
