@@ -51,6 +51,7 @@ fix = true
 line-length = 88
 target-version = "py39"
 extend-include = ["*.ipynb"]
+required-version = ">=0.11,<0.15"
 
 [tool.ruff.lint]
 select = [
