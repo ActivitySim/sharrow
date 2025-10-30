@@ -82,13 +82,14 @@ jobs:
         run: |
           uv self version
           uv sync --locked
-      - name: Lint with Ruff
-        run: |
-          # code quality check
-          # stop the build if there are Python syntax errors or undefined names
-          ruff check . --select=E9,F63,F7,F82 --no-fix
-          # stop the build for any other configured Ruff linting errors
-          ruff check . --show-fixes --exit-non-zero-on-fix
+      - name: Syntax Check with Ruff
+        uses: astral-sh/ruff-action@v3
+        with:
+          args: "check . --select=E9,F63,F7,F82 --no-fix"
+      - name: Code Quality Check with Ruff
+        uses: astral-sh/ruff-action@v3
+        with:
+          args: "check . --show-fixes --exit-non-zero-on-fix"
       - name: Test with pytest
         run: |
           uv run pytest
