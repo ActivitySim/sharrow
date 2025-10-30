@@ -23,6 +23,7 @@ jobs:
         # code quality check, stop the build for any errors
         uses: astral-sh/ruff-action@v3
         with:
+          version: "latest"
           args: "check . --show-fixes --exit-non-zero-on-fix"
 
   test-minimal:
