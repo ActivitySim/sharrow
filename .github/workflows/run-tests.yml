@@ -71,6 +71,9 @@ jobs:
         with:
           version: "0.9.6"
           python-version: ${{ matrix.python-version }}
+      - name: File contents
+        run: |
+          cat sharrow/example_data.py
       - name: UV sync
         run: |
           uv self version
