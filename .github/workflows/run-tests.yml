@@ -173,6 +173,7 @@ jobs:
         shell: bash -l {0}
     name: ${{ matrix.region }}
     runs-on: ubuntu-latest
+    timeout-minutes: 720 # Sets the timeout to 12 hours
     steps:
       - name: Checkout Sharrow
         uses: actions/checkout@v4
