@@ -213,5 +213,5 @@ jobs:
       - name: Test ${{ matrix.region }}
         run: |
           source .venv/bin/activate
-          cd ${{ matrix.region-repo }}/test
-          python -m pytest .
+          cd ${{ matrix.region-repo }}
+          python -m pytest ./test
