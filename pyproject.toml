@@ -40,7 +40,7 @@ packages = ["sharrow", "sharrow.utils"]
 include-package-data = true
 
 [tool.setuptools.package-data]
-sharrow = ["*"]
+sharrow = ["*", "example_data/*"]
 
 [tool.setuptools_scm]
 fallback_version = "1999"
