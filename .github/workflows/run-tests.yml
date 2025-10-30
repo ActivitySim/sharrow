@@ -159,11 +159,11 @@ jobs:
           - region: ActivitySim 1-Zone Example (MTC)
             region-org: ActivitySim
             region-repo: activitysim-prototype-mtc
-            region-branch: pandas2
+            region-branch: extended
           - region: ActivitySim 2-Zone Example (SANDAG)
             region-org: ActivitySim
             region-repo: sandag-abm3-example
-            region-branch: pandas2
+            region-branch: main
       fail-fast: false
     defaults:
       run:
