@@ -89,7 +89,7 @@ jobs:
           args: "check . --show-fixes --exit-non-zero-on-fix"
       - name: Test with pytest
         run: |
-          uv run pytest
+          uv run --locked pytest
 
   deploy-docs:
     needs: test
