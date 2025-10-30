@@ -71,10 +71,11 @@ jobs:
         with:
           version: "0.9.6"
           python-version: ${{ matrix.python-version }}
-      # - name: UV sync
-      #   run: |
-      #     uv self version
-      #     uv sync --locked
+      - name: UV sync
+        run: |
+          uv self version
+          uv cache clean
+          uv sync --locked
       - name: Syntax Check with Ruff
         uses: astral-sh/ruff-action@v3
         with:
