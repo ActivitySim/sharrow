@@ -8,6 +8,8 @@ from typing import TYPE_CHECKING, Literal
 import networkx as nx
 import numpy as np
 
+from ._lazy import lazy
+
 if TYPE_CHECKING:
     import pandas as pd
 
@@ -363,11 +365,11 @@ class NestingTree(nx.DiGraph):
                 super().add_edge(h, k[1], **attrs)
         self._clear_caches()
 
-    @property
+    @lazy
     def topological_sorted(self):
         return list(reverse_lexicographical_topological_sort(self))
 
-    @property
+    @lazy
     def topological_sorted_no_elementals(self):
         try:
             result = self.topological_sorted.copy()
@@ -392,14 +394,14 @@ class NestingTree(nx.DiGraph):
                 to_remove.add(code)
         return [i for i in result if i not in to_remove]
 
-    @property
+    @lazy
     def standard_sort(self):
         return self.elementals + tuple(self.topological_sorted_no_elementals)
 
     def node_name(self, code):
         return self.nodes[code].get("name", str(code))
 
-    @property
+    @lazy
     def standard_sort_names(self):
         return [self.node_name(s) for s in self.standard_sort]
 
@@ -409,7 +411,7 @@ class NestingTree(nx.DiGraph):
     def elemental_names(self):
         return {s: (self.node_name(s) or s) for s in self.elementals}
 
-    @property
+    @lazy
     def standard_slot_map(self):
         return {i: n for n, i in enumerate(self.standard_sort)}
 
@@ -436,7 +438,7 @@ class NestingTree(nx.DiGraph):
             if not out_degree:
                 yield code
 
-    @property
+    @lazy
     def elementals(self):
         result = []
         found = set()
@@ -507,7 +509,7 @@ class NestingTree(nx.DiGraph):
             if in_degree > 1:
                 yield code
 
-    @property
+    @lazy
     def standard_competitive_edge_list(self):
         alphas = []
         for n in self.nodes_with_multiple_predecessors_iter():
@@ -516,7 +518,7 @@ class NestingTree(nx.DiGraph):
                 alphas.append((k, n))
         return alphas
 
-    @property
+    @lazy
     def standard_competitive_edge_list_2(self):
         alphas = []
         for n in self.nodes_with_multiple_predecessors_iter():
