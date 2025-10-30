@@ -43,7 +43,7 @@ include-package-data = true
 sharrow = ["*", "example_data/*"]
 
 [tool.setuptools_scm]
-fallback_version = "1999"
+fallback_version = "1999.0"
 write_to = "sharrow/_version.py"
 
 [tool.ruff]
