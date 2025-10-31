@@ -1,8 +1,25 @@
+import contextlib
 import os
 from importlib.resources import as_file, files
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
+
+
+@contextlib.contextmanager
+def get_example_data_path(filename: str | None = None):
+    """Context manager that yields a path to a file in the example data directory."""
+    if filename:
+        with as_file(files("sharrow").joinpath("example_data").joinpath(filename)) as f:
+            if f.exists():
+                yield f
+            else:
+                # Fallback for when running from source
+                yield Path(__file__).parent.joinpath("example_data").joinpath(filename)
+    else:
+        with as_file(files("sharrow").joinpath("example_data")) as data_path:
+            yield data_path
 
 
 def get_skims_filename() -> str:
@@ -15,7 +32,7 @@ def get_skims_omx():
 
     from . import dataset
 
-    with as_file(files("sharrow").joinpath("example_data/skims.omx")) as filename:
+    with get_example_data_path("skims.omx") as filename:
         skims = None
         with openmatrix.open_file(str(filename)) as f:
             skims = dataset.from_omx_3d(
@@ -32,8 +49,7 @@ def get_skims_omx():
 def get_skims_zarr():
     from . import dataset
 
-    f = files("sharrow").joinpath("example_data/skims.zarr")
-    with as_file(f) as zfile:
+    with get_example_data_path("skims.zarr") as zfile:
         if zfile.exists():
             skims = dataset.from_zarr(zfile, consolidated=False)
         else:
@@ -44,8 +60,7 @@ def get_skims_zarr():
 def get_skims():
     from . import dataset
 
-    f = files("sharrow").joinpath("example_data/skims.zarr")
-    with as_file(f) as zfile:
+    with get_example_data_path("skims.zarr") as zfile:
         if zfile.exists():
             skims = dataset.from_zarr(zfile, consolidated=False)
         else:
@@ -54,27 +69,27 @@ def get_skims():
 
 
 def get_households():
-    with as_file(files("sharrow").joinpath("example_data/households.csv.gz")) as f:
+    with get_example_data_path("households.csv.gz") as f:
         return pd.read_csv(f, index_col="HHID")
 
 
 def get_persons():
-    with as_file(files("sharrow").joinpath("example_data/persons.csv.gz")) as f:
+    with get_example_data_path("persons.csv.gz") as f:
         return pd.read_csv(f, index_col="PERID")
 
 
 def get_land_use():
-    with as_file(files("sharrow").joinpath("example_data/land_use.csv.gz")) as f:
+    with get_example_data_path("land_use.csv.gz") as f:
         return pd.read_csv(f, index_col="TAZ")
 
 
 def get_maz_to_taz():
-    with as_file(files("sharrow").joinpath("example_data/maz_to_taz.csv")) as f:
+    with get_example_data_path("maz_to_taz.csv") as f:
         return pd.read_csv(f, index_col="MAZ")
 
 
 def get_maz_to_maz_walk():
-    with as_file(files("sharrow").joinpath("example_data/maz_to_maz_walk.csv")) as f:
+    with get_example_data_path("maz_to_maz_walk.csv") as f:
         return pd.read_csv(f)
 
 

@@ -403,14 +403,25 @@ class RewriteForNumba(ast.NodeTransformer):
             topname = self.spacename
         pref_topname = self.preferred_spacename or topname
 
+        missing_backstop = False
+        # this flag will indicate that we have a sparse variable with no backstop
+
         if self.spacevars is not None:
             if attr not in self.spacevars:
                 if self.get_default or (
                     topname == pref_topname and not self.swallow_errors
                 ):
-                    raise KeyError(
-                        f"{topname}..{attr}\nexpression={self.original_expr}"
-                    )
+                    # check if there is a blender for this attr
+                    # if so, we are working with a sparse MAZ variable that has
+                    # no backstop TAZ data.  So we will set the result to zero
+                    # and let the blender processing handle the rest below.
+                    blender = self.blenders.get(attr, None)
+                    if blender is not None:
+                        missing_backstop = True
+                    else:
+                        raise KeyError(
+                            f"{topname}..{attr}\nexpression={self.original_expr}"
+                        )
                 # we originally raised a KeyError here regardless, but what if
                 # we just give back the original node, and see if other spaces,
                 # possibly fallback spaces, might work?  If nothing works then
@@ -419,7 +430,8 @@ class RewriteForNumba(ast.NodeTransformer):
                 # using the same rules, then circle back later to clean up
                 # errors, so that as-yet unprocessed Ast elements get the
                 # chance to be seen by the first pass.
-                return original_node
+                if not missing_backstop:
+                    return original_node
 
         dim_slots = self.dim_slots
         if isinstance(self.spacevars, dict):
@@ -554,23 +566,24 @@ class RewriteForNumba(ast.NodeTransformer):
             # inside the blender, the args will be maz-taz mapped, but we need the plain (i)maz too now
             result_arg_ = [j.slice for j in result_args]
             if len(result_args) == 2:
+                get_blended_2_args = [
+                    result,
+                    ast.Name(
+                        id=f"__{pref_topname}___s_{attr}__indices", ctx=ast.Load()
+                    ),
+                    ast.Name(id=f"__{pref_topname}___s_{attr}__indptr", ctx=ast.Load()),
+                    ast.Name(id=f"__{pref_topname}___s_{attr}__data", ctx=ast.Load()),
+                    result_arg_[0 if not transpose_lead else 1],
+                    result_arg_[1 if not transpose_lead else 0],
+                ]
+                max_blend_distance = blender.get("max_blend_distance")
+                if max_blend_distance is not None and max_blend_distance != np.inf:
+                    get_blended_2_args.append(
+                        ast_Constant(max_blend_distance),  # blend_limit
+                    )
                 result = ast.Call(
                     func=ast.Name("get_blended_2", cts=ast.Load()),
-                    args=[
-                        result,
-                        ast.Name(
-                            id=f"__{pref_topname}___s_{attr}__indices", ctx=ast.Load()
-                        ),
-                        ast.Name(
-                            id=f"__{pref_topname}___s_{attr}__indptr", ctx=ast.Load()
-                        ),
-                        ast.Name(
-                            id=f"__{pref_topname}___s_{attr}__data", ctx=ast.Load()
-                        ),
-                        result_arg_[0 if not transpose_lead else 1],
-                        result_arg_[1 if not transpose_lead else 0],
-                        ast_Constant(blender.get("max_blend_distance")),  # blend_limit
-                    ],
+                    args=get_blended_2_args,
                     keywords=[],
                 )
             else:

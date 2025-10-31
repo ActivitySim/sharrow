@@ -7,8 +7,6 @@ on:
       - 'v[0-9]+.[0-9]+**'
   pull_request:
     branches: [ main, develop ]
-    tags:
-      - 'v[0-9]+.[0-9]+**'
   workflow_dispatch:
 
 jobs:
@@ -21,16 +19,12 @@ jobs:
         shell: bash -l {0}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Code Quality Check with Ruff
+        # code quality check, stop the build for any errors
+        uses: astral-sh/ruff-action@v3
         with:
-          python-version: '3.11'
-      - name: Install Ruff
-        run: |
-          python -m pip install ruff
-      - name: Lint with Ruff
-        run: |
-          # code quality check, stop the build for any errors
-          ruff check . --show-fixes --exit-non-zero-on-fix
+          version: "latest"
+          args: "check . --show-fixes --exit-non-zero-on-fix"
 
   test-minimal:
     needs: fmt
@@ -41,32 +35,23 @@ jobs:
         shell: bash -l {0}
     steps:
         - uses: actions/checkout@v4
-        - uses: actions/setup-python@v5
+        - uses: astral-sh/setup-uv@v7
           with:
+            version: "0.9.6"
+            enable-cache: true
+            cache-dependency-glob: "uv.lock"
             python-version: '3.11'
-        - name: Install pytest
-          run: |
-            python -m pip install pytest pytest-cov pytest-regressions pytest-xdist nbmake
-        - name: Install sharrow
-          run: |
-            python -m pip install .
         - name: Initial simple tests
           # tests that sharrow can be imported and that categorical tests can be run
           run: |
-            python -m pytest sharrow/tests/test_categorical.py
-        - name: Install openmatrix
-          run: |
-            python -m pip install openmatrix
+            uv run pytest sharrow/tests/test_categorical.py
         - name: Dataset tests
           # tests that the datasets can be read and that the tests can be run
           run: |
-            python -m pytest sharrow/tests/test_datasets.py
-        - name: Install zarr and dask-diagnostics
-          run: |
-            python -m pip install zarr "dask[diagnostics]"
+            uv run pytest sharrow/tests/test_datasets.py
         - name: More complete test with pytest
           run: |
-            python -m pytest -v --disable-warnings sharrow/tests
+            uv run pytest -v --disable-warnings sharrow/tests
 
   test:
     needs: fmt
@@ -74,39 +59,37 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: ["ubuntu-latest", "macos-latest", "windows-latest"]
-        python-version: ["3.10", "3.11", "3.12"]
+        os: ["ubuntu-latest", "windows-latest"]
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+      fail-fast: false
     defaults:
       run:
         shell: bash -l {0}
     steps:
       - uses: actions/checkout@v4
-      - name: Install Python and Dependencies
-        uses: conda-incubator/setup-miniconda@v3
+      - uses: astral-sh/setup-uv@v7
         with:
-          miniforge-version: latest
-          environment-file: envs/testing.yml
+          version: "0.9.6"
           python-version: ${{ matrix.python-version }}
-          activate-environment: testing-env
-          auto-activate-base: false
-          auto-update-conda: false
-      - name: Install sharrow
+      - name: File contents
         run: |
-          python -m pip install .
-      - name: Conda checkup
+          cat sharrow/example_data.py
+      - name: UV sync
         run: |
-          conda info -a
-          conda list
-      - name: Lint with Ruff
-        run: |
-          # code quality check
-          # stop the build if there are Python syntax errors or undefined names
-          ruff check . --select=E9,F63,F7,F82 --no-fix
-          # stop the build for any other configured Ruff linting errors
-          ruff check . --show-fixes --exit-non-zero-on-fix
+          uv self version
+          uv cache clean
+          uv sync --locked
+      - name: Syntax Check with Ruff
+        uses: astral-sh/ruff-action@v3
+        with:
+          args: "check . --select=E9,F63,F7,F82 --no-fix"
+      - name: Code Quality Check with Ruff
+        uses: astral-sh/ruff-action@v3
+        with:
+          args: "check . --show-fixes --exit-non-zero-on-fix"
       - name: Test with pytest
         run: |
-          python -m pytest
+          uv run --locked pytest
 
   deploy-docs:
     needs: test
@@ -165,6 +148,7 @@ jobs:
       with:
         user: __token__
         password: ${{ secrets.PYPI_API_TOKEN }}
+
   activitysim-examples:
     # test that updates to sharrow will not break the activitysim canonical examples
     needs: fmt
@@ -177,17 +161,18 @@ jobs:
           - region: ActivitySim 1-Zone Example (MTC)
             region-org: ActivitySim
             region-repo: activitysim-prototype-mtc
-            region-branch: pandas2
+            region-branch: extended
           - region: ActivitySim 2-Zone Example (SANDAG)
             region-org: ActivitySim
             region-repo: sandag-abm3-example
-            region-branch: pandas2
+            region-branch: main
       fail-fast: false
     defaults:
       run:
         shell: bash -l {0}
     name: ${{ matrix.region }}
     runs-on: ubuntu-latest
+    timeout-minutes: 720 # Sets the timeout to 12 hours
     steps:
       - name: Checkout Sharrow
         uses: actions/checkout@v4
@@ -201,45 +186,37 @@ jobs:
           ref: 'main'
           path: 'activitysim'
 
-      - name: Setup Miniforge
-        uses: conda-incubator/setup-miniconda@v3
+      - name: Setup UV
+        uses: astral-sh/setup-uv@v7
         with:
-          miniforge-version: latest
-          activate-environment: asim-test
+          version: "0.9.6"
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
           python-version: ${{ env.python-version }}
 
       - name: Set cache date for year and month
         run: echo "DATE=$(date +'%Y%m')" >> $GITHUB_ENV
 
-      - uses: actions/cache@v4
-        with:
-          path: |
-            ${{ env.CONDA }}/envs
-            ~/.cache/ActivitySim
-          key: ${{ env.label }}-conda-${{ hashFiles('activitysim/conda-environments/github-actions-tests.yml') }}-${{ env.DATE }}-${{ env.CACHE_NUMBER }}
-        id: cache
-
-      - name: Update environment
+      - name: Create Virtual Env
         run: |
-          conda env update -n asim-test -f activitysim/conda-environments/github-actions-tests.yml
-        if: steps.cache.outputs.cache-hit != 'true'
+          uv venv
+          source .venv/bin/activate
+          uv pip install "black==22.12.0" "coveralls==3.3.1" \
+                         "cytoolz==0.12.2" "dask==2023.11.*" "isort==5.12.0" \
+                         "multimethod<2.0" "nbmake==1.4.6" "numba==0.57.*" \
+                         "numpy==1.24.*" "openmatrix==0.3.5.0" "orca==1.8" \
+                         "pandera>=0.15,<0.18.1" "pandas==2.2.*" "platformdirs==3.2.*" \
+                         "psutil==5.9.*" "pyarrow==11.*" "pydantic==2.6.*" "pypyr==5.8.*" \
+                         "tables>=3.9" "pytest==7.2.*" "pytest-cov" "pytest-regressions" \
+                         "pyyaml==6.*" "requests==2.28.*" "ruff" "scikit-learn==1.2.*" \
+                         "sharrow>=2.9.1" "simwrapper>1.7" "sparse" "xarray==2025.01.*" \
+                         "zarr>=2,<3" "zstandard" \
+                         ./sharrow ./activitysim
 
-      - name: Install sharrow
-        # installing from source
+      - name: UV checkup
         run: |
-          python -m pip install ./sharrow
-
-      - name: Install activitysim
-        # installing without dependencies is faster, we trust that all needed dependencies
-        # are in the conda environment defined above.  Also, this avoids pip getting
-        # confused and reinstalling tables (pytables).
-        run: |
-          python -m pip install ./activitysim --no-deps
-
-      - name: Conda checkup
-        run: |
-          conda info -a
-          conda list
+          source .venv/bin/activate
+          uv pip list
 
       - name: Checkout Example
         uses: actions/checkout@v4
@@ -250,5 +227,6 @@ jobs:
 
       - name: Test ${{ matrix.region }}
         run: |
-          cd ${{ matrix.region-repo }}/test
-          python -m pytest .
+          source .venv/bin/activate
+          cd ${{ matrix.region-repo }}
+          python -m pytest ./test

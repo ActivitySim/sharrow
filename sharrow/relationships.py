@@ -398,9 +398,9 @@ class DataTree:
         else:
             from .flows import presorted
 
-            dim_order = presorted(self.root_dataset.dims, self.dim_order)
+            dim_order = presorted(self.root_dataset.sizes, self.dim_order)
         return tuple(
-            self.root_dataset.dims[i] for i in dim_order if i not in self.dim_exclude
+            self.root_dataset.sizes[i] for i in dim_order if i not in self.dim_exclude
         )
 
     @property
@@ -408,7 +408,7 @@ class DataTree:
         from .flows import presorted
 
         return tuple(
-            presorted(self.root_dataset.dims, self.dim_order, self.dim_exclude)
+            presorted(self.root_dataset.sizes, self.dim_order, self.dim_exclude)
         )
 
     def __shallow_copy_extras(self):
