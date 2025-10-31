@@ -1,3 +1,4 @@
+import logging
 import math
 
 import numba as nb
@@ -141,7 +142,83 @@ class RedirectionAccessor:
         index=None,
         i_dim="omaz",
         j_dim="dmaz",
+        *,
+        backing_i_dim="otaz",
+        backing_j_dim="dtaz",
     ):
+        """
+        Add sparse matrix data to blend with dense backing array.
+
+        This method attaches sparse 2D array data to the dataset, which will be
+        blended with an existing dense backing array. The sparse data typically
+        represents more detailed zone-to-zone values (e.g., MAZ-to-MAZ skims),
+        while the dense backing array contains coarser zone values (e.g., TAZ-to-TAZ
+        skims). The blending behavior is controlled by max_blend_distance.
+
+        Parameters
+        ----------
+        name : str
+            Name of the variable to blend. Must match an existing variable in the
+            dataset, or a zero-filled backing array will be created.
+        i : array-like
+            Origin zone indices for sparse data points.
+        j : array-like
+            Destination zone indices for sparse data points.
+        data : array-like
+            Values at each (i, j) sparse data point.
+        shape : tuple of int, optional
+            Shape of the sparse matrix as (n_rows, n_cols). If not provided and
+            index is given, shape is inferred as (len(index), len(index)).
+        max_blend_distance : float, optional
+            Maximum distance threshold for blending. Sparse values exceeding this
+            threshold will fall back to dense backing values. If None or not
+            provided, defaults to infinity (no distance-based fallback).
+        blend_distance_name : str, optional
+            Name of a variable containing distances to use for blend calculations.
+            If provided, enables distance-weighted blending.
+        index : array-like, optional
+            Index mapping for zone IDs. Used to convert external zone IDs (i, j)
+            to internal 0-based positions in the sparse matrix.
+        i_dim : str, default "omaz"
+            Name of the origin dimension for the sparse data (typically the more
+            detailed zone system like MAZ).
+        j_dim : str, default "dmaz"
+            Name of the destination dimension for the sparse data.
+        backing_i_dim : str, default "otaz"
+            Name of the origin dimension in the dense backing array (typically the
+            coarser zone system like TAZ).
+        backing_j_dim : str, default "dtaz"
+            Name of the destination dimension in the dense backing array.
+
+        Notes
+        -----
+        The sparse data is stored in GCXS (Generalized Compressed Sparse) format
+        with compression along the first axis (rows) for efficient lookups.
+
+        If the named variable does not exist in the dataset, a zero-filled backing
+        array is automatically created with dimensions (backing_i_dim, backing_j_dim).
+
+        The blending behavior works as follows:
+        - If sparse data exists for a zone pair and is within max_blend_distance,
+          a weighted blend of sparse and dense values is used.
+        - If sparse data exceeds max_blend_distance, the dense backing value is used.
+        - If no sparse data exists for a zone pair, the dense backing value is used.
+
+        See Also
+        --------
+        is_blended : Check if a variable has sparse blending enabled.
+
+        Examples
+        --------
+        >>> skims.redirection.sparse_blender(
+        ...     "DISTWALK",
+        ...     maz_to_maz_walk.OMAZ,
+        ...     maz_to_maz_walk.DMAZ,
+        ...     maz_to_maz_walk.DISTWALK,
+        ...     max_blend_distance=1.0,
+        ...     index=maz_taz.index,
+        ... )
+        """
         i = np.asarray(i)
         j = np.asarray(j)
         if index is not None and shape is None:
@@ -161,6 +238,20 @@ class RedirectionAccessor:
 
         if sparse is None:
             raise ImportError("sparse is not installed")
+
+        if name not in self._obj:
+            # the TAZ level backing array does not exist yet, so create it with zeros
+            logging.getLogger(__name__).warning(
+                f"Creating zero backing array for sparse blender {name}"
+            )
+            backing_shape = (
+                self._obj.sizes[backing_i_dim],
+                self._obj.sizes[backing_j_dim],
+            )
+            self._obj[name] = xr.DataArray(
+                np.broadcast_to(np.zeros([1], dtype=data.dtype), backing_shape),
+                dims=(backing_i_dim, backing_j_dim),
+            )
 
         sparse_data = sparse.GCXS(
             sparse.COO(np.stack((i_, j_)), data, shape=shape), compressed_axes=(0,)
