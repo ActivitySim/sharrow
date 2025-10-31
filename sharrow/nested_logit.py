@@ -160,7 +160,8 @@ def construct_nesting_tree(alternatives, nesting_settings):
     try:
         from larch.model.tree import NestingTree
     except ImportError:
-        raise ImportError("larch is required to construct nesting trees") from None
+        # if larch is not installed, import from local copy (not as well optimized)
+        from ._nested_logit_tree import NestingTree
 
     if not isinstance(alternatives, Mapping):
         alt_names = list(alternatives)
