@@ -664,7 +664,7 @@ def reload_from_omx_3d(
                     raw = dataset[data_name].data
                     raw[:, :] = f.root.data[data_name][:, :]
                 bytes_loaded += raw.nbytes
-                logger.info(
+                logger.debug(
                     f"loaded {data_name} ({filter_note}) to dataset "
                     f"in {time.time() - t1:.2f}s, {si_units(bytes_loaded)}"
                 )
