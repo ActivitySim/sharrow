@@ -1045,7 +1045,7 @@ class Flow:
         )
         # return from library if available
         if flow_library is not None and self.flow_hash in flow_library:
-            logger.info(f"flow exists in library: {self.flow_hash}")
+            logger.debug(f"flow exists in library: {self.flow_hash}")
             result = flow_library[self.flow_hash]
             result.tree = tree
             return result
@@ -1661,7 +1661,7 @@ class Flow:
         else:
             s = None
         if s and s.group(1) == self.flow_hash:
-            logger.info(f"using existing flow code {self.flow_hash}")
+            logger.debug(f"using existing flow code {self.flow_hash}")
             writing = False
         else:
             logger.info(f"writing fresh flow code {self.flow_hash}")
