@@ -89,6 +89,7 @@ These functions can be found in the :py:mod:`sharrow.dataset` module.
 .. autofunction:: sharrow.dataset.from_table
 .. autofunction:: sharrow.dataset.from_omx
 .. autofunction:: sharrow.dataset.from_omx_3d
+.. autofunction:: sharrow.dataset.from_parquet_3d
 .. autofunction:: sharrow.dataset.from_zarr
 .. autofunction:: sharrow.dataset.from_named_objects
 

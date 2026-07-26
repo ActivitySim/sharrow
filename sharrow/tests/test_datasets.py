@@ -178,3 +178,138 @@ def test_dataarray_iloc():
     z = arr2d.iloc[dict(s=slice(1, 2), p=slice(2, 4))]
 
     xr.testing.assert_equal(z, xr.DataArray([[20, 28]], dims=["s", "p"]))
+
+
+def _skims_dataframe(zones=(11, 22, 33, 44), order="row-major"):
+    """Create a dense skims dataframe for parquet testing."""
+    n = len(zones)
+    otaz = np.repeat(np.asarray(zones), n)
+    dtaz = np.tile(np.asarray(zones), n)
+    df = pd.DataFrame(
+        {
+            "otaz": otaz,
+            "dtaz": dtaz,
+            "DIST": (otaz * 1000 + dtaz).astype(np.float32),
+            "TIME__AM": (otaz * 10 + dtaz).astype(np.float32),
+            "TIME__PM": (otaz * 10 + dtaz + 0.5).astype(np.float32),
+        }
+    )
+    if order == "column-major":
+        df = df.sort_values(["dtaz", "otaz"]).reset_index(drop=True)
+    return df
+
+
+def _expected_skims(zones=(11, 22, 33, 44)):
+    df = _skims_dataframe(zones)
+    return df.set_index(["otaz", "dtaz"]).to_xarray()
+
+
+def test_from_parquet_3d_row_major():
+    with tempfile.TemporaryDirectory() as tempdir:
+        f = Path(tempdir).joinpath("skims.parquet")
+        _skims_dataframe().to_parquet(f, index=False)
+        skims = sh.dataset.from_parquet_3d(f, time_periods=["AM", "PM"])
+    expected = _expected_skims()
+    assert skims["DIST"].dims == ("otaz", "dtaz")
+    assert skims["TIME"].dims == ("otaz", "dtaz", "time_period")
+    assert skims.coords["otaz"].values == approx(np.asarray([11, 22, 33, 44]))
+    assert skims.coords["dtaz"].values == approx(np.asarray([11, 22, 33, 44]))
+    assert list(skims.coords["time_period"].values) == ["AM", "PM"]
+    assert skims["DIST"].values == approx(expected["DIST"].values)
+    assert skims["TIME"].sel(time_period="AM").values == approx(
+        expected["TIME__AM"].values
+    )
+    assert skims["TIME"].sel(time_period="PM").values == approx(
+        expected["TIME__PM"].values
+    )
+
+
+def test_from_parquet_3d_column_major():
+    with tempfile.TemporaryDirectory() as tempdir:
+        f = Path(tempdir).joinpath("skims.parquet")
+        _skims_dataframe(order="column-major").to_parquet(f, index=False)
+        skims = sh.dataset.from_parquet_3d(f, time_periods=["AM", "PM"])
+    expected = _expected_skims()
+    assert skims["DIST"].values == approx(expected["DIST"].values)
+    assert skims["TIME"].sel(time_period="PM").values == approx(
+        expected["TIME__PM"].values
+    )
+
+
+def test_from_parquet_3d_sparse():
+    expected = _expected_skims()
+    df = _skims_dataframe()
+    # drop some rows to make the data sparse, and shuffle the remainder
+    df = df.drop(index=[1, 7]).sample(frac=1.0, random_state=42)
+    with tempfile.TemporaryDirectory() as tempdir:
+        f = Path(tempdir).joinpath("skims.parquet")
+        df.to_parquet(f, index=False)
+        skims = sh.dataset.from_parquet_3d(f, time_periods=["AM", "PM"])
+    assert skims["DIST"].dims == ("otaz", "dtaz")
+    assert skims.coords["otaz"].values == approx(np.asarray([11, 22, 33, 44]))
+    dist = skims["DIST"].values
+    assert np.isnan(dist[0, 1])
+    assert np.isnan(dist[1, 3])
+    valid = ~np.isnan(dist)
+    assert dist[valid] == approx(expected["DIST"].values[valid])
+
+
+def test_from_parquet_3d_unsorted_dense():
+    df = _skims_dataframe()
+    # a dense but improperly sorted table should raise an error
+    df = df.sample(frac=1.0, random_state=42)
+    with tempfile.TemporaryDirectory() as tempdir:
+        f = Path(tempdir).joinpath("skims.parquet")
+        df.to_parquet(f, index=False)
+        with pytest.raises(ValueError):
+            sh.dataset.from_parquet_3d(f, time_periods=["AM", "PM"])
+
+
+def test_from_parquet_3d_multiple_files():
+    expected = _expected_skims()
+    df = _skims_dataframe()
+    with tempfile.TemporaryDirectory() as tempdir:
+        f1 = Path(tempdir).joinpath("skims1.parquet")
+        f2 = Path(tempdir).joinpath("skims2.parquet")
+        df[["otaz", "dtaz", "DIST", "TIME__AM"]].to_parquet(f1, index=False)
+        # the second file is written in column-major order, to check that
+        # each file is inspected independently
+        df[["otaz", "dtaz", "TIME__PM"]].sort_values(["dtaz", "otaz"]).to_parquet(
+            f2, index=False
+        )
+        skims = sh.dataset.from_parquet_3d([f1, f2], time_periods=["AM", "PM"])
+    assert skims["DIST"].values == approx(expected["DIST"].values)
+    assert skims["TIME"].sel(time_period="AM").values == approx(
+        expected["TIME__AM"].values
+    )
+    assert skims["TIME"].sel(time_period="PM").values == approx(
+        expected["TIME__PM"].values
+    )
+
+
+def test_from_parquet_3d_mismatched_index_order():
+    expected = _expected_skims()
+    df = _skims_dataframe()
+    df2 = _skims_dataframe(zones=(44, 33, 22, 11))
+    with tempfile.TemporaryDirectory() as tempdir:
+        f1 = Path(tempdir).joinpath("skims1.parquet")
+        f2 = Path(tempdir).joinpath("skims2.parquet")
+        df[["otaz", "dtaz", "DIST"]].to_parquet(f1, index=False)
+        df2[["otaz", "dtaz", "TIME__AM", "TIME__PM"]].to_parquet(f2, index=False)
+        skims = sh.dataset.from_parquet_3d([f1, f2], time_periods=["AM", "PM"])
+    assert skims.coords["otaz"].values == approx(np.asarray([11, 22, 33, 44]))
+    assert skims["DIST"].values == approx(expected["DIST"].values)
+    assert skims["TIME"].sel(time_period="AM").values == approx(
+        expected["TIME__AM"].values
+    )
+
+
+def test_from_parquet_3d_ignore():
+    with tempfile.TemporaryDirectory() as tempdir:
+        f = Path(tempdir).joinpath("skims.parquet")
+        _skims_dataframe().to_parquet(f, index=False)
+        skims = sh.dataset.from_parquet_3d(
+            f, time_periods=["AM", "PM"], ignore="TIME.*"
+        )
+    assert "TIME" not in skims.variables
+    assert "DIST" in skims.variables
