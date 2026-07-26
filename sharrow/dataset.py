@@ -730,7 +730,13 @@ def _parquet_layout(labels_0, labels_1):
 
 
 def _parquet_column_to_numpy(table, name):
-    return table.column(name).combine_chunks().to_numpy(zero_copy_only=False)
+    column = table.column(name)
+    if isinstance(column, pa.ChunkedArray):
+        column = column.combine_chunks()
+    if isinstance(column, pa.ChunkedArray):
+        # older versions of pyarrow return a ChunkedArray from combine_chunks
+        return column.to_numpy()
+    return column.to_numpy(zero_copy_only=False)
 
 
 def _parquet_data_names(schema_names, index_names, ignore):
@@ -765,43 +771,43 @@ def _read_one_parquet_3d(filename, index_names, ignore):
     """
     import pyarrow.parquet as pq
 
-    pf = pq.ParquetFile(filename)
-    schema_names = pf.schema_arrow.names
-    for i in index_names:
-        if i not in schema_names:
-            raise KeyError(f"index column {i!r} not found in {filename}")
-    data_names = _parquet_data_names(schema_names, index_names, ignore)
+    with pq.ParquetFile(filename) as pf:
+        schema_names = pf.schema_arrow.names
+        for i in index_names:
+            if i not in schema_names:
+                raise KeyError(f"index column {i!r} not found in {filename}")
+        data_names = _parquet_data_names(schema_names, index_names, ignore)
 
-    index_table = pf.read(columns=list(index_names))
-    labels_0 = _parquet_column_to_numpy(index_table, index_names[0])
-    labels_1 = _parquet_column_to_numpy(index_table, index_names[1])
-    layout, index_0, index_1 = _parquet_layout(labels_0, labels_1)
-    logger.info(f"parquet file {filename} has a {layout} layout")
-    del index_table, labels_0, labels_1
+        index_table = pf.read(columns=list(index_names))
+        labels_0 = _parquet_column_to_numpy(index_table, index_names[0])
+        labels_1 = _parquet_column_to_numpy(index_table, index_names[1])
+        layout, index_0, index_1 = _parquet_layout(labels_0, labels_1)
+        logger.info(f"parquet file {filename} has a {layout} layout")
+        del index_table, labels_0, labels_1
 
-    if layout == "unsorted-dense":
-        raise ValueError(
-            f"the data in {filename} is dense but is not sorted into "
-            f"row-major or column-major order"
-        )
+        if layout == "unsorted-dense":
+            raise ValueError(
+                f"the data in {filename} is dense but is not sorted into "
+                f"row-major or column-major order"
+            )
 
-    if layout == "sparse":
-        # fall back to the generic xarray loader for sparse data
-        df = pf.read(columns=list(index_names) + data_names).to_pandas()
-        ds = df.set_index(list(index_names)).to_xarray()
-        arrays = {k: ds[k].to_numpy() for k in data_names}
-        return arrays, ds[index_names[0]].to_numpy(), ds[index_names[1]].to_numpy()
+        if layout == "sparse":
+            # fall back to the generic xarray loader for sparse data
+            df = pf.read(columns=list(index_names) + data_names).to_pandas()
+            ds = df.set_index(list(index_names)).to_xarray()
+            arrays = {k: ds[k].to_numpy() for k in data_names}
+            return arrays, ds[index_names[0]].to_numpy(), ds[index_names[1]].to_numpy()
 
-    n_0 = len(index_0)
-    n_1 = len(index_1)
-    arrays = {}
-    for k in data_names:
-        content = _parquet_column_to_numpy(pf.read(columns=[k]), k)
-        if layout == "row-major":
-            arrays[k] = content.reshape(n_0, n_1)
-        else:
-            arrays[k] = content.reshape(n_1, n_0).transpose()
-    return arrays, index_0, index_1
+        n_0 = len(index_0)
+        n_1 = len(index_1)
+        arrays = {}
+        for k in data_names:
+            content = _parquet_column_to_numpy(pf.read(columns=[k]), k)
+            if layout == "row-major":
+                arrays[k] = content.reshape(n_0, n_1)
+            else:
+                arrays[k] = content.reshape(n_1, n_0).transpose()
+        return arrays, index_0, index_1
 
 
 def from_parquet_3d(
