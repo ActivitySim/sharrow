@@ -202,7 +202,7 @@ jobs:
           uv venv
           source .venv/bin/activate
           uv pip install "black==22.12.0" "coveralls==3.3.1" \
-                         "cytoolz==0.12.2" "dask>=2023.11.*" "isort>=5.12.0" \
+                         "cytoolz==0.12.2" "dask>=2023.11" "isort>=5.12.0" \
                          "multimethod<2.0" "nbmake>=1.4.6" "numba>=0.57.*" \
                          "numpy>=2,<3" "openmatrix==0.3.5.0" \
                          "pandera>=0.30" "pandas>=2,<3" "platformdirs>=3.2.*" \
