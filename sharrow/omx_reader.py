@@ -385,9 +385,7 @@ def read_dataset(
         out = np.empty(dset.shape, dtype=dset.dtype)
     else:
         if tuple(out.shape) != tuple(dset.shape):
-            raise ValueError(
-                f"out has shape {out.shape}, expected {dset.shape}"
-            )
+            raise ValueError(f"out has shape {out.shape}, expected {dset.shape}")
         if out.dtype != dset.dtype:
             raise ValueError(f"out has dtype {out.dtype}, expected {dset.dtype}")
     if executor is not None:
