@@ -155,6 +155,11 @@ jobs:
     env:
       python-version: "3.10"
       label: linux-64
+      # limit glibc malloc arenas, which can otherwise retain large amounts
+      # of memory freed during numba compilation
+      MALLOC_ARENA_MAX: "2"
+      # standard GitHub-hosted ubuntu runners have 4 cores
+      NUMBA_NUM_THREADS: "4"
     strategy:
       matrix:
         include:
@@ -197,6 +202,34 @@ jobs:
       - name: Set cache date for year and month
         run: echo "DATE=$(date +'%Y%m')" >> $GITHUB_ENV
 
+      - name: Start memory monitor
+        # samples system memory every 15 seconds so that peak usage can be
+        # reviewed after the job completes (or is killed by the runner)
+        run: |
+          cat > /tmp/mem-monitor.sh <<'EOF'
+          while true; do
+            ts=$(date +%H:%M:%S)
+            read -r used avail <<< "$(free -m | awk '/^Mem:/ {print $3, $7}')"
+            top=$(ps -eo rss=,comm= --sort=-rss | head -1 | awk '{printf "%s_MB=%d", $2, $1/1024}')
+            echo "$ts used_MB=$used avail_MB=$avail top_process_$top"
+            sleep 15
+          done
+          EOF
+          nohup bash /tmp/mem-monitor.sh >> /tmp/mem-monitor.log 2>&1 &
+          echo $! > /tmp/mem-monitor.pid
+
+      - name: Restore sharrow flow cache
+        # restores previously compiled sharrow flows (including numba on-disk
+        # cache files), which greatly reduces both the time and the peak
+        # memory needed to run the examples
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.cache/ActivitySim
+          key: sharrow-flows-${{ matrix.region-repo }}-${{ env.DATE }}-${{ github.run_id }}
+          restore-keys: |
+            sharrow-flows-${{ matrix.region-repo }}-${{ env.DATE }}-
+            sharrow-flows-${{ matrix.region-repo }}-
+
       - name: Create Virtual Env
         run: |
           uv venv
@@ -226,7 +259,37 @@ jobs:
           path: '${{ matrix.region-repo }}'
 
       - name: Test ${{ matrix.region }}
+        # each collected test is run in its own process, so that memory is
+        # fully released between tests; running them all in a single process
+        # accumulates enough memory to trigger an OOM kill (exit code 143)
+        # on standard GitHub-hosted runners
         run: |
           source .venv/bin/activate
           cd ${{ matrix.region-repo }}
-          python -m pytest ./test
+          readarray -t tests < <(python -m pytest ./test --collect-only -q | grep '::')
+          echo "collected ${#tests[@]} tests"
+          rc=0
+          for t in "${tests[@]}"; do
+            echo "::group::pytest $t"
+            python -m pytest "$t" || rc=1
+            echo "::endgroup::"
+          done
+          exit $rc
+
+      - name: Save sharrow flow cache
+        # saved even when the tests fail, so that flows compiled during a
+        # failed run still warm the cache for subsequent runs
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.cache/ActivitySim
+          key: sharrow-flows-${{ matrix.region-repo }}-${{ env.DATE }}-${{ github.run_id }}
+
+      - name: Memory monitor report
+        if: always()
+        run: |
+          kill $(cat /tmp/mem-monitor.pid) 2>/dev/null || true
+          echo "== system memory usage over time (15s samples) =="
+          cat /tmp/mem-monitor.log
+          awk '{ for (i=1; i<=NF; i++) if ($i ~ /^used_MB=/) { v=substr($i,9)+0; if (v>max) max=v } }
+               END { print "== peak used_MB=" max " ==" }' /tmp/mem-monitor.log
