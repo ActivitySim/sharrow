@@ -16,6 +16,7 @@ import pyarrow as pa
 import xarray as xr
 from xarray import DataArray, Dataset
 
+from . import omx_reader
 from .accessors import register_dataset_method
 from .aster import extract_all_name_tokens
 from .categorical import _Categorical  # noqa
@@ -289,6 +290,19 @@ def from_table(
     return result
 
 
+def _group_names(grp) -> list[str]:
+    """List the child node names of a pytables or h5py group."""
+    try:
+        return list(grp._v_children)  # pytables
+    except AttributeError:
+        return list(grp.keys())  # h5py
+
+
+def omx_file_name(omx) -> str | None:
+    """Resolve the on-disk filename of an OMX-like object, if possible."""
+    return omx_reader.h5_filename(omx)
+
+
 def from_omx(
     omx: openmatrix.File,
     index_names=("otaz", "dtaz"),
@@ -326,26 +340,46 @@ def from_omx(
     -------
     Dataset
     """
-    # handle both larch.OMX and openmatrix.open_file versions
+    import h5py
+
+    # handle larch.OMX, openmatrix.open_file, and h5py.File versions
     if "lar" in type(omx).__module__:
         omx_data = omx.data
         omx_lookup = omx.lookup
         omx_shape = omx.shape
+    elif isinstance(omx, h5py.File):
+        omx_data = omx["data"]
+        omx_lookup = omx["lookup"]
+        omx_shape = tuple(int(i) for i in omx.attrs["SHAPE"])
     else:
         omx_data = omx.root["data"]
         omx_lookup = omx.root["lookup"]
         omx_shape = omx.shape()
 
-    arrays = {}
     if renames is None:
-        for k in omx_data._v_children:
-            arrays[k] = omx_data[k][:]
+        data_names = _group_names(omx_data)
+        rename_pairs = [(k, k) for k in data_names]
     elif isinstance(renames, dict):
-        for new_k, old_k in renames.items():
-            arrays[new_k] = omx_data[old_k][:]
+        rename_pairs = list(renames.items())
     else:
-        for k in renames:
-            arrays[k] = omx_data[k][:]
+        rename_pairs = [(k, k) for k in renames]
+
+    arrays = {}
+    filename = omx_file_name(omx)
+    if filename is not None:
+        # fast path: parallel chunk decoding via h5py
+        import concurrent.futures
+
+        with h5py.File(filename, "r") as f5:
+            f5_data = f5["data"]
+            with concurrent.futures.ThreadPoolExecutor() as pool:
+                for new_k, old_k in rename_pairs:
+                    arrays[new_k] = omx_reader.read_dataset(
+                        f5_data[old_k], executor=pool
+                    )
+    else:
+        for new_k, old_k in rename_pairs:
+            arrays[new_k] = omx_data[old_k][:]
     d = {
         "dims": index_names,
         "data_vars": {k: {"dims": index_names, "data": arrays[k]} for k in arrays},
@@ -398,6 +432,14 @@ def _should_ignore(ignore, x):
             if re.match(i, x):
                 return True
     return False
+
+
+def _fast_load_omx_array(filename, name):
+    """Load one matrix table from an OMX file, decoding chunks in parallel."""
+    import h5py
+
+    with h5py.File(filename, "r") as f:
+        return omx_reader.read_dataset(f["data"][name])
 
 
 def from_omx_3d(
@@ -471,10 +513,15 @@ def from_omx_3d(
     omx = use_file_handles
 
     try:
-        # handle both larch.OMX and openmatrix.open_file versions
+        import h5py
+
+        # handle larch.OMX, openmatrix.open_file, and h5py.File versions
         if "larch" in type(omx[0]).__module__:
             omx_shape = omx[0].shape
             omx_lookup = omx[0].lookup
+        elif isinstance(omx[0], h5py.File):
+            omx_shape = tuple(int(i) for i in omx[0].attrs["SHAPE"])
+            omx_lookup = omx[0]["lookup"]
         else:
             omx_shape = omx[0].shape()
             omx_lookup = omx[0].root["lookup"]
@@ -483,14 +530,31 @@ def from_omx_3d(
         for n, i in enumerate(omx):
             if "larch" in type(i).__module__:
                 omx_data.append(i.data)
-                for k in i.data._v_children:
-                    omx_data_map[k] = n
+            elif isinstance(i, h5py.File):
+                omx_data.append(i["data"])
             else:
                 omx_data.append(i.root["data"])
-                for k in i.root["data"]._v_children:
-                    omx_data_map[k] = n
+            for k in _group_names(omx_data[-1]):
+                omx_data_map[k] = n
+
+        omx_filenames = [omx_file_name(i) for i in omx]
 
         import dask.array
+
+        def _lazy_omx_array(k):
+            # Build a lazy dask array for one matrix table.  When the source
+            # file is on disk, defer to the parallel chunk-decoding reader;
+            # otherwise fall back to wrapping the open file handle's node.
+            n = omx_data_map[k]
+            filename = omx_filenames[n]
+            node = omx_data[n][k]
+            if filename is None:
+                return dask.array.from_array(node)
+            return dask.array.from_delayed(
+                dask.delayed(_fast_load_omx_array)(filename, k),
+                shape=tuple(node.shape),
+                dtype=node.dtype,
+            )
 
         data_names = list(omx_data_map.keys())
         if ignore is not None:
@@ -500,16 +564,17 @@ def from_omx_3d(
         n1, n2 = omx_shape
         if indexes is None:
             # default reads mapping if only one lookup is included, otherwise one-based
-            if len(omx_lookup._v_children) == 1:
+            lookup_names = _group_names(omx_lookup)
+            if len(lookup_names) == 1:
                 ranger = None
-                indexes = list(omx_lookup._v_children)[0]
+                indexes = lookup_names[0]
             else:
                 ranger = one_based
         elif indexes == "one-based":
             ranger = one_based
         elif indexes == "zero-based":
             ranger = zero_based
-        elif indexes in set(omx_lookup._v_children):
+        elif indexes in set(_group_names(omx_lookup)):
             ranger = None
         else:
             raise NotImplementedError(
@@ -534,12 +599,10 @@ def from_omx_3d(
                 base_k, time_k = k.split(time_period_sep, 1)
                 if base_k not in pending_3d:
                     pending_3d[base_k] = [None] * len(time_periods)
-                pending_3d[base_k][time_periods_map[time_k]] = dask.array.from_array(
-                    omx_data[omx_data_map[k]][k]
-                )
+                pending_3d[base_k][time_periods_map[time_k]] = _lazy_omx_array(k)
             else:
                 content[k] = xr.DataArray(
-                    dask.array.from_array(omx_data[omx_data_map[k]][k]),
+                    _lazy_omx_array(k),
                     dims=index_names[:2],
                     coords={
                         index_names[0]: r1,
@@ -613,61 +676,82 @@ def reload_from_omx_3d(
     if isinstance(ignore, str):
         ignore = [ignore]
 
-    use_file_handles = []
-    opened_file_handles = []
-    for filename in omx:
-        if isinstance(filename, (str, Path)):
-            import openmatrix
+    import concurrent.futures
 
-            h = openmatrix.open_file(filename)
-            opened_file_handles.append(h)
-            use_file_handles.append(h)
-        else:
-            use_file_handles.append(filename)
-    omx = use_file_handles
+    import h5py
 
     bytes_loaded = 0
+    t0 = time.time()
 
-    try:
-        t0 = time.time()
-        for filename, f in zip(omx, use_file_handles):
-            if isinstance(filename, str):
-                logger.info(f"loading into dataset from {filename}")
-            for data_name in f.root.data._v_children:
-                if _should_ignore(ignore, data_name):
-                    logger.info(f"ignoring {data_name}")
-                    continue
-                t1 = time.time()
-                filters = f.root.data[data_name].filters
-                filter_note = f"{filters.complib}/{filters.complevel}"
+    def _load_into(raw, dset, executor):
+        """Fill the array `raw` from the h5py or pytables dataset `dset`."""
+        if isinstance(dset, h5py.Dataset):
+            if raw.dtype == dset.dtype:
+                omx_reader.read_dataset(dset, out=raw, executor=executor)
+            else:
+                raw[:, :] = omx_reader.read_dataset(dset, executor=executor)
+        else:
+            raw[:, :] = dset[:, :]
 
-                if time_period_sep in data_name:
-                    data_name_x, data_name_t = data_name.split(time_period_sep, 1)
-                    if data_name_x not in dataset:
-                        logger.info(
-                            f"skipping {data_name} because {data_name_x} not in dataset"
-                        )
-                        continue
-                    if len(dataset[data_name_x].dims) != 3:
-                        raise ValueError(
-                            f"dataset variable {data_name_x} has "
-                            f"{len(dataset[data_name_x].dims)} dimensions, expected 3"
-                        )
-                    raw = dataset[data_name_x].sel(time_period=data_name_t).data
-                    raw[:, :] = f.root.data[data_name][:, :]
-                else:
-                    if len(dataset[data_name].dims) != 2:
-                        raise ValueError(
-                            f"dataset variable {data_name} has "
-                            f"{len(dataset[data_name].dims)} dimensions, expected 2"
-                        )
-                    raw = dataset[data_name].data
-                    raw[:, :] = f.root.data[data_name][:, :]
-                bytes_loaded += raw.nbytes
-                logger.debug(
-                    f"loaded {data_name} ({filter_note}) to dataset "
-                    f"in {time.time() - t1:.2f}s, {si_units(bytes_loaded)}"
+    def _load_one(dset, data_name, filter_note, executor):
+        nonlocal bytes_loaded
+        t1 = time.time()
+        if time_period_sep in data_name:
+            data_name_x, data_name_t = data_name.split(time_period_sep, 1)
+            if data_name_x not in dataset:
+                logger.info(
+                    f"skipping {data_name} because {data_name_x} not in dataset"
                 )
+                return
+            if len(dataset[data_name_x].dims) != 3:
+                raise ValueError(
+                    f"dataset variable {data_name_x} has "
+                    f"{len(dataset[data_name_x].dims)} dimensions, expected 3"
+                )
+            raw = dataset[data_name_x].sel(time_period=data_name_t).data
+        else:
+            if len(dataset[data_name].dims) != 2:
+                raise ValueError(
+                    f"dataset variable {data_name} has "
+                    f"{len(dataset[data_name].dims)} dimensions, expected 2"
+                )
+            raw = dataset[data_name].data
+        _load_into(raw, dset, executor)
+        bytes_loaded += raw.nbytes
+        logger.debug(
+            f"loaded {data_name} ({filter_note}) to dataset "
+            f"in {time.time() - t1:.2f}s, {si_units(bytes_loaded)}"
+        )
+
+    opened_file_handles = []
+    try:
+        with concurrent.futures.ThreadPoolExecutor() as pool:
+            for source in omx:
+                filename = omx_file_name(source)
+                if filename is not None:
+                    # fast path: parallel chunk decoding via h5py
+                    logger.info(f"loading into dataset from {filename}")
+                    f5 = h5py.File(filename, "r")
+                    opened_file_handles.append(f5)
+                    data_group = f5["data"]
+                    for data_name in data_group.keys():
+                        if _should_ignore(ignore, data_name):
+                            logger.info(f"ignoring {data_name}")
+                            continue
+                        dset = data_group[data_name]
+                        filter_note = f"{dset.compression}/{dset.compression_opts}"
+                        _load_one(dset, data_name, filter_note, pool)
+                else:
+                    # source is an open file handle with no resolvable
+                    # on-disk filename; read through the handle directly
+                    f = source
+                    for data_name in f.root.data._v_children:
+                        if _should_ignore(ignore, data_name):
+                            logger.info(f"ignoring {data_name}")
+                            continue
+                        filters = f.root.data[data_name].filters
+                        filter_note = f"{filters.complib}/{filters.complevel}"
+                        _load_one(f.root.data[data_name], data_name, filter_note, pool)
         logger.info(f"loading to dataset complete in {time.time() - t0:.2f}s")
     finally:
         for h in opened_file_handles:
