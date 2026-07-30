@@ -451,3 +451,35 @@ def test_from_omx_compressed_blosc():
         with h5py.File(f, mode="r") as back:
             ds = sh.dataset.from_omx(back, indexes="taz")
     np.testing.assert_array_equal(ds["DIST"].values, arr)
+
+
+def test_from_omx_3d_to_zarr():
+    """Lazily loaded 3d skims remain readable when writing to zarr."""
+    matrices = _random_matrices()
+    with tempfile.TemporaryDirectory() as tempdir:
+        f = Path(tempdir).joinpath("skims.omx")
+        _write_compressed_omx(f, matrices)
+        skims = sh.dataset.from_omx_3d(str(f), time_periods=["AM", "PM"])
+        zarr_path = Path(tempdir).joinpath("skims.zarr")
+        skims[["TIME"]].to_zarr(zarr_path, mode="w")
+        back = xr.open_zarr(zarr_path)
+        np.testing.assert_array_equal(
+            back["TIME"].sel(time_period="AM").values, matrices["TIME__AM"]
+        )
+
+
+def test_from_omx_3d_writable_handle():
+    """A file handle open for writing does not block lazy loading."""
+    matrices = _random_matrices()
+    with tempfile.TemporaryDirectory() as tempdir:
+        f = Path(tempdir).joinpath("skims.omx")
+        _write_compressed_omx(f, matrices)
+        with openmatrix.open_file(f, mode="a") as back:
+            skims = sh.dataset.from_omx_3d(
+                back, time_periods=["AM", "PM"], max_float_precision=64
+            )
+            computed = skims.compute()
+        np.testing.assert_array_equal(computed["DIST"].values, matrices["DIST"])
+        np.testing.assert_array_equal(
+            computed["TIME"].sel(time_period="PM").values, matrices["TIME__PM"]
+        )

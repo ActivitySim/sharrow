@@ -366,7 +366,7 @@ def from_omx(
 
     arrays = {}
     filename = omx_file_name(omx)
-    if filename is not None:
+    if _is_reopenable(filename):
         # fast path: parallel chunk decoding via h5py
         import concurrent.futures
 
@@ -440,6 +440,24 @@ def _fast_load_omx_array(filename, name):
 
     with h5py.File(filename, "r") as f:
         return omx_reader.read_dataset(f["data"][name])
+
+
+def _is_reopenable(filename) -> bool:
+    """Check whether a file can be independently opened for reading with h5py.
+
+    Reopening can fail if the file name is unknown (e.g. an in-memory file),
+    or if the file is already open elsewhere in a mode that locks it.
+    """
+    if filename is None:
+        return False
+    import h5py
+
+    try:
+        with h5py.File(filename, "r"):
+            pass
+    except Exception:  # noqa: BLE001
+        return False
+    return True
 
 
 def from_omx_3d(
@@ -538,18 +556,20 @@ def from_omx_3d(
                 omx_data_map[k] = n
 
         omx_filenames = [omx_file_name(i) for i in omx]
+        omx_reopenable = [_is_reopenable(i) for i in omx_filenames]
 
         import dask.array
 
         def _lazy_omx_array(k):
             # Build a lazy dask array for one matrix table.  When the source
-            # file is on disk, defer to the parallel chunk-decoding reader;
-            # otherwise fall back to wrapping the open file handle's node.
+            # file can be independently reopened, defer to the parallel
+            # chunk-decoding reader; otherwise read the data eagerly, as the
+            # open file handle may be closed before the dask graph is computed.
             n = omx_data_map[k]
             filename = omx_filenames[n]
             node = omx_data[n][k]
-            if filename is None:
-                return dask.array.from_array(node)
+            if not omx_reopenable[n]:
+                return dask.array.from_array(np.asarray(node[:]))
             return dask.array.from_delayed(
                 dask.delayed(_fast_load_omx_array)(filename, k),
                 shape=tuple(node.shape),
