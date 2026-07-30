@@ -8,34 +8,21 @@ optimized, runnable code.
 
 ## Installation
 
-Sharrow will soon be available through conda-forge.
+Install Sharrow from [PyPI](https://pypi.org/project/sharrow/) in your `uv` project:
 
 ```shell
-conda install sharrow -c conda-forge
+uv add sharrow
 ```
 
-You can also install from the source code using setuptools and pip.  A number of
-the dependencies are not pure Python packages, and so it's highly recommended that
-you create an environment containing all those dependencies first, and then install
-sharrow itself.  To do so with conda, you can run:
+`uv` resolves and installs Sharrow and its dependencies.
+
+## Development Installation
+
+To work from source, clone the [repository](https://github.com/activitysim/sharrow)
+and, from its root directory, create a development environment:
 
 ```shell
-conda install -c conda-forge numpy pandas xarray numba pyarrow numexpr filelock
-```
-
-Then clone the [repository](https://github.com/camsys/sharrow), and then from
-the root directory run
-
-```shell
-pip install -e .
-```
-
-Alternatively, you can install sharrow plus all the dependencies (including
-additional optional dependencies for development and testing) in a conda environment,
-using the `envs/development.yml` environment to create a `sh-dev` environment:
-
-```shell
-conda env create -f envs/development.yml
+uv sync
 ```
 
 ## Testing
@@ -43,17 +30,21 @@ conda env create -f envs/development.yml
 Sharrow includes unit tests both in the `sharrow/tests` directory and embedded
 in the user documentation under `docs`.
 
-To run the test suite after installing sharrow, install (via pypi or conda) pytest and nbmake,
-and run `pytest` in the root directory of the sharrow repository.
+To run the test suite, install the development dependencies and run the following
+from the root directory of the Sharrow repository:
+
+```shell
+uv sync
+uv run pytest
+```
 
 
 ## Code Formatting
 
 Sharrow uses several tools to ensure a consistent code format throughout the project:
 
-- [Black](https://black.readthedocs.io/en/stable/) for standardized code formatting,
-- [Flake8](http://flake8.pycqa.org/en/latest/) for general code quality,
-- [isort](https://github.com/timothycrosley/isort) for standardized order in imports, and
+- [Ruff](https://docs.astral.sh/ruff/) for standardized code formatting, import
+  sorting, and code quality,
 - [nbstripout](https://github.com/kynan/nbstripout) to ensure notebooks are committed
   to the GitHub repository without bulky outputs included.
 
@@ -71,16 +62,11 @@ with `git commit --no-verify`.
 
 ## Building the Documentation
 
-The docs for sharrow are built using [Jupyter Book](https://jupyterbook.org).
-You can install Jupyter Book [via `pip`](https://pip.pypa.io/en/stable/):
+The docs for sharrow are built using [Jupyter Book](https://jupyterbook.org). Install
+it with `uv`:
 
 ```shell
-pip install -U jupyter-book
-```
-or via [`conda-forge`](https://conda-forge.org/):
-
-```shell
-conda install -c conda-forge jupyter-book
+uv tool install jupyter-book
 ```
 
 Then to build the docs, in the root directory of the sharrow repository run

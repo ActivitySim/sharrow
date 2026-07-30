@@ -155,6 +155,11 @@ jobs:
     env:
       python-version: "3.10"
       label: linux-64
+      # limit glibc malloc arenas, which can otherwise retain large amounts
+      # of memory freed during numba compilation
+      MALLOC_ARENA_MAX: "2"
+      # standard GitHub-hosted ubuntu runners have 4 cores
+      NUMBA_NUM_THREADS: "4"
     strategy:
       matrix:
         include:
@@ -197,19 +202,44 @@ jobs:
       - name: Set cache date for year and month
         run: echo "DATE=$(date +'%Y%m')" >> $GITHUB_ENV
 
+      - name: Add swap space
+        # numba compilation of sharrow flows has a large transient memory
+        # peak; extra swap absorbs the spike instead of the runner being
+        # terminated by the host when it exhausts physical memory
+        run: |
+          sudo swapon --show || true
+          df -h /mnt
+          sudo fallocate -l 8G /mnt/extra-swapfile
+          sudo chmod 600 /mnt/extra-swapfile
+          sudo mkswap /mnt/extra-swapfile
+          sudo swapon /mnt/extra-swapfile
+          free -h
+
+      - name: Restore sharrow flow cache
+        # restores previously compiled sharrow flows (including numba on-disk
+        # cache files), which greatly reduces both the time and the peak
+        # memory needed to run the examples
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.cache/ActivitySim
+          key: sharrow-flows-${{ matrix.region-repo }}-${{ env.DATE }}-${{ github.run_id }}
+          restore-keys: |
+            sharrow-flows-${{ matrix.region-repo }}-${{ env.DATE }}-
+            sharrow-flows-${{ matrix.region-repo }}-
+
       - name: Create Virtual Env
         run: |
           uv venv
           source .venv/bin/activate
-          uv pip install "black==22.12.0" "coveralls==3.3.1" \
-                         "cytoolz==0.12.2" "dask==2023.11.*" "isort==5.12.0" \
-                         "multimethod<2.0" "nbmake==1.4.6" "numba==0.57.*" \
-                         "numpy==1.24.*" "openmatrix==0.3.5.0" "orca==1.8" \
-                         "pandera>=0.15,<0.18.1" "pandas==2.2.*" "platformdirs==3.2.*" \
-                         "psutil==5.9.*" "pyarrow==11.*" "pydantic==2.6.*" "pypyr==5.8.*" \
-                         "tables>=3.9" "pytest==7.2.*" "pytest-cov" "pytest-regressions" \
-                         "pyyaml==6.*" "requests==2.28.*" "ruff" "scikit-learn==1.2.*" \
-                         "sharrow>=2.9.1" "simwrapper>1.7" "sparse" "xarray==2025.01.*" \
+          uv pip install "black==22.12.0" "coveralls>=4" \
+                         "cytoolz==0.12.2" "dask>=2026" "isort>=5.12.0" \
+                         "multimethod<2.0" "nbmake>=1.4.6" "numba>=0.57" \
+                         "numpy>=2,<3" "openmatrix==0.3.5.0" \
+                         "pandera>=0.30" "pandas>=2,<3" "platformdirs>=3.2" \
+                         "psutil>=5.9" "pyarrow>=11.0" "pydantic>=2.6,<3" "pypyr>=5.8" \
+                         "tables>=3.9" "pytest>=7.2" "pytest-cov" "pytest-regressions" \
+                         "pyyaml>=6" "requests>=2.28" "ruff" "scikit-learn>=1.2" \
+                         "simwrapper>1.7" "sparse" "xarray>=2025" \
                          "zarr>=2,<3" "zstandard" \
                          ./sharrow ./activitysim
 
@@ -226,7 +256,66 @@ jobs:
           path: '${{ matrix.region-repo }}'
 
       - name: Test ${{ matrix.region }}
+        # Each collected test runs in its own process, so memory is fully
+        # released between tests. A watchdog stops a test gracefully when
+        # system memory (incl. swap) is nearly exhausted: a controlled
+        # failure (unlike a runner shutdown) lets later steps still run, in
+        # particular saving the sharrow flow cache so a subsequent attempt
+        # resumes from the already-compiled flows instead of starting over.
         run: |
           source .venv/bin/activate
           cd ${{ matrix.region-repo }}
-          python -m pytest ./test
+
+          mem_line() {
+            free -m | awk '/^Mem:/ {u=$3; a=$7} /^Swap:/ {s=$4} END {print "used_MB=" u " avail_MB=" a " swap_free_MB=" s}'
+          }
+          free_total() {
+            free -m | awk '/^Mem:/ {a=$7} /^Swap:/ {s=$4} END {print a + s}'
+          }
+
+          # stream memory samples into the live log so the data survives
+          # even if the runner is terminated abruptly
+          ( while true; do echo "[mem] $(date +%H:%M:%S) $(mem_line)" | tee -a /tmp/mem-monitor.log; sleep 30; done ) &
+          monitor_pid=$!
+
+          readarray -t tests < <(python -m pytest ./test --collect-only -q | grep '::')
+          echo "collected ${#tests[@]} tests"
+          rc=0
+          for t in "${tests[@]}"; do
+            echo "::group::pytest $t"
+            python -m pytest "$t" &
+            test_pid=$!
+            while kill -0 "$test_pid" 2>/dev/null; do
+              if [ "$(free_total)" -lt 1024 ]; then
+                echo "[watchdog] $(date +%H:%M:%S) memory nearly exhausted ($(mem_line)); stopping test"
+                kill "$test_pid" 2>/dev/null || true
+                sleep 30
+              fi
+              sleep 5
+            done
+            if wait "$test_pid"; then
+              echo "[ok] $t"
+            else
+              echo "[failed] $t (exit code $?)"
+              rc=1
+            fi
+            echo "::endgroup::"
+          done
+          kill "$monitor_pid" 2>/dev/null || true
+          exit $rc
+
+      - name: Save sharrow flow cache
+        # saved even when the tests fail, so that flows compiled during a
+        # failed run still warm the cache for subsequent runs
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.cache/ActivitySim
+          key: sharrow-flows-${{ matrix.region-repo }}-${{ env.DATE }}-${{ github.run_id }}
+
+      - name: Memory monitor report
+        if: always()
+        run: |
+          echo "== peak system memory usage =="
+          awk '{ for (i=1; i<=NF; i++) if ($i ~ /^used_MB=/) { v=substr($i,9)+0; if (v>max) max=v } }
+               END { print "peak used_MB=" max }' /tmp/mem-monitor.log || true

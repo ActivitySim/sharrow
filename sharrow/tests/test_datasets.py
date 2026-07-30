@@ -178,3 +178,276 @@ def test_dataarray_iloc():
     z = arr2d.iloc[dict(s=slice(1, 2), p=slice(2, 4))]
 
     xr.testing.assert_equal(z, xr.DataArray([[20, 28]], dims=["s", "p"]))
+
+
+def _skims_dataframe(zones=(11, 22, 33, 44), order="row-major"):
+    """Create a dense skims dataframe for parquet testing."""
+    n = len(zones)
+    otaz = np.repeat(np.asarray(zones), n)
+    dtaz = np.tile(np.asarray(zones), n)
+    df = pd.DataFrame(
+        {
+            "otaz": otaz,
+            "dtaz": dtaz,
+            "DIST": (otaz * 1000 + dtaz).astype(np.float32),
+            "TIME__AM": (otaz * 10 + dtaz).astype(np.float32),
+            "TIME__PM": (otaz * 10 + dtaz + 0.5).astype(np.float32),
+        }
+    )
+    if order == "column-major":
+        df = df.sort_values(["dtaz", "otaz"]).reset_index(drop=True)
+    return df
+
+
+def _expected_skims(zones=(11, 22, 33, 44)):
+    df = _skims_dataframe(zones)
+    return df.set_index(["otaz", "dtaz"]).to_xarray()
+
+
+def test_from_parquet_3d_row_major():
+    with tempfile.TemporaryDirectory() as tempdir:
+        f = Path(tempdir).joinpath("skims.parquet")
+        _skims_dataframe().to_parquet(f, index=False)
+        skims = sh.dataset.from_parquet_3d(f, time_periods=["AM", "PM"])
+    expected = _expected_skims()
+    assert skims["DIST"].dims == ("otaz", "dtaz")
+    assert skims["TIME"].dims == ("otaz", "dtaz", "time_period")
+    assert skims.coords["otaz"].values == approx(np.asarray([11, 22, 33, 44]))
+    assert skims.coords["dtaz"].values == approx(np.asarray([11, 22, 33, 44]))
+    assert list(skims.coords["time_period"].values) == ["AM", "PM"]
+    assert skims["DIST"].values == approx(expected["DIST"].values)
+    assert skims["TIME"].sel(time_period="AM").values == approx(
+        expected["TIME__AM"].values
+    )
+    assert skims["TIME"].sel(time_period="PM").values == approx(
+        expected["TIME__PM"].values
+    )
+
+
+def test_from_parquet_3d_column_major():
+    with tempfile.TemporaryDirectory() as tempdir:
+        f = Path(tempdir).joinpath("skims.parquet")
+        _skims_dataframe(order="column-major").to_parquet(f, index=False)
+        skims = sh.dataset.from_parquet_3d(f, time_periods=["AM", "PM"])
+    expected = _expected_skims()
+    assert skims["DIST"].values == approx(expected["DIST"].values)
+    assert skims["TIME"].sel(time_period="PM").values == approx(
+        expected["TIME__PM"].values
+    )
+
+
+def test_from_parquet_3d_sparse():
+    expected = _expected_skims()
+    df = _skims_dataframe()
+    # drop some rows to make the data sparse, and shuffle the remainder
+    df = df.drop(index=[1, 7]).sample(frac=1.0, random_state=42)
+    with tempfile.TemporaryDirectory() as tempdir:
+        f = Path(tempdir).joinpath("skims.parquet")
+        df.to_parquet(f, index=False)
+        skims = sh.dataset.from_parquet_3d(f, time_periods=["AM", "PM"])
+    assert skims["DIST"].dims == ("otaz", "dtaz")
+    assert skims.coords["otaz"].values == approx(np.asarray([11, 22, 33, 44]))
+    dist = skims["DIST"].values
+    assert np.isnan(dist[0, 1])
+    assert np.isnan(dist[1, 3])
+    valid = ~np.isnan(dist)
+    assert dist[valid] == approx(expected["DIST"].values[valid])
+
+
+def test_from_parquet_3d_unsorted_dense():
+    df = _skims_dataframe()
+    # a dense but improperly sorted table should raise an error
+    df = df.sample(frac=1.0, random_state=42)
+    with tempfile.TemporaryDirectory() as tempdir:
+        f = Path(tempdir).joinpath("skims.parquet")
+        df.to_parquet(f, index=False)
+        with pytest.raises(ValueError):
+            sh.dataset.from_parquet_3d(f, time_periods=["AM", "PM"])
+
+
+def test_from_parquet_3d_multiple_files():
+    expected = _expected_skims()
+    df = _skims_dataframe()
+    with tempfile.TemporaryDirectory() as tempdir:
+        f1 = Path(tempdir).joinpath("skims1.parquet")
+        f2 = Path(tempdir).joinpath("skims2.parquet")
+        df[["otaz", "dtaz", "DIST", "TIME__AM"]].to_parquet(f1, index=False)
+        # the second file is written in column-major order, to check that
+        # each file is inspected independently
+        df[["otaz", "dtaz", "TIME__PM"]].sort_values(["dtaz", "otaz"]).to_parquet(
+            f2, index=False
+        )
+        skims = sh.dataset.from_parquet_3d([f1, f2], time_periods=["AM", "PM"])
+    assert skims["DIST"].values == approx(expected["DIST"].values)
+    assert skims["TIME"].sel(time_period="AM").values == approx(
+        expected["TIME__AM"].values
+    )
+    assert skims["TIME"].sel(time_period="PM").values == approx(
+        expected["TIME__PM"].values
+    )
+
+
+def test_from_parquet_3d_mismatched_index_order():
+    expected = _expected_skims()
+    df = _skims_dataframe()
+    df2 = _skims_dataframe(zones=(44, 33, 22, 11))
+    with tempfile.TemporaryDirectory() as tempdir:
+        f1 = Path(tempdir).joinpath("skims1.parquet")
+        f2 = Path(tempdir).joinpath("skims2.parquet")
+        df[["otaz", "dtaz", "DIST"]].to_parquet(f1, index=False)
+        df2[["otaz", "dtaz", "TIME__AM", "TIME__PM"]].to_parquet(f2, index=False)
+        skims = sh.dataset.from_parquet_3d([f1, f2], time_periods=["AM", "PM"])
+    assert skims.coords["otaz"].values == approx(np.asarray([11, 22, 33, 44]))
+    assert skims["DIST"].values == approx(expected["DIST"].values)
+    assert skims["TIME"].sel(time_period="AM").values == approx(
+        expected["TIME__AM"].values
+    )
+
+
+def test_from_parquet_3d_ignore():
+    with tempfile.TemporaryDirectory() as tempdir:
+        f = Path(tempdir).joinpath("skims.parquet")
+        _skims_dataframe().to_parquet(f, index=False)
+        skims = sh.dataset.from_parquet_3d(
+            f, time_periods=["AM", "PM"], ignore="TIME.*"
+        )
+    assert "TIME" not in skims.variables
+    assert "DIST" in skims.variables
+
+
+def _write_compressed_omx(path, matrices, complib="zlib", complevel=7, shuffle=True):
+    """Write an OMX file with compressed, oddly-chunked matrix tables."""
+    import tables
+
+    filters = tables.Filters(complevel=complevel, complib=complib, shuffle=shuffle)
+    n1, n2 = next(iter(matrices.values())).shape
+    with openmatrix.open_file(path, mode="w") as out:
+        for name, arr in matrices.items():
+            out.create_carray(
+                "/data",
+                name,
+                obj=arr,
+                filters=filters,
+                # chunk shape that does not evenly divide the array,
+                # to exercise edge-chunk handling
+                chunkshape=(7, 7),
+            )
+        out.create_carray("/lookup", "taz", obj=np.arange(11, 11 + n1))
+        shp = np.empty(2, dtype=int)
+        shp[0], shp[1] = n1, n2
+        out.root._v_attrs.SHAPE = shp
+
+
+def _random_matrices(n=25, seed=42):
+    rng = np.random.default_rng(seed)
+    return {
+        "DIST": rng.random((n, n)),
+        "TIME__AM": (rng.random((n, n)) * 100).astype(np.float32),
+        "TIME__PM": (rng.random((n, n)) * 100).astype(np.float32),
+        "COUNTS": rng.integers(0, 9999, (n, n)).astype(np.int32),
+    }
+
+
+def test_from_omx_compressed_zlib():
+    matrices = _random_matrices()
+    with tempfile.TemporaryDirectory() as tempdir:
+        f = Path(tempdir).joinpath("skims.omx")
+        _write_compressed_omx(f, matrices)
+        with openmatrix.open_file(f, mode="r") as back:
+            ds = sh.dataset.from_omx(back, indexes="taz")
+            ds_renamed = sh.dataset.from_omx(
+                back, indexes="taz", renames={"distance": "DIST"}
+            )
+            ds_limited = sh.dataset.from_omx(back, indexes="taz", renames=["COUNTS"])
+    for name, arr in matrices.items():
+        assert ds[name].dtype == arr.dtype
+        np.testing.assert_array_equal(ds[name].values, arr)
+    assert ds.coords["otaz"].values == approx(np.arange(11, 36))
+    np.testing.assert_array_equal(ds_renamed["distance"].values, matrices["DIST"])
+    assert sorted(ds_limited.data_vars) == ["COUNTS"]
+
+
+def test_from_omx_compressed_h5py_handle():
+    import h5py
+
+    matrices = _random_matrices()
+    with tempfile.TemporaryDirectory() as tempdir:
+        f = Path(tempdir).joinpath("skims.omx")
+        _write_compressed_omx(f, matrices)
+        with h5py.File(f, mode="r") as back:
+            ds = sh.dataset.from_omx(back, indexes="taz")
+    for name, arr in matrices.items():
+        np.testing.assert_array_equal(ds[name].values, arr)
+    assert ds.coords["otaz"].values == approx(np.arange(11, 36))
+
+
+def test_from_omx_3d_compressed_zlib():
+    matrices = _random_matrices()
+    with tempfile.TemporaryDirectory() as tempdir:
+        f = Path(tempdir).joinpath("skims.omx")
+        _write_compressed_omx(f, matrices)
+        skims = sh.dataset.from_omx_3d(
+            str(f),
+            time_periods=["AM", "PM"],
+            max_float_precision=64,
+        ).compute()
+        np.testing.assert_array_equal(skims["DIST"].values, matrices["DIST"])
+        np.testing.assert_array_equal(
+            skims["TIME"].sel(time_period="AM").values, matrices["TIME__AM"]
+        )
+        np.testing.assert_array_equal(
+            skims["TIME"].sel(time_period="PM").values, matrices["TIME__PM"]
+        )
+        assert skims["TIME"].dtype == np.float32
+        assert skims.coords["otaz"].values == approx(np.arange(11, 36))
+
+        # also via an already-open file handle
+        with openmatrix.open_file(f, mode="r") as back:
+            skims2 = sh.dataset.from_omx_3d(
+                back,
+                time_periods=["AM", "PM"],
+                max_float_precision=64,
+            )
+        # data remains readable after the handle is closed
+        xr.testing.assert_equal(skims, skims2.compute())
+
+
+def test_reload_from_omx_3d_compressed():
+    matrices = _random_matrices()
+    with tempfile.TemporaryDirectory() as tempdir:
+        f = Path(tempdir).joinpath("skims.omx")
+        _write_compressed_omx(f, matrices)
+        expected = sh.dataset.from_omx_3d(
+            str(f), time_periods=["AM", "PM"], max_float_precision=32
+        ).compute()
+        blank = xr.zeros_like(expected)
+        assert not blank.equals(expected)
+        sh.dataset.reload_from_omx_3d(blank, [str(f)])
+        xr.testing.assert_equal(blank, expected)
+        # with ignore
+        blank2 = xr.zeros_like(expected)
+        sh.dataset.reload_from_omx_3d(blank2, [str(f)], ignore=["COUNTS"])
+        assert (blank2["COUNTS"].values == 0).all()
+        np.testing.assert_array_equal(blank2["DIST"].values, expected["DIST"].values)
+
+
+def test_from_omx_compressed_blosc():
+    import h5py
+    import hdf5plugin
+
+    rng = np.random.default_rng(7)
+    arr = rng.random((25, 25))
+    with tempfile.TemporaryDirectory() as tempdir:
+        f = Path(tempdir).joinpath("skims.omx")
+        with h5py.File(f, mode="w") as out:
+            out.create_dataset(
+                "data/DIST",
+                data=arr,
+                chunks=(7, 7),
+                **hdf5plugin.Blosc(cname="lz4", clevel=5),
+            )
+            out.create_dataset("lookup/taz", data=np.arange(11, 36))
+            out.attrs["SHAPE"] = np.asarray([25, 25], dtype=int)
+        with h5py.File(f, mode="r") as back:
+            ds = sh.dataset.from_omx(back, indexes="taz")
+    np.testing.assert_array_equal(ds["DIST"].values, arr)

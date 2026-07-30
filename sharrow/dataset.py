@@ -16,6 +16,7 @@ import pyarrow as pa
 import xarray as xr
 from xarray import DataArray, Dataset
 
+from . import omx_reader
 from .accessors import register_dataset_method
 from .aster import extract_all_name_tokens
 from .categorical import _Categorical  # noqa
@@ -289,6 +290,19 @@ def from_table(
     return result
 
 
+def _group_names(grp) -> list[str]:
+    """List the child node names of a pytables or h5py group."""
+    try:
+        return list(grp._v_children)  # pytables
+    except AttributeError:
+        return list(grp.keys())  # h5py
+
+
+def omx_file_name(omx) -> str | None:
+    """Resolve the on-disk filename of an OMX-like object, if possible."""
+    return omx_reader.h5_filename(omx)
+
+
 def from_omx(
     omx: openmatrix.File,
     index_names=("otaz", "dtaz"),
@@ -326,26 +340,46 @@ def from_omx(
     -------
     Dataset
     """
-    # handle both larch.OMX and openmatrix.open_file versions
+    import h5py
+
+    # handle larch.OMX, openmatrix.open_file, and h5py.File versions
     if "lar" in type(omx).__module__:
         omx_data = omx.data
         omx_lookup = omx.lookup
         omx_shape = omx.shape
+    elif isinstance(omx, h5py.File):
+        omx_data = omx["data"]
+        omx_lookup = omx["lookup"]
+        omx_shape = tuple(int(i) for i in omx.attrs["SHAPE"])
     else:
         omx_data = omx.root["data"]
         omx_lookup = omx.root["lookup"]
         omx_shape = omx.shape()
 
-    arrays = {}
     if renames is None:
-        for k in omx_data._v_children:
-            arrays[k] = omx_data[k][:]
+        data_names = _group_names(omx_data)
+        rename_pairs = [(k, k) for k in data_names]
     elif isinstance(renames, dict):
-        for new_k, old_k in renames.items():
-            arrays[new_k] = omx_data[old_k][:]
+        rename_pairs = list(renames.items())
     else:
-        for k in renames:
-            arrays[k] = omx_data[k][:]
+        rename_pairs = [(k, k) for k in renames]
+
+    arrays = {}
+    filename = omx_file_name(omx)
+    if filename is not None:
+        # fast path: parallel chunk decoding via h5py
+        import concurrent.futures
+
+        with h5py.File(filename, "r") as f5:
+            f5_data = f5["data"]
+            with concurrent.futures.ThreadPoolExecutor() as pool:
+                for new_k, old_k in rename_pairs:
+                    arrays[new_k] = omx_reader.read_dataset(
+                        f5_data[old_k], executor=pool
+                    )
+    else:
+        for new_k, old_k in rename_pairs:
+            arrays[new_k] = omx_data[old_k][:]
     d = {
         "dims": index_names,
         "data_vars": {k: {"dims": index_names, "data": arrays[k]} for k in arrays},
@@ -398,6 +432,14 @@ def _should_ignore(ignore, x):
             if re.match(i, x):
                 return True
     return False
+
+
+def _fast_load_omx_array(filename, name):
+    """Load one matrix table from an OMX file, decoding chunks in parallel."""
+    import h5py
+
+    with h5py.File(filename, "r") as f:
+        return omx_reader.read_dataset(f["data"][name])
 
 
 def from_omx_3d(
@@ -471,10 +513,15 @@ def from_omx_3d(
     omx = use_file_handles
 
     try:
-        # handle both larch.OMX and openmatrix.open_file versions
+        import h5py
+
+        # handle larch.OMX, openmatrix.open_file, and h5py.File versions
         if "larch" in type(omx[0]).__module__:
             omx_shape = omx[0].shape
             omx_lookup = omx[0].lookup
+        elif isinstance(omx[0], h5py.File):
+            omx_shape = tuple(int(i) for i in omx[0].attrs["SHAPE"])
+            omx_lookup = omx[0]["lookup"]
         else:
             omx_shape = omx[0].shape()
             omx_lookup = omx[0].root["lookup"]
@@ -483,14 +530,31 @@ def from_omx_3d(
         for n, i in enumerate(omx):
             if "larch" in type(i).__module__:
                 omx_data.append(i.data)
-                for k in i.data._v_children:
-                    omx_data_map[k] = n
+            elif isinstance(i, h5py.File):
+                omx_data.append(i["data"])
             else:
                 omx_data.append(i.root["data"])
-                for k in i.root["data"]._v_children:
-                    omx_data_map[k] = n
+            for k in _group_names(omx_data[-1]):
+                omx_data_map[k] = n
+
+        omx_filenames = [omx_file_name(i) for i in omx]
 
         import dask.array
+
+        def _lazy_omx_array(k):
+            # Build a lazy dask array for one matrix table.  When the source
+            # file is on disk, defer to the parallel chunk-decoding reader;
+            # otherwise fall back to wrapping the open file handle's node.
+            n = omx_data_map[k]
+            filename = omx_filenames[n]
+            node = omx_data[n][k]
+            if filename is None:
+                return dask.array.from_array(node)
+            return dask.array.from_delayed(
+                dask.delayed(_fast_load_omx_array)(filename, k),
+                shape=tuple(node.shape),
+                dtype=node.dtype,
+            )
 
         data_names = list(omx_data_map.keys())
         if ignore is not None:
@@ -500,16 +564,17 @@ def from_omx_3d(
         n1, n2 = omx_shape
         if indexes is None:
             # default reads mapping if only one lookup is included, otherwise one-based
-            if len(omx_lookup._v_children) == 1:
+            lookup_names = _group_names(omx_lookup)
+            if len(lookup_names) == 1:
                 ranger = None
-                indexes = list(omx_lookup._v_children)[0]
+                indexes = lookup_names[0]
             else:
                 ranger = one_based
         elif indexes == "one-based":
             ranger = one_based
         elif indexes == "zero-based":
             ranger = zero_based
-        elif indexes in set(omx_lookup._v_children):
+        elif indexes in set(_group_names(omx_lookup)):
             ranger = None
         else:
             raise NotImplementedError(
@@ -534,12 +599,10 @@ def from_omx_3d(
                 base_k, time_k = k.split(time_period_sep, 1)
                 if base_k not in pending_3d:
                     pending_3d[base_k] = [None] * len(time_periods)
-                pending_3d[base_k][time_periods_map[time_k]] = dask.array.from_array(
-                    omx_data[omx_data_map[k]][k]
-                )
+                pending_3d[base_k][time_periods_map[time_k]] = _lazy_omx_array(k)
             else:
                 content[k] = xr.DataArray(
-                    dask.array.from_array(omx_data[omx_data_map[k]][k]),
+                    _lazy_omx_array(k),
                     dims=index_names[:2],
                     coords={
                         index_names[0]: r1,
@@ -613,65 +676,363 @@ def reload_from_omx_3d(
     if isinstance(ignore, str):
         ignore = [ignore]
 
-    use_file_handles = []
-    opened_file_handles = []
-    for filename in omx:
-        if isinstance(filename, (str, Path)):
-            import openmatrix
+    import concurrent.futures
 
-            h = openmatrix.open_file(filename)
-            opened_file_handles.append(h)
-            use_file_handles.append(h)
-        else:
-            use_file_handles.append(filename)
-    omx = use_file_handles
+    import h5py
 
     bytes_loaded = 0
+    t0 = time.time()
 
-    try:
-        t0 = time.time()
-        for filename, f in zip(omx, use_file_handles):
-            if isinstance(filename, str):
-                logger.info(f"loading into dataset from {filename}")
-            for data_name in f.root.data._v_children:
-                if _should_ignore(ignore, data_name):
-                    logger.info(f"ignoring {data_name}")
-                    continue
-                t1 = time.time()
-                filters = f.root.data[data_name].filters
-                filter_note = f"{filters.complib}/{filters.complevel}"
+    def _load_into(raw, dset, executor):
+        """Fill the array `raw` from the h5py or pytables dataset `dset`."""
+        if isinstance(dset, h5py.Dataset):
+            if raw.dtype == dset.dtype:
+                omx_reader.read_dataset(dset, out=raw, executor=executor)
+            else:
+                raw[:, :] = omx_reader.read_dataset(dset, executor=executor)
+        else:
+            raw[:, :] = dset[:, :]
 
-                if time_period_sep in data_name:
-                    data_name_x, data_name_t = data_name.split(time_period_sep, 1)
-                    if data_name_x not in dataset:
-                        logger.info(
-                            f"skipping {data_name} because {data_name_x} not in dataset"
-                        )
-                        continue
-                    if len(dataset[data_name_x].dims) != 3:
-                        raise ValueError(
-                            f"dataset variable {data_name_x} has "
-                            f"{len(dataset[data_name_x].dims)} dimensions, expected 3"
-                        )
-                    raw = dataset[data_name_x].sel(time_period=data_name_t).data
-                    raw[:, :] = f.root.data[data_name][:, :]
-                else:
-                    if len(dataset[data_name].dims) != 2:
-                        raise ValueError(
-                            f"dataset variable {data_name} has "
-                            f"{len(dataset[data_name].dims)} dimensions, expected 2"
-                        )
-                    raw = dataset[data_name].data
-                    raw[:, :] = f.root.data[data_name][:, :]
-                bytes_loaded += raw.nbytes
-                logger.debug(
-                    f"loaded {data_name} ({filter_note}) to dataset "
-                    f"in {time.time() - t1:.2f}s, {si_units(bytes_loaded)}"
+    def _load_one(dset, data_name, filter_note, executor):
+        nonlocal bytes_loaded
+        t1 = time.time()
+        if time_period_sep in data_name:
+            data_name_x, data_name_t = data_name.split(time_period_sep, 1)
+            if data_name_x not in dataset:
+                logger.info(
+                    f"skipping {data_name} because {data_name_x} not in dataset"
                 )
+                return
+            if len(dataset[data_name_x].dims) != 3:
+                raise ValueError(
+                    f"dataset variable {data_name_x} has "
+                    f"{len(dataset[data_name_x].dims)} dimensions, expected 3"
+                )
+            raw = dataset[data_name_x].sel(time_period=data_name_t).data
+        else:
+            if len(dataset[data_name].dims) != 2:
+                raise ValueError(
+                    f"dataset variable {data_name} has "
+                    f"{len(dataset[data_name].dims)} dimensions, expected 2"
+                )
+            raw = dataset[data_name].data
+        _load_into(raw, dset, executor)
+        bytes_loaded += raw.nbytes
+        logger.debug(
+            f"loaded {data_name} ({filter_note}) to dataset "
+            f"in {time.time() - t1:.2f}s, {si_units(bytes_loaded)}"
+        )
+
+    opened_file_handles = []
+    try:
+        with concurrent.futures.ThreadPoolExecutor() as pool:
+            for source in omx:
+                filename = omx_file_name(source)
+                if filename is not None:
+                    # fast path: parallel chunk decoding via h5py
+                    logger.info(f"loading into dataset from {filename}")
+                    f5 = h5py.File(filename, "r")
+                    opened_file_handles.append(f5)
+                    data_group = f5["data"]
+                    for data_name in data_group.keys():
+                        if _should_ignore(ignore, data_name):
+                            logger.info(f"ignoring {data_name}")
+                            continue
+                        dset = data_group[data_name]
+                        filter_note = f"{dset.compression}/{dset.compression_opts}"
+                        _load_one(dset, data_name, filter_note, pool)
+                else:
+                    # source is an open file handle with no resolvable
+                    # on-disk filename; read through the handle directly
+                    f = source
+                    for data_name in f.root.data._v_children:
+                        if _should_ignore(ignore, data_name):
+                            logger.info(f"ignoring {data_name}")
+                            continue
+                        filters = f.root.data[data_name].filters
+                        filter_note = f"{filters.complib}/{filters.complevel}"
+                        _load_one(f.root.data[data_name], data_name, filter_note, pool)
         logger.info(f"loading to dataset complete in {time.time() - t0:.2f}s")
     finally:
         for h in opened_file_handles:
             h.close()
+
+
+def _parquet_layout(labels_0, labels_1):
+    """
+    Determine the layout of a two dimensional index given as two columns.
+
+    Parameters
+    ----------
+    labels_0, labels_1 : array-like
+        The values of the two index columns, which together identify the
+        position of each row of a table in a two dimensional array.
+
+    Returns
+    -------
+    layout : {"row-major", "column-major", "unsorted-dense", "sparse"}
+    index_0, index_1 : array-like or None
+        The unique labels for each dimension, in the order they appear in
+        the resulting array.  These are None if the layout is "sparse", as
+        the arrangement of a sparse table is resolved elsewhere.
+    """
+    n_rows = len(labels_0)
+    unique_0 = pd.unique(labels_0)
+    unique_1 = pd.unique(labels_1)
+    n_0 = len(unique_0)
+    n_1 = len(unique_1)
+    if n_0 * n_1 != n_rows:
+        return "sparse", None, None
+
+    # row-major: the first index changes slowly, the second changes quickly
+    row_major_0 = labels_0[::n_1]
+    row_major_1 = labels_1[:n_1]
+    if len(row_major_0) == n_0 and np.array_equal(
+        labels_0, np.repeat(row_major_0, n_1)
+    ):
+        if np.array_equal(labels_1, np.tile(row_major_1, n_0)):
+            return "row-major", row_major_0, row_major_1
+
+    # column-major: the second index changes slowly, the first changes quickly
+    column_major_0 = labels_0[:n_0]
+    column_major_1 = labels_1[::n_0]
+    if len(column_major_1) == n_1 and np.array_equal(
+        labels_1, np.repeat(column_major_1, n_0)
+    ):
+        if np.array_equal(labels_0, np.tile(column_major_0, n_1)):
+            return "column-major", column_major_0, column_major_1
+
+    # The number of rows matches a dense array, but the rows are not in
+    # either dense ordering.  This is only actually dense if every possible
+    # pair of labels appears exactly once.
+    codes_0 = pd.Index(unique_0).get_indexer(labels_0)
+    codes_1 = pd.Index(unique_1).get_indexer(labels_1)
+    flat = codes_0.astype(np.int64) * n_1 + codes_1
+    if len(np.unique(flat)) == n_rows:
+        return "unsorted-dense", unique_0, unique_1
+    return "sparse", None, None
+
+
+def _parquet_column_to_numpy(table, name):
+    column = table.column(name)
+    if isinstance(column, pa.ChunkedArray):
+        column = column.combine_chunks()
+    if isinstance(column, pa.ChunkedArray):
+        # older versions of pyarrow return a ChunkedArray from combine_chunks
+        return column.to_numpy()
+    return column.to_numpy(zero_copy_only=False)
+
+
+def _parquet_data_names(schema_names, index_names, ignore):
+    data_names = [i for i in schema_names if i not in index_names]
+    if ignore is not None:
+        if isinstance(ignore, str):
+            ignore = [ignore]
+        data_names = [i for i in data_names if not _should_ignore(ignore, i)]
+    return data_names
+
+
+def _read_one_parquet_3d(filename, index_names, ignore):
+    """
+    Read the matrix tables in one parquet file into two dimensional arrays.
+
+    Parameters
+    ----------
+    filename : path-like
+        The parquet file to read.
+    index_names : tuple[str, str]
+        The names of the columns in the parquet file that give the position
+        of each row in the two dimensional arrays.
+    ignore : list-like or None
+        Regular expressions for matrix table names to skip.
+
+    Returns
+    -------
+    arrays : dict[str, array-like]
+        Two dimensional arrays, one for each matrix table in the file.
+    index_0, index_1 : array-like
+        The labels for each dimension of the arrays.
+    """
+    import pyarrow.parquet as pq
+
+    with pq.ParquetFile(filename) as pf:
+        schema_names = pf.schema_arrow.names
+        for i in index_names:
+            if i not in schema_names:
+                raise KeyError(f"index column {i!r} not found in {filename}")
+        data_names = _parquet_data_names(schema_names, index_names, ignore)
+
+        index_table = pf.read(columns=list(index_names))
+        labels_0 = _parquet_column_to_numpy(index_table, index_names[0])
+        labels_1 = _parquet_column_to_numpy(index_table, index_names[1])
+        layout, index_0, index_1 = _parquet_layout(labels_0, labels_1)
+        logger.info(f"parquet file {filename} has a {layout} layout")
+        del index_table, labels_0, labels_1
+
+        if layout == "unsorted-dense":
+            raise ValueError(
+                f"the data in {filename} is dense but is not sorted into "
+                f"row-major or column-major order"
+            )
+
+        if layout == "sparse":
+            # fall back to the generic xarray loader for sparse data
+            df = pf.read(columns=list(index_names) + data_names).to_pandas()
+            ds = df.set_index(list(index_names)).to_xarray()
+            arrays = {k: ds[k].to_numpy() for k in data_names}
+            return arrays, ds[index_names[0]].to_numpy(), ds[index_names[1]].to_numpy()
+
+        n_0 = len(index_0)
+        n_1 = len(index_1)
+        arrays = {}
+        for k in data_names:
+            content = _parquet_column_to_numpy(pf.read(columns=[k]), k)
+            if layout == "row-major":
+                arrays[k] = content.reshape(n_0, n_1)
+            else:
+                arrays[k] = content.reshape(n_1, n_0).transpose()
+        return arrays, index_0, index_1
+
+
+def from_parquet_3d(
+    parquet,
+    index_names=("otaz", "dtaz", "time_period"),
+    *,
+    time_periods=None,
+    time_period_sep="__",
+    max_float_precision=32,
+    ignore=None,
+):
+    """
+    Create a Dataset from parquet file(s) with an implicit third dimension.
+
+    The parquet file(s) should contain two index columns, which give the
+    position of each row in the two "native" dimensions, plus any number of
+    other columns, each of which gives the values of one matrix table.  The
+    matrix tables are named in the same manner as they would be in an OMX
+    file, including using a separator (typically a double underscore) to
+    identify time periods, which are assembled into a third dimension.
+
+    Parameters
+    ----------
+    parquet : path-like or Iterable[path-like]
+        The parquet file(s) to read.  When multiple files are given, the
+        matrix tables from all files are combined into a single dataset.
+        Each file is checked independently for its data layout, so the
+        index columns need not be in the same order in every file.
+    index_names : tuple, default ("otaz", "dtaz", "time_period")
+        Should be a tuple of length 3, giving the names of the three
+        dimensions.  The first two names are the names of the index columns
+        in the parquet file(s), the last is the name of the implicit
+        dimension that is created by parsing matrix table names.
+    time_periods : list-like, optional
+        A list of index values from which the third dimension is constructed
+        for all variables with a third dimension.  Required if any matrix
+        table name contains `time_period_sep`.
+    time_period_sep : str, default "__" (double underscore)
+        The presence of this separator within the name of any matrix table
+        indicates that table is to be considered a page in a three
+        dimensional variable.  The portion of the name preceding the first
+        instance of this separator is the name of the resulting variable,
+        and the portion of the name after the first instance of this
+        separator is the label of the position for this page, which should
+        appear in `time_periods`.
+    max_float_precision : int, default 32
+        When loading, reduce all floats to this level of precision,
+        generally to save memory if they were stored as double precision but
+        that level of detail is unneeded in the present application.
+    ignore : str or list-like, optional
+        A list of regular expressions that will be used to filter out
+        variables from the dataset.  If any of the regular expressions
+        match the name of a variable, that variable will not be included
+        in the loaded dataset.
+
+    Returns
+    -------
+    Dataset
+    """
+    if isinstance(parquet, (str, Path)) or not isinstance(parquet, Iterable):
+        parquet = [parquet]
+
+    if len(index_names) != 3:
+        raise ValueError("index_names must have length 3")
+
+    time_periods_map = None
+    if time_periods is not None:
+        time_periods = list(time_periods)
+        time_periods_map = {t: n for n, t in enumerate(time_periods)}
+
+    index_0 = None
+    index_1 = None
+    content = {}
+    pending_3d = {}
+
+    for filename in parquet:
+        arrays, file_index_0, file_index_1 = _read_one_parquet_3d(
+            filename, tuple(index_names[:2]), ignore
+        )
+        if index_0 is None:
+            index_0 = file_index_0
+            index_1 = file_index_1
+        elif not (
+            np.array_equal(index_0, file_index_0)
+            and np.array_equal(index_1, file_index_1)
+        ):
+            # the labels in this file are not in the same order as the
+            # labels in the first file, so rearrange this file's data
+            take_0 = pd.Index(file_index_0).get_indexer(index_0)
+            take_1 = pd.Index(file_index_1).get_indexer(index_1)
+            if (take_0 < 0).any() or (take_1 < 0).any():
+                raise ValueError(
+                    f"the index labels in {filename} do not match those in "
+                    f"the other parquet file(s)"
+                )
+            arrays = {k: v[take_0][:, take_1] for k, v in arrays.items()}
+
+        for k, v in arrays.items():
+            if time_period_sep in k:
+                base_k, time_k = k.split(time_period_sep, 1)
+                if time_periods_map is None:
+                    raise ValueError("must give time periods explicitly")
+                if time_k not in time_periods_map:
+                    raise KeyError(f"time period {time_k!r} not in time_periods")
+                if base_k not in pending_3d:
+                    pending_3d[base_k] = [None] * len(time_periods)
+                pending_3d[base_k][time_periods_map[time_k]] = v
+            else:
+                content[k] = xr.DataArray(
+                    v,
+                    dims=index_names[:2],
+                    coords={
+                        index_names[0]: index_0,
+                        index_names[1]: index_1,
+                    },
+                )
+
+    for base_k, arrs in pending_3d.items():
+        prototype = None
+        for i in arrs:
+            if i is not None:
+                prototype = i
+                break
+        if prototype is None:
+            raise ValueError("no prototype")
+        arrs_ = [(i if i is not None else np.zeros_like(prototype)) for i in arrs]
+        content[base_k] = xr.DataArray(
+            np.stack(arrs_, axis=-1),
+            dims=index_names,
+            coords={
+                index_names[0]: index_0,
+                index_names[1]: index_1,
+                index_names[2]: time_periods,
+            },
+        )
+
+    for i in content:
+        if np.issubdtype(content[i].dtype, np.floating):
+            if content[i].dtype.itemsize > max_float_precision / 8:
+                content[i] = content[i].astype(f"float{max_float_precision}")
+    return xr.Dataset(content)
 
 
 def from_amx(
