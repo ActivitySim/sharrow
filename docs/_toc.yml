@@ -11,4 +11,5 @@ chapters:
       - file: walkthrough/two-dim
       - file: walkthrough/encoding
       - file: walkthrough/sparse
+      - file: walkthrough/loading-skims
   - file: api
