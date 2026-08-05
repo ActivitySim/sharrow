@@ -117,7 +117,8 @@ jobs:
         auto-update-conda: false
     - name: Install Jupyterbook and ruamel.yaml
       run: |
-        conda install jupyter-book ruamel.yaml sphinx-autosummary-accessors -c conda-forge
+        # The docs use the Jupyter Book 1.x Sphinx project layout.
+        conda install "jupyter-book<2" ruamel.yaml sphinx-autosummary-accessors -c conda-forge
     - name: Install sharrow
       run: |
         python -m pip install --no-deps .
