@@ -102,40 +102,27 @@ jobs:
         shell: bash -l {0}
     steps:
     - uses: actions/checkout@v4
-    - name: Set up Python 3.10
-      uses: actions/setup-python@v5
+    - name: Install uv and set Python 3.10
+      uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
       with:
+        version: "0.12.2"
         python-version: "3.10"
+        enable-cache: true
     - name: Install dependencies
-      uses: conda-incubator/setup-miniconda@v3
-      with:
-        miniforge-version: latest
-        environment-file: envs/testing.yml
-        python-version: "3.10"
-        activate-environment: testing-env
-        auto-activate-base: false
-        auto-update-conda: false
-    - name: Install Jupyterbook and ruamel.yaml
       run: |
-        # The docs use the Jupyter Book 1.x Sphinx project layout.
-        conda install "jupyter-book<2" ruamel.yaml sphinx-autosummary-accessors -c conda-forge
-    - name: Install sharrow
+        uv sync --locked --dev
+    - name: UV checkup
       run: |
-        python -m pip install --no-deps .
-    - name: Conda checkup
-      run: |
-        conda info -a
-        conda list
-    - name: Install pip build
-      run: |
-        python -m pip install --upgrade build
+        uv --version
+        uv run --locked python --version
+        uv pip list
     - name: Build wheel
       run: |
-        python -m build
+        uv build
     - name: Build the docs
       run: |
-        python docs/_script/run_all.py
-        jupyter-book build ./docs
+        uv run --locked --with-requirements docs/requirements.txt python docs/_script/run_all.py
+        uv run --locked --with-requirements docs/requirements.txt jupyter-book build ./docs
     - name: Push to GitHub Pages
       uses: peaceiris/actions-gh-pages@v3.5.9
       with:

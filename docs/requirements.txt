@@ -1,4 +1,5 @@
 jupyter-book < 2
+ruamel.yaml
 matplotlib
 numpy >= 1.19
 pandas >= 1.2
