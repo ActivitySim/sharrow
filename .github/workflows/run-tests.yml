@@ -8,6 +8,12 @@ on:
   pull_request:
     branches: [ main, develop ]
   workflow_dispatch:
+    inputs:
+      deploy_docs:
+        description: Build and deploy the documentation without publishing to PyPI
+        required: true
+        default: false
+        type: boolean
 
 jobs:
 
@@ -93,8 +99,10 @@ jobs:
 
   deploy-docs:
     needs: test
-    # only on pushes tagged with v...
-    if: startsWith(github.ref, 'refs/tags/v')
+    # Run for releases or when explicitly requested from the Actions UI.
+    if: >-
+      startsWith(github.ref, 'refs/tags/v') ||
+      (github.event_name == 'workflow_dispatch' && inputs.deploy_docs)
     runs-on: ubuntu-latest
     environment: asim
     defaults:
@@ -132,7 +140,10 @@ jobs:
     # now send to PyPI
     - name: Publish to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
-      if: github.repository_owner == 'ActivitySim'
+      if: >-
+        github.event_name == 'push' &&
+        github.repository_owner == 'ActivitySim' &&
+        startsWith(github.ref, 'refs/tags/v')
       with:
         user: __token__
         password: ${{ secrets.PYPI_API_TOKEN }}
