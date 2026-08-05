@@ -8,7 +8,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Getting Started &#8212; v2.15.0</title>
+    <title>Getting Started &#8212; v1999.1.dev1+gfc175b27d</title>
   
   
   
@@ -30,9 +30,9 @@
 
     <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
     <link rel="stylesheet" type="text/css" href="_static/styles/sphinx-book-theme.css?v=eba8b062" />
-    <link rel="stylesheet" type="text/css" href="_static/togglebutton.css?v=13237357" />
+    <link rel="stylesheet" type="text/css" href="_static/togglebutton.css?v=9c3e77be" />
     <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
-    <link rel="stylesheet" type="text/css" href="_static/mystnb.8ecb98da25f57f5357bf6f572d296f466b2cfe2517ffebfabe82451661e28f02.css" />
+    <link rel="stylesheet" type="text/css" href="_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
     <link rel="stylesheet" type="text/css" href="_static/sphinx-thebe.css?v=4fa983c6" />
     <link rel="stylesheet" type="text/css" href="_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="_static/sharrow-docs.css?v=dd9f8deb" />
@@ -51,7 +51,7 @@
     <script>let toggleHintShow = 'Click to show';</script>
     <script>let toggleHintHide = 'Click to hide';</script>
     <script>let toggleOpenOnPrint = 'true';</script>
-    <script src="_static/togglebutton.js?v=4a39c7ea"></script>
+    <script src="_static/togglebutton.js?v=b8b12719"></script>
     <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
     <script src="_static/design-tabs.js?v=f930bc37"></script>
     <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
@@ -154,8 +154,8 @@
       
     
     
-    <img src="_static/logo.png" class="logo__image only-light" alt="v2.15.0 - Home"/>
-    <script>document.write(`<img src="_static/logo.png" class="logo__image only-dark" alt="v2.15.0 - Home"/>`);</script>
+    <img src="_static/logo.png" class="logo__image only-light" alt="v1999.1.dev1+gfc175b27d - Home"/>
+    <script>document.write(`<img src="_static/logo.png" class="logo__image only-dark" alt="v1999.1.dev1+gfc175b27d - Home"/>`);</script>
   
   
 </a></div>
@@ -180,6 +180,7 @@
 <li class="toctree-l2"><a class="reference internal" href="walkthrough/encoding.html">Data Encoding</a></li>
 
 <li class="toctree-l2"><a class="reference internal" href="walkthrough/sparse.html">Using Sparse MAZ Skims</a></li>
+<li class="toctree-l2"><a class="reference internal" href="walkthrough/loading-skims.html">Loading Skims from Files</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1"><a class="reference internal" href="api.html">API Reference</a></li>
@@ -379,6 +380,7 @@ document.write(`
             <nav aria-label="Page">
                 <ul class="visible nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#installation">Installation</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#development-installation">Development Installation</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#testing">Testing</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#code-formatting">Code Formatting</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#building-the-documentation">Building the Documentation</a></li>
@@ -401,26 +403,17 @@ compile expression specification files (like those used in ActivitySim) into
 optimized, runnable code.</p>
 <section id="installation">
 <h2>Installation<a class="headerlink" href="#installation" title="Link to this heading">#</a></h2>
-<p>Sharrow will soon be available through conda-forge.</p>
-<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>conda<span class="w"> </span>install<span class="w"> </span>sharrow<span class="w"> </span>-c<span class="w"> </span>conda-forge
+<p>Install Sharrow from <a class="reference external" href="https://pypi.org/project/sharrow/">PyPI</a> in your <code class="docutils literal notranslate"><span class="pre">uv</span></code> project:</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>add<span class="w"> </span>sharrow
 </pre></div>
 </div>
-<p>You can also install from the source code using setuptools and pip.  A number of
-the dependencies are not pure Python packages, and so it’s highly recommended that
-you create an environment containing all those dependencies first, and then install
-sharrow itself.  To do so with conda, you can run:</p>
-<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>conda<span class="w"> </span>install<span class="w"> </span>-c<span class="w"> </span>conda-forge<span class="w"> </span>numpy<span class="w"> </span>pandas<span class="w"> </span>xarray<span class="w"> </span>numba<span class="w"> </span>pyarrow<span class="w"> </span>numexpr<span class="w"> </span>filelock
-</pre></div>
-</div>
-<p>Then clone the <a class="reference external" href="https://github.com/camsys/sharrow">repository</a>, and then from
-the root directory run</p>
-<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span>.
-</pre></div>
-</div>
-<p>Alternatively, you can install sharrow plus all the dependencies (including
-additional optional dependencies for development and testing) in a conda environment,
-using the <code class="docutils literal notranslate"><span class="pre">envs/development.yml</span></code> environment to create a <code class="docutils literal notranslate"><span class="pre">sh-dev</span></code> environment:</p>
-<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>conda<span class="w"> </span>env<span class="w"> </span>create<span class="w"> </span>-f<span class="w"> </span>envs/development.yml
+<p><code class="docutils literal notranslate"><span class="pre">uv</span></code> resolves and installs Sharrow and its dependencies.</p>
+</section>
+<section id="development-installation">
+<h2>Development Installation<a class="headerlink" href="#development-installation" title="Link to this heading">#</a></h2>
+<p>To work from source, clone the <a class="reference external" href="https://github.com/activitysim/sharrow">repository</a>
+and, from its root directory, create a development environment:</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>sync
 </pre></div>
 </div>
 </section>
@@ -428,16 +421,19 @@ using the <code class="docutils literal notranslate"><span class="pre">envs/deve
 <h2>Testing<a class="headerlink" href="#testing" title="Link to this heading">#</a></h2>
 <p>Sharrow includes unit tests both in the <code class="docutils literal notranslate"><span class="pre">sharrow/tests</span></code> directory and embedded
 in the user documentation under <code class="docutils literal notranslate"><span class="pre">docs</span></code>.</p>
-<p>To run the test suite after installing sharrow, install (via pypi or conda) pytest and nbmake,
-and run <code class="docutils literal notranslate"><span class="pre">pytest</span></code> in the root directory of the sharrow repository.</p>
+<p>To run the test suite, install the development dependencies and run the following
+from the root directory of the Sharrow repository:</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>sync
+uv<span class="w"> </span>run<span class="w"> </span>pytest
+</pre></div>
+</div>
 </section>
 <section id="code-formatting">
 <h2>Code Formatting<a class="headerlink" href="#code-formatting" title="Link to this heading">#</a></h2>
 <p>Sharrow uses several tools to ensure a consistent code format throughout the project:</p>
 <ul class="simple">
-<li><p><a class="reference external" href="https://black.readthedocs.io/en/stable/">Black</a> for standardized code formatting,</p></li>
-<li><p><a class="reference external" href="http://flake8.pycqa.org/en/latest/">Flake8</a> for general code quality,</p></li>
-<li><p><a class="reference external" href="https://github.com/timothycrosley/isort">isort</a> for standardized order in imports, and</p></li>
+<li><p><a class="reference external" href="https://docs.astral.sh/ruff/">Ruff</a> for standardized code formatting, import
+sorting, and code quality,</p></li>
 <li><p><a class="reference external" href="https://github.com/kynan/nbstripout">nbstripout</a> to ensure notebooks are committed
 to the GitHub repository without bulky outputs included.</p></li>
 </ul>
@@ -452,13 +448,9 @@ with <code class="docutils literal notranslate"><span class="pre">git</span> <sp
 </section>
 <section id="building-the-documentation">
 <h2>Building the Documentation<a class="headerlink" href="#building-the-documentation" title="Link to this heading">#</a></h2>
-<p>The docs for sharrow are built using <a class="reference external" href="https://jupyterbook.org">Jupyter Book</a>.
-You can install Jupyter Book <a class="reference external" href="https://pip.pypa.io/en/stable/">via <code class="docutils literal notranslate"><span class="pre">pip</span></code></a>:</p>
-<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>-U<span class="w"> </span>jupyter-book
-</pre></div>
-</div>
-<p>or via <a class="reference external" href="https://conda-forge.org/"><code class="docutils literal notranslate"><span class="pre">conda-forge</span></code></a>:</p>
-<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>conda<span class="w"> </span>install<span class="w"> </span>-c<span class="w"> </span>conda-forge<span class="w"> </span>jupyter-book
+<p>The docs for sharrow are built using <a class="reference external" href="https://jupyterbook.org">Jupyter Book</a>. Install
+it with <code class="docutils literal notranslate"><span class="pre">uv</span></code>:</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>tool<span class="w"> </span>install<span class="w"> </span>jupyter-book
 </pre></div>
 </div>
 <p>Then to build the docs, in the root directory of the sharrow repository run</p>
@@ -533,6 +525,7 @@ You can install Jupyter Book <a class="reference external" href="https://pip.pyp
   <nav class="bd-toc-nav page-toc">
     <ul class="visible nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#installation">Installation</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#development-installation">Development Installation</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#testing">Testing</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#code-formatting">Code Formatting</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#building-the-documentation">Building the Documentation</a></li>

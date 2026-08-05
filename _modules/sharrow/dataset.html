@@ -7,7 +7,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>sharrow.dataset &#8212; v2.15.0</title>
+    <title>sharrow.dataset &#8212; v1999.1.dev1+gfc175b27d</title>
   
   
   
@@ -29,9 +29,9 @@
 
     <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=eba8b062" />
-    <link rel="stylesheet" type="text/css" href="../../_static/togglebutton.css?v=13237357" />
+    <link rel="stylesheet" type="text/css" href="../../_static/togglebutton.css?v=9c3e77be" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
-    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.8ecb98da25f57f5357bf6f572d296f466b2cfe2517ffebfabe82451661e28f02.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
     <link rel="stylesheet" type="text/css" href="../../_static/sphinx-thebe.css?v=4fa983c6" />
     <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../../_static/sharrow-docs.css?v=dd9f8deb" />
@@ -50,7 +50,7 @@
     <script>let toggleHintShow = 'Click to show';</script>
     <script>let toggleHintHide = 'Click to hide';</script>
     <script>let toggleOpenOnPrint = 'true';</script>
-    <script src="../../_static/togglebutton.js?v=4a39c7ea"></script>
+    <script src="../../_static/togglebutton.js?v=b8b12719"></script>
     <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
     <script src="../../_static/design-tabs.js?v=f930bc37"></script>
     <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
@@ -153,8 +153,8 @@
       
     
     
-    <img src="../../_static/logo.png" class="logo__image only-light" alt="v2.15.0 - Home"/>
-    <script>document.write(`<img src="../../_static/logo.png" class="logo__image only-dark" alt="v2.15.0 - Home"/>`);</script>
+    <img src="../../_static/logo.png" class="logo__image only-light" alt="v1999.1.dev1+gfc175b27d - Home"/>
+    <script>document.write(`<img src="../../_static/logo.png" class="logo__image only-dark" alt="v1999.1.dev1+gfc175b27d - Home"/>`);</script>
   
   
 </a></div>
@@ -179,6 +179,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../../walkthrough/encoding.html">Data Encoding</a></li>
 
 <li class="toctree-l2"><a class="reference internal" href="../../walkthrough/sparse.html">Using Sparse MAZ Skims</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../walkthrough/loading-skims.html">Loading Skims from Files</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1"><a class="reference internal" href="../../api.html">API Reference</a></li>
@@ -350,6 +351,7 @@ document.write(`
 <span class="kn">import</span><span class="w"> </span><span class="nn">xarray</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">xarray</span><span class="w"> </span><span class="kn">import</span> <span class="n">DataArray</span><span class="p">,</span> <span class="n">Dataset</span>
 
+<span class="kn">from</span><span class="w"> </span><span class="nn">.</span><span class="w"> </span><span class="kn">import</span> <span class="n">omx_reader</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.accessors</span><span class="w"> </span><span class="kn">import</span> <span class="n">register_dataset_method</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.aster</span><span class="w"> </span><span class="kn">import</span> <span class="n">extract_all_name_tokens</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.categorical</span><span class="w"> </span><span class="kn">import</span> <span class="n">_Categorical</span>  <span class="c1"># noqa</span>
@@ -629,6 +631,19 @@ document.write(`
 
 
 
+<span class="k">def</span><span class="w"> </span><span class="nf">_group_names</span><span class="p">(</span><span class="n">grp</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;List the child node names of a pytables or h5py group.&quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="n">grp</span><span class="o">.</span><span class="n">_v_children</span><span class="p">)</span>  <span class="c1"># pytables</span>
+    <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="n">grp</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>  <span class="c1"># h5py</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">omx_file_name</span><span class="p">(</span><span class="n">omx</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Resolve the on-disk filename of an OMX-like object, if possible.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">omx_reader</span><span class="o">.</span><span class="n">h5_filename</span><span class="p">(</span><span class="n">omx</span><span class="p">)</span>
+
+
 <div class="viewcode-block" id="from_omx">
 <a class="viewcode-back" href="../../api.html#sharrow.dataset.from_omx">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">from_omx</span><span class="p">(</span>
@@ -668,26 +683,46 @@ document.write(`
 <span class="sd">    -------</span>
 <span class="sd">    Dataset</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="c1"># handle both larch.OMX and openmatrix.open_file versions</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">h5py</span>
+
+    <span class="c1"># handle larch.OMX, openmatrix.open_file, and h5py.File versions</span>
     <span class="k">if</span> <span class="s2">&quot;lar&quot;</span> <span class="ow">in</span> <span class="nb">type</span><span class="p">(</span><span class="n">omx</span><span class="p">)</span><span class="o">.</span><span class="vm">__module__</span><span class="p">:</span>
         <span class="n">omx_data</span> <span class="o">=</span> <span class="n">omx</span><span class="o">.</span><span class="n">data</span>
         <span class="n">omx_lookup</span> <span class="o">=</span> <span class="n">omx</span><span class="o">.</span><span class="n">lookup</span>
         <span class="n">omx_shape</span> <span class="o">=</span> <span class="n">omx</span><span class="o">.</span><span class="n">shape</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">omx</span><span class="p">,</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">):</span>
+        <span class="n">omx_data</span> <span class="o">=</span> <span class="n">omx</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">]</span>
+        <span class="n">omx_lookup</span> <span class="o">=</span> <span class="n">omx</span><span class="p">[</span><span class="s2">&quot;lookup&quot;</span><span class="p">]</span>
+        <span class="n">omx_shape</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">omx</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;SHAPE&quot;</span><span class="p">])</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="n">omx_data</span> <span class="o">=</span> <span class="n">omx</span><span class="o">.</span><span class="n">root</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">]</span>
         <span class="n">omx_lookup</span> <span class="o">=</span> <span class="n">omx</span><span class="o">.</span><span class="n">root</span><span class="p">[</span><span class="s2">&quot;lookup&quot;</span><span class="p">]</span>
         <span class="n">omx_shape</span> <span class="o">=</span> <span class="n">omx</span><span class="o">.</span><span class="n">shape</span><span class="p">()</span>
 
-    <span class="n">arrays</span> <span class="o">=</span> <span class="p">{}</span>
     <span class="k">if</span> <span class="n">renames</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">omx_data</span><span class="o">.</span><span class="n">_v_children</span><span class="p">:</span>
-            <span class="n">arrays</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">omx_data</span><span class="p">[</span><span class="n">k</span><span class="p">][:]</span>
+        <span class="n">data_names</span> <span class="o">=</span> <span class="n">_group_names</span><span class="p">(</span><span class="n">omx_data</span><span class="p">)</span>
+        <span class="n">rename_pairs</span> <span class="o">=</span> <span class="p">[(</span><span class="n">k</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">data_names</span><span class="p">]</span>
     <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">renames</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
-        <span class="k">for</span> <span class="n">new_k</span><span class="p">,</span> <span class="n">old_k</span> <span class="ow">in</span> <span class="n">renames</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-            <span class="n">arrays</span><span class="p">[</span><span class="n">new_k</span><span class="p">]</span> <span class="o">=</span> <span class="n">omx_data</span><span class="p">[</span><span class="n">old_k</span><span class="p">][:]</span>
+        <span class="n">rename_pairs</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">renames</span><span class="o">.</span><span class="n">items</span><span class="p">())</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">renames</span><span class="p">:</span>
-            <span class="n">arrays</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">omx_data</span><span class="p">[</span><span class="n">k</span><span class="p">][:]</span>
+        <span class="n">rename_pairs</span> <span class="o">=</span> <span class="p">[(</span><span class="n">k</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">renames</span><span class="p">]</span>
+
+    <span class="n">arrays</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">filename</span> <span class="o">=</span> <span class="n">omx_file_name</span><span class="p">(</span><span class="n">omx</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">_is_reopenable</span><span class="p">(</span><span class="n">filename</span><span class="p">):</span>
+        <span class="c1"># fast path: parallel chunk decoding via h5py</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">concurrent.futures</span>
+
+        <span class="k">with</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f5</span><span class="p">:</span>
+            <span class="n">f5_data</span> <span class="o">=</span> <span class="n">f5</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">]</span>
+            <span class="k">with</span> <span class="n">concurrent</span><span class="o">.</span><span class="n">futures</span><span class="o">.</span><span class="n">ThreadPoolExecutor</span><span class="p">()</span> <span class="k">as</span> <span class="n">pool</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">new_k</span><span class="p">,</span> <span class="n">old_k</span> <span class="ow">in</span> <span class="n">rename_pairs</span><span class="p">:</span>
+                    <span class="n">arrays</span><span class="p">[</span><span class="n">new_k</span><span class="p">]</span> <span class="o">=</span> <span class="n">omx_reader</span><span class="o">.</span><span class="n">read_dataset</span><span class="p">(</span>
+                        <span class="n">f5_data</span><span class="p">[</span><span class="n">old_k</span><span class="p">],</span> <span class="n">executor</span><span class="o">=</span><span class="n">pool</span>
+                    <span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">new_k</span><span class="p">,</span> <span class="n">old_k</span> <span class="ow">in</span> <span class="n">rename_pairs</span><span class="p">:</span>
+            <span class="n">arrays</span><span class="p">[</span><span class="n">new_k</span><span class="p">]</span> <span class="o">=</span> <span class="n">omx_data</span><span class="p">[</span><span class="n">old_k</span><span class="p">][:]</span>
     <span class="n">d</span> <span class="o">=</span> <span class="p">{</span>
         <span class="s2">&quot;dims&quot;</span><span class="p">:</span> <span class="n">index_names</span><span class="p">,</span>
         <span class="s2">&quot;data_vars&quot;</span><span class="p">:</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;dims&quot;</span><span class="p">:</span> <span class="n">index_names</span><span class="p">,</span> <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="n">arrays</span><span class="p">[</span><span class="n">k</span><span class="p">]}</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">arrays</span><span class="p">},</span>
@@ -741,6 +776,32 @@ document.write(`
             <span class="k">if</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
                 <span class="k">return</span> <span class="kc">True</span>
     <span class="k">return</span> <span class="kc">False</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_fast_load_omx_array</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Load one matrix table from an OMX file, decoding chunks in parallel.&quot;&quot;&quot;</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">h5py</span>
+
+    <span class="k">with</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">omx_reader</span><span class="o">.</span><span class="n">read_dataset</span><span class="p">(</span><span class="n">f</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">][</span><span class="n">name</span><span class="p">])</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_is_reopenable</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Check whether a file can be independently opened for reading with h5py.</span>
+
+<span class="sd">    Reopening can fail if the file name is unknown (e.g. an in-memory file),</span>
+<span class="sd">    or if the file is already open elsewhere in a mode that locks it.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">filename</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">h5py</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">with</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">):</span>
+            <span class="k">pass</span>
+    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>  <span class="c1"># noqa: BLE001</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="k">return</span> <span class="kc">True</span>
 
 
 <div class="viewcode-block" id="from_omx_3d">
@@ -816,10 +877,15 @@ document.write(`
     <span class="n">omx</span> <span class="o">=</span> <span class="n">use_file_handles</span>
 
     <span class="k">try</span><span class="p">:</span>
-        <span class="c1"># handle both larch.OMX and openmatrix.open_file versions</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">h5py</span>
+
+        <span class="c1"># handle larch.OMX, openmatrix.open_file, and h5py.File versions</span>
         <span class="k">if</span> <span class="s2">&quot;larch&quot;</span> <span class="ow">in</span> <span class="nb">type</span><span class="p">(</span><span class="n">omx</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="vm">__module__</span><span class="p">:</span>
             <span class="n">omx_shape</span> <span class="o">=</span> <span class="n">omx</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span>
             <span class="n">omx_lookup</span> <span class="o">=</span> <span class="n">omx</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">lookup</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">omx</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">):</span>
+            <span class="n">omx_shape</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">omx</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;SHAPE&quot;</span><span class="p">])</span>
+            <span class="n">omx_lookup</span> <span class="o">=</span> <span class="n">omx</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">&quot;lookup&quot;</span><span class="p">]</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">omx_shape</span> <span class="o">=</span> <span class="n">omx</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">()</span>
             <span class="n">omx_lookup</span> <span class="o">=</span> <span class="n">omx</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">root</span><span class="p">[</span><span class="s2">&quot;lookup&quot;</span><span class="p">]</span>
@@ -828,14 +894,33 @@ document.write(`
         <span class="k">for</span> <span class="n">n</span><span class="p">,</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">omx</span><span class="p">):</span>
             <span class="k">if</span> <span class="s2">&quot;larch&quot;</span> <span class="ow">in</span> <span class="nb">type</span><span class="p">(</span><span class="n">i</span><span class="p">)</span><span class="o">.</span><span class="vm">__module__</span><span class="p">:</span>
                 <span class="n">omx_data</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
-                <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">i</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">_v_children</span><span class="p">:</span>
-                    <span class="n">omx_data_map</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">n</span>
+            <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">):</span>
+                <span class="n">omx_data</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">])</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">omx_data</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i</span><span class="o">.</span><span class="n">root</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">])</span>
-                <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">i</span><span class="o">.</span><span class="n">root</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">_v_children</span><span class="p">:</span>
-                    <span class="n">omx_data_map</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">n</span>
+            <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">_group_names</span><span class="p">(</span><span class="n">omx_data</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]):</span>
+                <span class="n">omx_data_map</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">n</span>
+
+        <span class="n">omx_filenames</span> <span class="o">=</span> <span class="p">[</span><span class="n">omx_file_name</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">omx</span><span class="p">]</span>
+        <span class="n">omx_reopenable</span> <span class="o">=</span> <span class="p">[</span><span class="n">_is_reopenable</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">omx_filenames</span><span class="p">]</span>
 
         <span class="kn">import</span><span class="w"> </span><span class="nn">dask.array</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">_lazy_omx_array</span><span class="p">(</span><span class="n">k</span><span class="p">):</span>
+            <span class="c1"># Build a lazy dask array for one matrix table.  When the source</span>
+            <span class="c1"># file can be independently reopened, defer to the parallel</span>
+            <span class="c1"># chunk-decoding reader; otherwise read the data eagerly, as the</span>
+            <span class="c1"># open file handle may be closed before the dask graph is computed.</span>
+            <span class="n">n</span> <span class="o">=</span> <span class="n">omx_data_map</span><span class="p">[</span><span class="n">k</span><span class="p">]</span>
+            <span class="n">filename</span> <span class="o">=</span> <span class="n">omx_filenames</span><span class="p">[</span><span class="n">n</span><span class="p">]</span>
+            <span class="n">node</span> <span class="o">=</span> <span class="n">omx_data</span><span class="p">[</span><span class="n">n</span><span class="p">][</span><span class="n">k</span><span class="p">]</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">omx_reopenable</span><span class="p">[</span><span class="n">n</span><span class="p">]:</span>
+                <span class="k">return</span> <span class="n">dask</span><span class="o">.</span><span class="n">array</span><span class="o">.</span><span class="n">from_array</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">node</span><span class="p">[:]))</span>
+            <span class="k">return</span> <span class="n">dask</span><span class="o">.</span><span class="n">array</span><span class="o">.</span><span class="n">from_delayed</span><span class="p">(</span>
+                <span class="n">dask</span><span class="o">.</span><span class="n">delayed</span><span class="p">(</span><span class="n">_fast_load_omx_array</span><span class="p">)(</span><span class="n">filename</span><span class="p">,</span> <span class="n">k</span><span class="p">),</span>
+                <span class="n">shape</span><span class="o">=</span><span class="nb">tuple</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">shape</span><span class="p">),</span>
+                <span class="n">dtype</span><span class="o">=</span><span class="n">node</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span>
+            <span class="p">)</span>
 
         <span class="n">data_names</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">omx_data_map</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
         <span class="k">if</span> <span class="n">ignore</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
@@ -845,16 +930,17 @@ document.write(`
         <span class="n">n1</span><span class="p">,</span> <span class="n">n2</span> <span class="o">=</span> <span class="n">omx_shape</span>
         <span class="k">if</span> <span class="n">indexes</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="c1"># default reads mapping if only one lookup is included, otherwise one-based</span>
-            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">omx_lookup</span><span class="o">.</span><span class="n">_v_children</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">lookup_names</span> <span class="o">=</span> <span class="n">_group_names</span><span class="p">(</span><span class="n">omx_lookup</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">lookup_names</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
                 <span class="n">ranger</span> <span class="o">=</span> <span class="kc">None</span>
-                <span class="n">indexes</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">omx_lookup</span><span class="o">.</span><span class="n">_v_children</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">indexes</span> <span class="o">=</span> <span class="n">lookup_names</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">ranger</span> <span class="o">=</span> <span class="n">one_based</span>
         <span class="k">elif</span> <span class="n">indexes</span> <span class="o">==</span> <span class="s2">&quot;one-based&quot;</span><span class="p">:</span>
             <span class="n">ranger</span> <span class="o">=</span> <span class="n">one_based</span>
         <span class="k">elif</span> <span class="n">indexes</span> <span class="o">==</span> <span class="s2">&quot;zero-based&quot;</span><span class="p">:</span>
             <span class="n">ranger</span> <span class="o">=</span> <span class="n">zero_based</span>
-        <span class="k">elif</span> <span class="n">indexes</span> <span class="ow">in</span> <span class="nb">set</span><span class="p">(</span><span class="n">omx_lookup</span><span class="o">.</span><span class="n">_v_children</span><span class="p">):</span>
+        <span class="k">elif</span> <span class="n">indexes</span> <span class="ow">in</span> <span class="nb">set</span><span class="p">(</span><span class="n">_group_names</span><span class="p">(</span><span class="n">omx_lookup</span><span class="p">)):</span>
             <span class="n">ranger</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span>
@@ -879,12 +965,10 @@ document.write(`
                 <span class="n">base_k</span><span class="p">,</span> <span class="n">time_k</span> <span class="o">=</span> <span class="n">k</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">time_period_sep</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
                 <span class="k">if</span> <span class="n">base_k</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">pending_3d</span><span class="p">:</span>
                     <span class="n">pending_3d</span><span class="p">[</span><span class="n">base_k</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">time_periods</span><span class="p">)</span>
-                <span class="n">pending_3d</span><span class="p">[</span><span class="n">base_k</span><span class="p">][</span><span class="n">time_periods_map</span><span class="p">[</span><span class="n">time_k</span><span class="p">]]</span> <span class="o">=</span> <span class="n">dask</span><span class="o">.</span><span class="n">array</span><span class="o">.</span><span class="n">from_array</span><span class="p">(</span>
-                    <span class="n">omx_data</span><span class="p">[</span><span class="n">omx_data_map</span><span class="p">[</span><span class="n">k</span><span class="p">]][</span><span class="n">k</span><span class="p">]</span>
-                <span class="p">)</span>
+                <span class="n">pending_3d</span><span class="p">[</span><span class="n">base_k</span><span class="p">][</span><span class="n">time_periods_map</span><span class="p">[</span><span class="n">time_k</span><span class="p">]]</span> <span class="o">=</span> <span class="n">_lazy_omx_array</span><span class="p">(</span><span class="n">k</span><span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">content</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span>
-                    <span class="n">dask</span><span class="o">.</span><span class="n">array</span><span class="o">.</span><span class="n">from_array</span><span class="p">(</span><span class="n">omx_data</span><span class="p">[</span><span class="n">omx_data_map</span><span class="p">[</span><span class="n">k</span><span class="p">]][</span><span class="n">k</span><span class="p">]),</span>
+                    <span class="n">_lazy_omx_array</span><span class="p">(</span><span class="n">k</span><span class="p">),</span>
                     <span class="n">dims</span><span class="o">=</span><span class="n">index_names</span><span class="p">[:</span><span class="mi">2</span><span class="p">],</span>
                     <span class="n">coords</span><span class="o">=</span><span class="p">{</span>
                         <span class="n">index_names</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span> <span class="n">r1</span><span class="p">,</span>
@@ -959,65 +1043,366 @@ document.write(`
     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">ignore</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
         <span class="n">ignore</span> <span class="o">=</span> <span class="p">[</span><span class="n">ignore</span><span class="p">]</span>
 
-    <span class="n">use_file_handles</span> <span class="o">=</span> <span class="p">[]</span>
-    <span class="n">opened_file_handles</span> <span class="o">=</span> <span class="p">[]</span>
-    <span class="k">for</span> <span class="n">filename</span> <span class="ow">in</span> <span class="n">omx</span><span class="p">:</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">)):</span>
-            <span class="kn">import</span><span class="w"> </span><span class="nn">openmatrix</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">concurrent.futures</span>
 
-            <span class="n">h</span> <span class="o">=</span> <span class="n">openmatrix</span><span class="o">.</span><span class="n">open_file</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
-            <span class="n">opened_file_handles</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">h</span><span class="p">)</span>
-            <span class="n">use_file_handles</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">h</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">use_file_handles</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
-    <span class="n">omx</span> <span class="o">=</span> <span class="n">use_file_handles</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">h5py</span>
 
     <span class="n">bytes_loaded</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">t0</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
 
-    <span class="k">try</span><span class="p">:</span>
-        <span class="n">t0</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
-        <span class="k">for</span> <span class="n">filename</span><span class="p">,</span> <span class="n">f</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">omx</span><span class="p">,</span> <span class="n">use_file_handles</span><span class="p">):</span>
-            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
-                <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;loading into dataset from </span><span class="si">{</span><span class="n">filename</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-            <span class="k">for</span> <span class="n">data_name</span> <span class="ow">in</span> <span class="n">f</span><span class="o">.</span><span class="n">root</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">_v_children</span><span class="p">:</span>
-                <span class="k">if</span> <span class="n">_should_ignore</span><span class="p">(</span><span class="n">ignore</span><span class="p">,</span> <span class="n">data_name</span><span class="p">):</span>
-                    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;ignoring </span><span class="si">{</span><span class="n">data_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-                    <span class="k">continue</span>
-                <span class="n">t1</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
-                <span class="n">filters</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">root</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">data_name</span><span class="p">]</span><span class="o">.</span><span class="n">filters</span>
-                <span class="n">filter_note</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">filters</span><span class="o">.</span><span class="n">complib</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">filters</span><span class="o">.</span><span class="n">complevel</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_load_into</span><span class="p">(</span><span class="n">raw</span><span class="p">,</span> <span class="n">dset</span><span class="p">,</span> <span class="n">executor</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Fill the array `raw` from the h5py or pytables dataset `dset`.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">dset</span><span class="p">,</span> <span class="n">h5py</span><span class="o">.</span><span class="n">Dataset</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">raw</span><span class="o">.</span><span class="n">dtype</span> <span class="o">==</span> <span class="n">dset</span><span class="o">.</span><span class="n">dtype</span><span class="p">:</span>
+                <span class="n">omx_reader</span><span class="o">.</span><span class="n">read_dataset</span><span class="p">(</span><span class="n">dset</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="n">raw</span><span class="p">,</span> <span class="n">executor</span><span class="o">=</span><span class="n">executor</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">raw</span><span class="p">[:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">omx_reader</span><span class="o">.</span><span class="n">read_dataset</span><span class="p">(</span><span class="n">dset</span><span class="p">,</span> <span class="n">executor</span><span class="o">=</span><span class="n">executor</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">raw</span><span class="p">[:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">dset</span><span class="p">[:,</span> <span class="p">:]</span>
 
-                <span class="k">if</span> <span class="n">time_period_sep</span> <span class="ow">in</span> <span class="n">data_name</span><span class="p">:</span>
-                    <span class="n">data_name_x</span><span class="p">,</span> <span class="n">data_name_t</span> <span class="o">=</span> <span class="n">data_name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">time_period_sep</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
-                    <span class="k">if</span> <span class="n">data_name_x</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">dataset</span><span class="p">:</span>
-                        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
-                            <span class="sa">f</span><span class="s2">&quot;skipping </span><span class="si">{</span><span class="n">data_name</span><span class="si">}</span><span class="s2"> because </span><span class="si">{</span><span class="n">data_name_x</span><span class="si">}</span><span class="s2"> not in dataset&quot;</span>
-                        <span class="p">)</span>
-                        <span class="k">continue</span>
-                    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">dataset</span><span class="p">[</span><span class="n">data_name_x</span><span class="p">]</span><span class="o">.</span><span class="n">dims</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">3</span><span class="p">:</span>
-                        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                            <span class="sa">f</span><span class="s2">&quot;dataset variable </span><span class="si">{</span><span class="n">data_name_x</span><span class="si">}</span><span class="s2"> has &quot;</span>
-                            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">dataset</span><span class="p">[</span><span class="n">data_name_x</span><span class="p">]</span><span class="o">.</span><span class="n">dims</span><span class="p">)</span><span class="si">}</span><span class="s2"> dimensions, expected 3&quot;</span>
-                        <span class="p">)</span>
-                    <span class="n">raw</span> <span class="o">=</span> <span class="n">dataset</span><span class="p">[</span><span class="n">data_name_x</span><span class="p">]</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">time_period</span><span class="o">=</span><span class="n">data_name_t</span><span class="p">)</span><span class="o">.</span><span class="n">data</span>
-                    <span class="n">raw</span><span class="p">[:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">root</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">data_name</span><span class="p">][:,</span> <span class="p">:]</span>
-                <span class="k">else</span><span class="p">:</span>
-                    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">dataset</span><span class="p">[</span><span class="n">data_name</span><span class="p">]</span><span class="o">.</span><span class="n">dims</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
-                        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                            <span class="sa">f</span><span class="s2">&quot;dataset variable </span><span class="si">{</span><span class="n">data_name</span><span class="si">}</span><span class="s2"> has &quot;</span>
-                            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">dataset</span><span class="p">[</span><span class="n">data_name</span><span class="p">]</span><span class="o">.</span><span class="n">dims</span><span class="p">)</span><span class="si">}</span><span class="s2"> dimensions, expected 2&quot;</span>
-                        <span class="p">)</span>
-                    <span class="n">raw</span> <span class="o">=</span> <span class="n">dataset</span><span class="p">[</span><span class="n">data_name</span><span class="p">]</span><span class="o">.</span><span class="n">data</span>
-                    <span class="n">raw</span><span class="p">[:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">root</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">data_name</span><span class="p">][:,</span> <span class="p">:]</span>
-                <span class="n">bytes_loaded</span> <span class="o">+=</span> <span class="n">raw</span><span class="o">.</span><span class="n">nbytes</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_load_one</span><span class="p">(</span><span class="n">dset</span><span class="p">,</span> <span class="n">data_name</span><span class="p">,</span> <span class="n">filter_note</span><span class="p">,</span> <span class="n">executor</span><span class="p">):</span>
+        <span class="k">nonlocal</span> <span class="n">bytes_loaded</span>
+        <span class="n">t1</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">time_period_sep</span> <span class="ow">in</span> <span class="n">data_name</span><span class="p">:</span>
+            <span class="n">data_name_x</span><span class="p">,</span> <span class="n">data_name_t</span> <span class="o">=</span> <span class="n">data_name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">time_period_sep</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">data_name_x</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">dataset</span><span class="p">:</span>
                 <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
-                    <span class="sa">f</span><span class="s2">&quot;loaded </span><span class="si">{</span><span class="n">data_name</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">filter_note</span><span class="si">}</span><span class="s2">) to dataset &quot;</span>
-                    <span class="sa">f</span><span class="s2">&quot;in </span><span class="si">{</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">t1</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">s, </span><span class="si">{</span><span class="n">si_units</span><span class="p">(</span><span class="n">bytes_loaded</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;skipping </span><span class="si">{</span><span class="n">data_name</span><span class="si">}</span><span class="s2"> because </span><span class="si">{</span><span class="n">data_name_x</span><span class="si">}</span><span class="s2"> not in dataset&quot;</span>
                 <span class="p">)</span>
+                <span class="k">return</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">dataset</span><span class="p">[</span><span class="n">data_name_x</span><span class="p">]</span><span class="o">.</span><span class="n">dims</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">3</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;dataset variable </span><span class="si">{</span><span class="n">data_name_x</span><span class="si">}</span><span class="s2"> has &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">dataset</span><span class="p">[</span><span class="n">data_name_x</span><span class="p">]</span><span class="o">.</span><span class="n">dims</span><span class="p">)</span><span class="si">}</span><span class="s2"> dimensions, expected 3&quot;</span>
+                <span class="p">)</span>
+            <span class="n">raw</span> <span class="o">=</span> <span class="n">dataset</span><span class="p">[</span><span class="n">data_name_x</span><span class="p">]</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">time_period</span><span class="o">=</span><span class="n">data_name_t</span><span class="p">)</span><span class="o">.</span><span class="n">data</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">dataset</span><span class="p">[</span><span class="n">data_name</span><span class="p">]</span><span class="o">.</span><span class="n">dims</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;dataset variable </span><span class="si">{</span><span class="n">data_name</span><span class="si">}</span><span class="s2"> has &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">dataset</span><span class="p">[</span><span class="n">data_name</span><span class="p">]</span><span class="o">.</span><span class="n">dims</span><span class="p">)</span><span class="si">}</span><span class="s2"> dimensions, expected 2&quot;</span>
+                <span class="p">)</span>
+            <span class="n">raw</span> <span class="o">=</span> <span class="n">dataset</span><span class="p">[</span><span class="n">data_name</span><span class="p">]</span><span class="o">.</span><span class="n">data</span>
+        <span class="n">_load_into</span><span class="p">(</span><span class="n">raw</span><span class="p">,</span> <span class="n">dset</span><span class="p">,</span> <span class="n">executor</span><span class="p">)</span>
+        <span class="n">bytes_loaded</span> <span class="o">+=</span> <span class="n">raw</span><span class="o">.</span><span class="n">nbytes</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;loaded </span><span class="si">{</span><span class="n">data_name</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">filter_note</span><span class="si">}</span><span class="s2">) to dataset &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;in </span><span class="si">{</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">t1</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">s, </span><span class="si">{</span><span class="n">si_units</span><span class="p">(</span><span class="n">bytes_loaded</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="p">)</span>
+
+    <span class="n">opened_file_handles</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">with</span> <span class="n">concurrent</span><span class="o">.</span><span class="n">futures</span><span class="o">.</span><span class="n">ThreadPoolExecutor</span><span class="p">()</span> <span class="k">as</span> <span class="n">pool</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">source</span> <span class="ow">in</span> <span class="n">omx</span><span class="p">:</span>
+                <span class="n">filename</span> <span class="o">=</span> <span class="n">omx_file_name</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">filename</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="c1"># fast path: parallel chunk decoding via h5py</span>
+                    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;loading into dataset from </span><span class="si">{</span><span class="n">filename</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                    <span class="n">f5</span> <span class="o">=</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span>
+                    <span class="n">opened_file_handles</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">f5</span><span class="p">)</span>
+                    <span class="n">data_group</span> <span class="o">=</span> <span class="n">f5</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">]</span>
+                    <span class="k">for</span> <span class="n">data_name</span> <span class="ow">in</span> <span class="n">data_group</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                        <span class="k">if</span> <span class="n">_should_ignore</span><span class="p">(</span><span class="n">ignore</span><span class="p">,</span> <span class="n">data_name</span><span class="p">):</span>
+                            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;ignoring </span><span class="si">{</span><span class="n">data_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                            <span class="k">continue</span>
+                        <span class="n">dset</span> <span class="o">=</span> <span class="n">data_group</span><span class="p">[</span><span class="n">data_name</span><span class="p">]</span>
+                        <span class="n">filter_note</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dset</span><span class="o">.</span><span class="n">compression</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">dset</span><span class="o">.</span><span class="n">compression_opts</span><span class="si">}</span><span class="s2">&quot;</span>
+                        <span class="n">_load_one</span><span class="p">(</span><span class="n">dset</span><span class="p">,</span> <span class="n">data_name</span><span class="p">,</span> <span class="n">filter_note</span><span class="p">,</span> <span class="n">pool</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="c1"># source is an open file handle with no resolvable</span>
+                    <span class="c1"># on-disk filename; read through the handle directly</span>
+                    <span class="n">f</span> <span class="o">=</span> <span class="n">source</span>
+                    <span class="k">for</span> <span class="n">data_name</span> <span class="ow">in</span> <span class="n">f</span><span class="o">.</span><span class="n">root</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">_v_children</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="n">_should_ignore</span><span class="p">(</span><span class="n">ignore</span><span class="p">,</span> <span class="n">data_name</span><span class="p">):</span>
+                            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;ignoring </span><span class="si">{</span><span class="n">data_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                            <span class="k">continue</span>
+                        <span class="n">filters</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">root</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">data_name</span><span class="p">]</span><span class="o">.</span><span class="n">filters</span>
+                        <span class="n">filter_note</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">filters</span><span class="o">.</span><span class="n">complib</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">filters</span><span class="o">.</span><span class="n">complevel</span><span class="si">}</span><span class="s2">&quot;</span>
+                        <span class="n">_load_one</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">root</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">data_name</span><span class="p">],</span> <span class="n">data_name</span><span class="p">,</span> <span class="n">filter_note</span><span class="p">,</span> <span class="n">pool</span><span class="p">)</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;loading to dataset complete in </span><span class="si">{</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">t0</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">s&quot;</span><span class="p">)</span>
     <span class="k">finally</span><span class="p">:</span>
         <span class="k">for</span> <span class="n">h</span> <span class="ow">in</span> <span class="n">opened_file_handles</span><span class="p">:</span>
             <span class="n">h</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_parquet_layout</span><span class="p">(</span><span class="n">labels_0</span><span class="p">,</span> <span class="n">labels_1</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Determine the layout of a two dimensional index given as two columns.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    labels_0, labels_1 : array-like</span>
+<span class="sd">        The values of the two index columns, which together identify the</span>
+<span class="sd">        position of each row of a table in a two dimensional array.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    layout : {&quot;row-major&quot;, &quot;column-major&quot;, &quot;unsorted-dense&quot;, &quot;sparse&quot;}</span>
+<span class="sd">    index_0, index_1 : array-like or None</span>
+<span class="sd">        The unique labels for each dimension, in the order they appear in</span>
+<span class="sd">        the resulting array.  These are None if the layout is &quot;sparse&quot;, as</span>
+<span class="sd">        the arrangement of a sparse table is resolved elsewhere.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">n_rows</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">labels_0</span><span class="p">)</span>
+    <span class="n">unique_0</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">labels_0</span><span class="p">)</span>
+    <span class="n">unique_1</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">labels_1</span><span class="p">)</span>
+    <span class="n">n_0</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">unique_0</span><span class="p">)</span>
+    <span class="n">n_1</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">unique_1</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">n_0</span> <span class="o">*</span> <span class="n">n_1</span> <span class="o">!=</span> <span class="n">n_rows</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">&quot;sparse&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
+
+    <span class="c1"># row-major: the first index changes slowly, the second changes quickly</span>
+    <span class="n">row_major_0</span> <span class="o">=</span> <span class="n">labels_0</span><span class="p">[::</span><span class="n">n_1</span><span class="p">]</span>
+    <span class="n">row_major_1</span> <span class="o">=</span> <span class="n">labels_1</span><span class="p">[:</span><span class="n">n_1</span><span class="p">]</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">row_major_0</span><span class="p">)</span> <span class="o">==</span> <span class="n">n_0</span> <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">array_equal</span><span class="p">(</span>
+        <span class="n">labels_0</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">row_major_0</span><span class="p">,</span> <span class="n">n_1</span><span class="p">)</span>
+    <span class="p">):</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">array_equal</span><span class="p">(</span><span class="n">labels_1</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">row_major_1</span><span class="p">,</span> <span class="n">n_0</span><span class="p">)):</span>
+            <span class="k">return</span> <span class="s2">&quot;row-major&quot;</span><span class="p">,</span> <span class="n">row_major_0</span><span class="p">,</span> <span class="n">row_major_1</span>
+
+    <span class="c1"># column-major: the second index changes slowly, the first changes quickly</span>
+    <span class="n">column_major_0</span> <span class="o">=</span> <span class="n">labels_0</span><span class="p">[:</span><span class="n">n_0</span><span class="p">]</span>
+    <span class="n">column_major_1</span> <span class="o">=</span> <span class="n">labels_1</span><span class="p">[::</span><span class="n">n_0</span><span class="p">]</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">column_major_1</span><span class="p">)</span> <span class="o">==</span> <span class="n">n_1</span> <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">array_equal</span><span class="p">(</span>
+        <span class="n">labels_1</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">column_major_1</span><span class="p">,</span> <span class="n">n_0</span><span class="p">)</span>
+    <span class="p">):</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">array_equal</span><span class="p">(</span><span class="n">labels_0</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">column_major_0</span><span class="p">,</span> <span class="n">n_1</span><span class="p">)):</span>
+            <span class="k">return</span> <span class="s2">&quot;column-major&quot;</span><span class="p">,</span> <span class="n">column_major_0</span><span class="p">,</span> <span class="n">column_major_1</span>
+
+    <span class="c1"># The number of rows matches a dense array, but the rows are not in</span>
+    <span class="c1"># either dense ordering.  This is only actually dense if every possible</span>
+    <span class="c1"># pair of labels appears exactly once.</span>
+    <span class="n">codes_0</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Index</span><span class="p">(</span><span class="n">unique_0</span><span class="p">)</span><span class="o">.</span><span class="n">get_indexer</span><span class="p">(</span><span class="n">labels_0</span><span class="p">)</span>
+    <span class="n">codes_1</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Index</span><span class="p">(</span><span class="n">unique_1</span><span class="p">)</span><span class="o">.</span><span class="n">get_indexer</span><span class="p">(</span><span class="n">labels_1</span><span class="p">)</span>
+    <span class="n">flat</span> <span class="o">=</span> <span class="n">codes_0</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">)</span> <span class="o">*</span> <span class="n">n_1</span> <span class="o">+</span> <span class="n">codes_1</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">flat</span><span class="p">))</span> <span class="o">==</span> <span class="n">n_rows</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">&quot;unsorted-dense&quot;</span><span class="p">,</span> <span class="n">unique_0</span><span class="p">,</span> <span class="n">unique_1</span>
+    <span class="k">return</span> <span class="s2">&quot;sparse&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_parquet_column_to_numpy</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+    <span class="n">column</span> <span class="o">=</span> <span class="n">table</span><span class="o">.</span><span class="n">column</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">column</span><span class="p">,</span> <span class="n">pa</span><span class="o">.</span><span class="n">ChunkedArray</span><span class="p">):</span>
+        <span class="n">column</span> <span class="o">=</span> <span class="n">column</span><span class="o">.</span><span class="n">combine_chunks</span><span class="p">()</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">column</span><span class="p">,</span> <span class="n">pa</span><span class="o">.</span><span class="n">ChunkedArray</span><span class="p">):</span>
+        <span class="c1"># older versions of pyarrow return a ChunkedArray from combine_chunks</span>
+        <span class="k">return</span> <span class="n">column</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">column</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">zero_copy_only</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_parquet_data_names</span><span class="p">(</span><span class="n">schema_names</span><span class="p">,</span> <span class="n">index_names</span><span class="p">,</span> <span class="n">ignore</span><span class="p">):</span>
+    <span class="n">data_names</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">schema_names</span> <span class="k">if</span> <span class="n">i</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">index_names</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">ignore</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">ignore</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="n">ignore</span> <span class="o">=</span> <span class="p">[</span><span class="n">ignore</span><span class="p">]</span>
+        <span class="n">data_names</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">data_names</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">_should_ignore</span><span class="p">(</span><span class="n">ignore</span><span class="p">,</span> <span class="n">i</span><span class="p">)]</span>
+    <span class="k">return</span> <span class="n">data_names</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_read_one_parquet_3d</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">index_names</span><span class="p">,</span> <span class="n">ignore</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Read the matrix tables in one parquet file into two dimensional arrays.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    filename : path-like</span>
+<span class="sd">        The parquet file to read.</span>
+<span class="sd">    index_names : tuple[str, str]</span>
+<span class="sd">        The names of the columns in the parquet file that give the position</span>
+<span class="sd">        of each row in the two dimensional arrays.</span>
+<span class="sd">    ignore : list-like or None</span>
+<span class="sd">        Regular expressions for matrix table names to skip.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    arrays : dict[str, array-like]</span>
+<span class="sd">        Two dimensional arrays, one for each matrix table in the file.</span>
+<span class="sd">    index_0, index_1 : array-like</span>
+<span class="sd">        The labels for each dimension of the arrays.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">pyarrow.parquet</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pq</span>
+
+    <span class="k">with</span> <span class="n">pq</span><span class="o">.</span><span class="n">ParquetFile</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span> <span class="k">as</span> <span class="n">pf</span><span class="p">:</span>
+        <span class="n">schema_names</span> <span class="o">=</span> <span class="n">pf</span><span class="o">.</span><span class="n">schema_arrow</span><span class="o">.</span><span class="n">names</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">index_names</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">i</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">schema_names</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;index column </span><span class="si">{</span><span class="n">i</span><span class="si">!r}</span><span class="s2"> not found in </span><span class="si">{</span><span class="n">filename</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">data_names</span> <span class="o">=</span> <span class="n">_parquet_data_names</span><span class="p">(</span><span class="n">schema_names</span><span class="p">,</span> <span class="n">index_names</span><span class="p">,</span> <span class="n">ignore</span><span class="p">)</span>
+
+        <span class="n">index_table</span> <span class="o">=</span> <span class="n">pf</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="n">index_names</span><span class="p">))</span>
+        <span class="n">labels_0</span> <span class="o">=</span> <span class="n">_parquet_column_to_numpy</span><span class="p">(</span><span class="n">index_table</span><span class="p">,</span> <span class="n">index_names</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">labels_1</span> <span class="o">=</span> <span class="n">_parquet_column_to_numpy</span><span class="p">(</span><span class="n">index_table</span><span class="p">,</span> <span class="n">index_names</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">layout</span><span class="p">,</span> <span class="n">index_0</span><span class="p">,</span> <span class="n">index_1</span> <span class="o">=</span> <span class="n">_parquet_layout</span><span class="p">(</span><span class="n">labels_0</span><span class="p">,</span> <span class="n">labels_1</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;parquet file </span><span class="si">{</span><span class="n">filename</span><span class="si">}</span><span class="s2"> has a </span><span class="si">{</span><span class="n">layout</span><span class="si">}</span><span class="s2"> layout&quot;</span><span class="p">)</span>
+        <span class="k">del</span> <span class="n">index_table</span><span class="p">,</span> <span class="n">labels_0</span><span class="p">,</span> <span class="n">labels_1</span>
+
+        <span class="k">if</span> <span class="n">layout</span> <span class="o">==</span> <span class="s2">&quot;unsorted-dense&quot;</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;the data in </span><span class="si">{</span><span class="n">filename</span><span class="si">}</span><span class="s2"> is dense but is not sorted into &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;row-major or column-major order&quot;</span>
+            <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">layout</span> <span class="o">==</span> <span class="s2">&quot;sparse&quot;</span><span class="p">:</span>
+            <span class="c1"># fall back to the generic xarray loader for sparse data</span>
+            <span class="n">df</span> <span class="o">=</span> <span class="n">pf</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="n">index_names</span><span class="p">)</span> <span class="o">+</span> <span class="n">data_names</span><span class="p">)</span><span class="o">.</span><span class="n">to_pandas</span><span class="p">()</span>
+            <span class="n">ds</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">index_names</span><span class="p">))</span><span class="o">.</span><span class="n">to_xarray</span><span class="p">()</span>
+            <span class="n">arrays</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">ds</span><span class="p">[</span><span class="n">k</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">data_names</span><span class="p">}</span>
+            <span class="k">return</span> <span class="n">arrays</span><span class="p">,</span> <span class="n">ds</span><span class="p">[</span><span class="n">index_names</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span> <span class="n">ds</span><span class="p">[</span><span class="n">index_names</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+
+        <span class="n">n_0</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">index_0</span><span class="p">)</span>
+        <span class="n">n_1</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">index_1</span><span class="p">)</span>
+        <span class="n">arrays</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">data_names</span><span class="p">:</span>
+            <span class="n">content</span> <span class="o">=</span> <span class="n">_parquet_column_to_numpy</span><span class="p">(</span><span class="n">pf</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="n">k</span><span class="p">]),</span> <span class="n">k</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">layout</span> <span class="o">==</span> <span class="s2">&quot;row-major&quot;</span><span class="p">:</span>
+                <span class="n">arrays</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">content</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">n_0</span><span class="p">,</span> <span class="n">n_1</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">arrays</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">content</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">n_1</span><span class="p">,</span> <span class="n">n_0</span><span class="p">)</span><span class="o">.</span><span class="n">transpose</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">arrays</span><span class="p">,</span> <span class="n">index_0</span><span class="p">,</span> <span class="n">index_1</span>
+
+
+<div class="viewcode-block" id="from_parquet_3d">
+<a class="viewcode-back" href="../../api.html#sharrow.dataset.from_parquet_3d">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">from_parquet_3d</span><span class="p">(</span>
+    <span class="n">parquet</span><span class="p">,</span>
+    <span class="n">index_names</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;otaz&quot;</span><span class="p">,</span> <span class="s2">&quot;dtaz&quot;</span><span class="p">,</span> <span class="s2">&quot;time_period&quot;</span><span class="p">),</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">time_periods</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">time_period_sep</span><span class="o">=</span><span class="s2">&quot;__&quot;</span><span class="p">,</span>
+    <span class="n">max_float_precision</span><span class="o">=</span><span class="mi">32</span><span class="p">,</span>
+    <span class="n">ignore</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Create a Dataset from parquet file(s) with an implicit third dimension.</span>
+
+<span class="sd">    The parquet file(s) should contain two index columns, which give the</span>
+<span class="sd">    position of each row in the two &quot;native&quot; dimensions, plus any number of</span>
+<span class="sd">    other columns, each of which gives the values of one matrix table.  The</span>
+<span class="sd">    matrix tables are named in the same manner as they would be in an OMX</span>
+<span class="sd">    file, including using a separator (typically a double underscore) to</span>
+<span class="sd">    identify time periods, which are assembled into a third dimension.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    parquet : path-like or Iterable[path-like]</span>
+<span class="sd">        The parquet file(s) to read.  When multiple files are given, the</span>
+<span class="sd">        matrix tables from all files are combined into a single dataset.</span>
+<span class="sd">        Each file is checked independently for its data layout, so the</span>
+<span class="sd">        index columns need not be in the same order in every file.</span>
+<span class="sd">    index_names : tuple, default (&quot;otaz&quot;, &quot;dtaz&quot;, &quot;time_period&quot;)</span>
+<span class="sd">        Should be a tuple of length 3, giving the names of the three</span>
+<span class="sd">        dimensions.  The first two names are the names of the index columns</span>
+<span class="sd">        in the parquet file(s), the last is the name of the implicit</span>
+<span class="sd">        dimension that is created by parsing matrix table names.</span>
+<span class="sd">    time_periods : list-like, optional</span>
+<span class="sd">        A list of index values from which the third dimension is constructed</span>
+<span class="sd">        for all variables with a third dimension.  Required if any matrix</span>
+<span class="sd">        table name contains `time_period_sep`.</span>
+<span class="sd">    time_period_sep : str, default &quot;__&quot; (double underscore)</span>
+<span class="sd">        The presence of this separator within the name of any matrix table</span>
+<span class="sd">        indicates that table is to be considered a page in a three</span>
+<span class="sd">        dimensional variable.  The portion of the name preceding the first</span>
+<span class="sd">        instance of this separator is the name of the resulting variable,</span>
+<span class="sd">        and the portion of the name after the first instance of this</span>
+<span class="sd">        separator is the label of the position for this page, which should</span>
+<span class="sd">        appear in `time_periods`.</span>
+<span class="sd">    max_float_precision : int, default 32</span>
+<span class="sd">        When loading, reduce all floats to this level of precision,</span>
+<span class="sd">        generally to save memory if they were stored as double precision but</span>
+<span class="sd">        that level of detail is unneeded in the present application.</span>
+<span class="sd">    ignore : str or list-like, optional</span>
+<span class="sd">        A list of regular expressions that will be used to filter out</span>
+<span class="sd">        variables from the dataset.  If any of the regular expressions</span>
+<span class="sd">        match the name of a variable, that variable will not be included</span>
+<span class="sd">        in the loaded dataset.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Dataset</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">parquet</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">))</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">parquet</span><span class="p">,</span> <span class="n">Iterable</span><span class="p">):</span>
+        <span class="n">parquet</span> <span class="o">=</span> <span class="p">[</span><span class="n">parquet</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">index_names</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">3</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;index_names must have length 3&quot;</span><span class="p">)</span>
+
+    <span class="n">time_periods_map</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="n">time_periods</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">time_periods</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">time_periods</span><span class="p">)</span>
+        <span class="n">time_periods_map</span> <span class="o">=</span> <span class="p">{</span><span class="n">t</span><span class="p">:</span> <span class="n">n</span> <span class="k">for</span> <span class="n">n</span><span class="p">,</span> <span class="n">t</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">time_periods</span><span class="p">)}</span>
+
+    <span class="n">index_0</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">index_1</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">content</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">pending_3d</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="k">for</span> <span class="n">filename</span> <span class="ow">in</span> <span class="n">parquet</span><span class="p">:</span>
+        <span class="n">arrays</span><span class="p">,</span> <span class="n">file_index_0</span><span class="p">,</span> <span class="n">file_index_1</span> <span class="o">=</span> <span class="n">_read_one_parquet_3d</span><span class="p">(</span>
+            <span class="n">filename</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">index_names</span><span class="p">[:</span><span class="mi">2</span><span class="p">]),</span> <span class="n">ignore</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">index_0</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">index_0</span> <span class="o">=</span> <span class="n">file_index_0</span>
+            <span class="n">index_1</span> <span class="o">=</span> <span class="n">file_index_1</span>
+        <span class="k">elif</span> <span class="ow">not</span> <span class="p">(</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">array_equal</span><span class="p">(</span><span class="n">index_0</span><span class="p">,</span> <span class="n">file_index_0</span><span class="p">)</span>
+            <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">array_equal</span><span class="p">(</span><span class="n">index_1</span><span class="p">,</span> <span class="n">file_index_1</span><span class="p">)</span>
+        <span class="p">):</span>
+            <span class="c1"># the labels in this file are not in the same order as the</span>
+            <span class="c1"># labels in the first file, so rearrange this file&#39;s data</span>
+            <span class="n">take_0</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Index</span><span class="p">(</span><span class="n">file_index_0</span><span class="p">)</span><span class="o">.</span><span class="n">get_indexer</span><span class="p">(</span><span class="n">index_0</span><span class="p">)</span>
+            <span class="n">take_1</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Index</span><span class="p">(</span><span class="n">file_index_1</span><span class="p">)</span><span class="o">.</span><span class="n">get_indexer</span><span class="p">(</span><span class="n">index_1</span><span class="p">)</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">take_0</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">any</span><span class="p">()</span> <span class="ow">or</span> <span class="p">(</span><span class="n">take_1</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;the index labels in </span><span class="si">{</span><span class="n">filename</span><span class="si">}</span><span class="s2"> do not match those in &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;the other parquet file(s)&quot;</span>
+                <span class="p">)</span>
+            <span class="n">arrays</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span><span class="p">[</span><span class="n">take_0</span><span class="p">][:,</span> <span class="n">take_1</span><span class="p">]</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">arrays</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+
+        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">arrays</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">time_period_sep</span> <span class="ow">in</span> <span class="n">k</span><span class="p">:</span>
+                <span class="n">base_k</span><span class="p">,</span> <span class="n">time_k</span> <span class="o">=</span> <span class="n">k</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">time_period_sep</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">time_periods_map</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;must give time periods explicitly&quot;</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">time_k</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">time_periods_map</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;time period </span><span class="si">{</span><span class="n">time_k</span><span class="si">!r}</span><span class="s2"> not in time_periods&quot;</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">base_k</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">pending_3d</span><span class="p">:</span>
+                    <span class="n">pending_3d</span><span class="p">[</span><span class="n">base_k</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">time_periods</span><span class="p">)</span>
+                <span class="n">pending_3d</span><span class="p">[</span><span class="n">base_k</span><span class="p">][</span><span class="n">time_periods_map</span><span class="p">[</span><span class="n">time_k</span><span class="p">]]</span> <span class="o">=</span> <span class="n">v</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">content</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span>
+                    <span class="n">v</span><span class="p">,</span>
+                    <span class="n">dims</span><span class="o">=</span><span class="n">index_names</span><span class="p">[:</span><span class="mi">2</span><span class="p">],</span>
+                    <span class="n">coords</span><span class="o">=</span><span class="p">{</span>
+                        <span class="n">index_names</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span> <span class="n">index_0</span><span class="p">,</span>
+                        <span class="n">index_names</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span> <span class="n">index_1</span><span class="p">,</span>
+                    <span class="p">},</span>
+                <span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">base_k</span><span class="p">,</span> <span class="n">arrs</span> <span class="ow">in</span> <span class="n">pending_3d</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">prototype</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">arrs</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">i</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">prototype</span> <span class="o">=</span> <span class="n">i</span>
+                <span class="k">break</span>
+        <span class="k">if</span> <span class="n">prototype</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;no prototype&quot;</span><span class="p">)</span>
+        <span class="n">arrs_</span> <span class="o">=</span> <span class="p">[(</span><span class="n">i</span> <span class="k">if</span> <span class="n">i</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">prototype</span><span class="p">))</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">arrs</span><span class="p">]</span>
+        <span class="n">content</span><span class="p">[</span><span class="n">base_k</span><span class="p">]</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">arrs_</span><span class="p">,</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">),</span>
+            <span class="n">dims</span><span class="o">=</span><span class="n">index_names</span><span class="p">,</span>
+            <span class="n">coords</span><span class="o">=</span><span class="p">{</span>
+                <span class="n">index_names</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span> <span class="n">index_0</span><span class="p">,</span>
+                <span class="n">index_names</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span> <span class="n">index_1</span><span class="p">,</span>
+                <span class="n">index_names</span><span class="p">[</span><span class="mi">2</span><span class="p">]:</span> <span class="n">time_periods</span><span class="p">,</span>
+            <span class="p">},</span>
+        <span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">content</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">issubdtype</span><span class="p">(</span><span class="n">content</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">floating</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">content</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">itemsize</span> <span class="o">&gt;</span> <span class="n">max_float_precision</span> <span class="o">/</span> <span class="mi">8</span><span class="p">:</span>
+                <span class="n">content</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">content</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;float</span><span class="si">{</span><span class="n">max_float_precision</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="p">(</span><span class="n">content</span><span class="p">)</span></div>
+
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">from_amx</span><span class="p">(</span>
