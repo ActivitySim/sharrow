@@ -371,6 +371,44 @@ def test_from_omx_compressed_path():
     assert ds.coords["otaz"].values == approx(np.arange(11, 36))
 
 
+def test_from_omx_filename_bearing_legacy_handle():
+    """Legacy OMX handles are reopened by filename without being imported."""
+
+    class LegacyOMXHandle:
+        """Minimal protocol exposed by openmatrix.File and PyTables File."""
+
+        def __init__(self, filename):
+            self.filename = filename
+            self.close_called = False
+
+        def close(self):
+            self.close_called = True
+
+    matrices = _random_matrices()
+    with tempfile.TemporaryDirectory() as tempdir:
+        f = Path(tempdir).joinpath("skims.omx")
+        _write_compressed_omx(f, matrices)
+        legacy_handle = LegacyOMXHandle(f)
+
+        expected_2d = sh.dataset.from_omx(f, indexes="taz")
+        actual_2d = sh.dataset.from_omx(legacy_handle, indexes="taz")
+        xr.testing.assert_equal(actual_2d, expected_2d)
+
+        expected_3d = sh.dataset.from_omx_3d(f, time_periods=["AM", "PM"], load="eager")
+        actual_3d = sh.dataset.from_omx_3d(
+            [legacy_handle], time_periods=["AM", "PM"]
+        ).compute()
+        xr.testing.assert_equal(actual_3d, expected_3d)
+
+        reloaded = xr.zeros_like(expected_3d)
+        sh.dataset.reload_from_omx_3d(reloaded, legacy_handle)
+        xr.testing.assert_equal(reloaded, expected_3d)
+
+        # Sharrow owns only the temporary h5py handle it creates. The caller's
+        # compatibility handle remains open and under caller control.
+        assert not legacy_handle.close_called
+
+
 def test_from_omx_3d_compressed_zlib():
     matrices = _random_matrices()
     with tempfile.TemporaryDirectory() as tempdir:

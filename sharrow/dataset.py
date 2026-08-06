@@ -298,8 +298,23 @@ def _group_names(grp) -> list[str]:
 
 
 def omx_file_name(omx) -> str | None:
-    """Resolve the on-disk filename of an OMX HDF5 file, if possible."""
-    return omx_reader.h5_filename(omx)
+    """Resolve the on-disk filename of an OMX HDF5 file, if possible.
+
+    Filename discovery is deliberately structural so callers can continue to
+    pass handles created by optional OMX libraries.  In particular, both
+    ``openmatrix.File`` and PyTables ``File`` expose a ``filename`` attribute;
+    Sharrow can reopen that path with h5py without importing either package.
+    """
+    filename = omx_reader.h5_filename(omx)
+    if filename is None:
+        filename = getattr(omx, "filename", None)
+        try:
+            filename = os.fspath(filename)
+        except TypeError:
+            return None
+        if not os.path.isfile(filename):
+            return None
+    return filename
 
 
 def from_omx(
@@ -313,8 +328,10 @@ def from_omx(
 
     Parameters
     ----------
-    omx : h5py.File or path-like
-        An OMX-format HDF5 file or its path.
+    omx : h5py.File, path-like, or filename-bearing OMX handle
+        An OMX-format HDF5 file, its path, or a compatible open handle such as
+        an ``openmatrix.File``. Filename-bearing handles are reopened through
+        h5py and remain owned by the caller.
     index_names : tuple, default ("otaz", "dtaz")
         The names of the two matrix dimensions.
     indexes : str or tuple[str], optional
@@ -345,7 +362,18 @@ def from_omx(
                 renames=renames,
             )
     if not isinstance(omx, h5py.File):
-        raise TypeError("omx must be an h5py.File or path-like object")
+        filename = omx_file_name(omx)
+        if filename is None:
+            raise TypeError(
+                "omx must be an h5py.File, path-like, or filename-bearing OMX handle"
+            )
+        with h5py.File(filename, "r") as handle:
+            return from_omx(
+                handle,
+                index_names=index_names,
+                indexes=indexes,
+                renames=renames,
+            )
 
     omx_data = omx["data"]
     omx_lookup = omx["lookup"]
@@ -567,8 +595,10 @@ def from_omx_3d(
 
     Parameters
     ----------
-    omx : h5py.File, path-like, or iterable of these
-        One or more OMX-format HDF5 files or paths.
+    omx : h5py.File, path-like, filename-bearing OMX handle, or iterable
+        One or more OMX-format HDF5 files, paths, or compatible open handles
+        such as ``openmatrix.File``. Filename-bearing handles are reopened
+        through h5py and remain owned by the caller.
     index_names : tuple, default ("otaz", "dtaz", "time_period")
         Should be a tuple of length 3, giving the names of the three
         dimensions.  The first two names are the native dimensions from
@@ -651,7 +681,7 @@ def from_omx_3d(
     if load != "memmap" and memory_path is not None:
         raise ValueError("memory_path is only used when load='memmap'")
 
-    if isinstance(omx, (h5py.File, str, os.PathLike)):
+    if isinstance(omx, (h5py.File, str, os.PathLike)) or omx_file_name(omx):
         omx_sources = [omx]
     else:
         omx_sources = list(omx)
@@ -669,7 +699,18 @@ def from_omx_3d(
             elif isinstance(source, h5py.File):
                 use_file_handles.append(source)
             else:
-                raise TypeError("omx entries must be h5py.File or path-like objects")
+                # Preserve compatibility with openmatrix/PyTables and similar
+                # optional wrappers without importing those dependencies. They
+                # expose the backing HDF5 path through ``filename``.
+                filename = omx_file_name(source)
+                if filename is None:
+                    raise TypeError(
+                        "omx entries must be h5py.File, path-like, or "
+                        "filename-bearing OMX handles"
+                    )
+                h = h5py.File(filename, "r")
+                opened_file_handles.append(h)
+                use_file_handles.append(h)
     except Exception:
         for handle in opened_file_handles:
             handle.close()
@@ -986,8 +1027,9 @@ def reload_from_omx_3d(
     ----------
     dataset : xr.Dataset
         The dataset to reload into.
-    omx : h5py.File, path-like, or iterable of these
-        One or more OMX-format HDF5 files to load from.
+    omx : h5py.File, path-like, filename-bearing OMX handle, or iterable
+        One or more OMX-format HDF5 files, paths, or compatible open handles
+        such as ``openmatrix.File``.
     time_period_sep : str, default "__"
         The separator used to identify time periods in the dataset.
     ignore : list-like, optional
@@ -999,7 +1041,7 @@ def reload_from_omx_3d(
     """
     if isinstance(ignore, str):
         ignore = [ignore]
-    if isinstance(omx, (h5py.File, str, os.PathLike)):
+    if isinstance(omx, (h5py.File, str, os.PathLike)) or omx_file_name(omx):
         omx = [omx]
 
     bytes_loaded = 0
@@ -1047,7 +1089,14 @@ def reload_from_omx_3d(
             logger.info(f"loading into dataset from {source.filename}")
             file_context = contextlib.nullcontext(source)
         else:
-            raise TypeError("omx entries must be h5py.File or path-like objects")
+            filename = omx_file_name(source)
+            if filename is None:
+                raise TypeError(
+                    "omx entries must be h5py.File, path-like, or "
+                    "filename-bearing OMX handles"
+                )
+            logger.info(f"loading into dataset from {filename}")
+            file_context = h5py.File(filename, "r")
         with file_context as handle:
             data_group = handle["data"]
             for data_name, dset in data_group.items():
