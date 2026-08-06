@@ -2,14 +2,18 @@ from __future__ import annotations
 
 import ast
 import base64
+import concurrent.futures
+import contextlib
 import hashlib
 import logging
+import os
 import re
 import time
 from collections.abc import Hashable, Iterable, Mapping, Sequence
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
+import h5py
 import numpy as np
 import pandas as pd
 import pyarrow as pa
@@ -22,10 +26,6 @@ from .aster import extract_all_name_tokens
 from .categorical import _Categorical  # noqa
 from .shared_memory import si_units
 from .table import Table
-
-if TYPE_CHECKING:
-    import openmatrix
-
 
 logger = logging.getLogger("sharrow")
 
@@ -291,20 +291,17 @@ def from_table(
 
 
 def _group_names(grp) -> list[str]:
-    """List the child node names of a pytables or h5py group."""
-    try:
-        return list(grp._v_children)  # pytables
-    except AttributeError:
-        return list(grp.keys())  # h5py
+    """List the child names of an HDF5 group."""
+    return list(grp.keys())
 
 
 def omx_file_name(omx) -> str | None:
-    """Resolve the on-disk filename of an OMX-like object, if possible."""
+    """Resolve the on-disk filename of an OMX HDF5 file, if possible."""
     return omx_reader.h5_filename(omx)
 
 
 def from_omx(
-    omx: openmatrix.File,
+    omx: h5py.File | str | os.PathLike,
     index_names=("otaz", "dtaz"),
     indexes="one-based",
     renames=None,
@@ -314,13 +311,10 @@ def from_omx(
 
     Parameters
     ----------
-    omx : openmatrix.File or larch.OMX
-        An OMX-format file, opened for reading.
+    omx : h5py.File or path-like
+        An OMX-format HDF5 file or its path.
     index_names : tuple, default ("otaz", "dtaz")
-        Should be a tuple of length 3, giving the names of the three
-        dimensions.  The first two names are the native dimensions from
-        the open matrix file, the last is the name of the implicit
-        dimension that is created by parsing array names.
+        The names of the two matrix dimensions.
     indexes : str or tuple[str], optional
         The name of a 'lookup' in the OMX file, which will be used to
         populate the coordinates for the two native dimensions.  Or,
@@ -340,21 +334,20 @@ def from_omx(
     -------
     Dataset
     """
-    import h5py
+    if isinstance(omx, (str, os.PathLike)):
+        with h5py.File(omx, "r") as handle:
+            return from_omx(
+                handle,
+                index_names=index_names,
+                indexes=indexes,
+                renames=renames,
+            )
+    if not isinstance(omx, h5py.File):
+        raise TypeError("omx must be an h5py.File or path-like object")
 
-    # handle larch.OMX, openmatrix.open_file, and h5py.File versions
-    if "lar" in type(omx).__module__:
-        omx_data = omx.data
-        omx_lookup = omx.lookup
-        omx_shape = omx.shape
-    elif isinstance(omx, h5py.File):
-        omx_data = omx["data"]
-        omx_lookup = omx["lookup"]
-        omx_shape = tuple(int(i) for i in omx.attrs["SHAPE"])
-    else:
-        omx_data = omx.root["data"]
-        omx_lookup = omx.root["lookup"]
-        omx_shape = omx.shape()
+    omx_data = omx["data"]
+    omx_lookup = omx["lookup"]
+    omx_shape = tuple(int(i) for i in omx.attrs["SHAPE"])
 
     if renames is None:
         data_names = _group_names(omx_data)
@@ -368,8 +361,6 @@ def from_omx(
     filename = omx_file_name(omx)
     if _is_reopenable(filename):
         # fast path: parallel chunk decoding via h5py
-        import concurrent.futures
-
         with h5py.File(filename, "r") as f5:
             f5_data = f5["data"]
             with concurrent.futures.ThreadPoolExecutor() as pool:
@@ -436,8 +427,6 @@ def _should_ignore(ignore, x):
 
 def _fast_load_omx_array(filename, name):
     """Load one matrix table from an OMX file, decoding chunks in parallel."""
-    import h5py
-
     with h5py.File(filename, "r") as f:
         return omx_reader.read_dataset(f["data"][name])
 
@@ -450,8 +439,6 @@ def _is_reopenable(filename) -> bool:
     """
     if filename is None:
         return False
-    import h5py
-
     try:
         with h5py.File(filename, "r"):
             pass
@@ -461,7 +448,7 @@ def _is_reopenable(filename) -> bool:
 
 
 def from_omx_3d(
-    omx: openmatrix.File | str | Iterable[openmatrix.File | str],
+    omx: h5py.File | str | os.PathLike | Iterable[h5py.File | str | os.PathLike],
     index_names=("otaz", "dtaz", "time_period"),
     indexes=None,
     *,
@@ -475,8 +462,8 @@ def from_omx_3d(
 
     Parameters
     ----------
-    omx : openmatrix.File or larch.OMX
-        An OMX-format file, opened for reading.
+    omx : h5py.File, path-like, or iterable of these
+        One or more OMX-format HDF5 files or paths.
     index_names : tuple, default ("otaz", "dtaz", "time_period")
         Should be a tuple of length 3, giving the names of the three
         dimensions.  The first two names are the native dimensions from
@@ -514,44 +501,38 @@ def from_omx_3d(
     -------
     Dataset
     """
-    if not isinstance(omx, (list, tuple)):
+    if isinstance(omx, (h5py.File, str, os.PathLike)):
         omx = [omx]
+    else:
+        omx = list(omx)
+    if not omx:
+        raise ValueError("at least one OMX file is required")
 
     use_file_handles = []
     opened_file_handles = []
-    for filename in omx:
-        if isinstance(filename, str):
-            import openmatrix
-
-            h = openmatrix.open_file(filename)
-            opened_file_handles.append(h)
-            use_file_handles.append(h)
-        else:
-            use_file_handles.append(filename)
+    try:
+        for source in omx:
+            if isinstance(source, (str, os.PathLike)):
+                h = h5py.File(source, "r")
+                opened_file_handles.append(h)
+                use_file_handles.append(h)
+            elif isinstance(source, h5py.File):
+                use_file_handles.append(source)
+            else:
+                raise TypeError("omx entries must be h5py.File or path-like objects")
+    except Exception:
+        for handle in opened_file_handles:
+            handle.close()
+        raise
     omx = use_file_handles
 
     try:
-        import h5py
-
-        # handle larch.OMX, openmatrix.open_file, and h5py.File versions
-        if "larch" in type(omx[0]).__module__:
-            omx_shape = omx[0].shape
-            omx_lookup = omx[0].lookup
-        elif isinstance(omx[0], h5py.File):
-            omx_shape = tuple(int(i) for i in omx[0].attrs["SHAPE"])
-            omx_lookup = omx[0]["lookup"]
-        else:
-            omx_shape = omx[0].shape()
-            omx_lookup = omx[0].root["lookup"]
+        omx_shape = tuple(int(i) for i in omx[0].attrs["SHAPE"])
+        omx_lookup = omx[0]["lookup"]
         omx_data = []
         omx_data_map = {}
         for n, i in enumerate(omx):
-            if "larch" in type(i).__module__:
-                omx_data.append(i.data)
-            elif isinstance(i, h5py.File):
-                omx_data.append(i["data"])
-            else:
-                omx_data.append(i.root["data"])
+            omx_data.append(i["data"])
             for k in _group_names(omx_data[-1]):
                 omx_data_map[k] = n
 
@@ -604,7 +585,7 @@ def from_omx_3d(
             r1 = ranger(n1)
             r2 = ranger(n2)
         else:
-            r1 = r2 = pd.Index(omx_lookup[indexes])
+            r1 = r2 = pd.Index(np.asarray(omx_lookup[indexes]))
 
         if time_periods is None:
             raise ValueError("must give time periods explicitly")
@@ -663,7 +644,7 @@ def from_omx_3d(
 
 def reload_from_omx_3d(
     dataset: xr.Dataset,
-    omx: Iterable[str],
+    omx: h5py.File | str | os.PathLike | Iterable[h5py.File | str | os.PathLike],
     *,
     time_period_sep="__",
     ignore=None,
@@ -682,8 +663,8 @@ def reload_from_omx_3d(
     ----------
     dataset : xr.Dataset
         The dataset to reload into.
-    omx : Iterable[str]
-        The list of OMX file names to load from.
+    omx : h5py.File, path-like, or iterable of these
+        One or more OMX-format HDF5 files to load from.
     time_period_sep : str, default "__"
         The separator used to identify time periods in the dataset.
     ignore : list-like, optional
@@ -695,23 +676,18 @@ def reload_from_omx_3d(
     """
     if isinstance(ignore, str):
         ignore = [ignore]
-
-    import concurrent.futures
-
-    import h5py
+    if isinstance(omx, (h5py.File, str, os.PathLike)):
+        omx = [omx]
 
     bytes_loaded = 0
     t0 = time.time()
 
     def _load_into(raw, dset, executor):
-        """Fill the array `raw` from the h5py or pytables dataset `dset`."""
-        if isinstance(dset, h5py.Dataset):
-            if raw.dtype == dset.dtype:
-                omx_reader.read_dataset(dset, out=raw, executor=executor)
-            else:
-                raw[:, :] = omx_reader.read_dataset(dset, executor=executor)
+        """Fill the array `raw` from the HDF5 dataset `dset`."""
+        if raw.dtype == dset.dtype:
+            omx_reader.read_dataset(dset, out=raw, executor=executor)
         else:
-            raw[:, :] = dset[:, :]
+            raw[:, :] = omx_reader.read_dataset(dset, executor=executor)
 
     def _load_one(dset, data_name, filter_note, executor):
         nonlocal bytes_loaded
@@ -743,39 +719,25 @@ def reload_from_omx_3d(
             f"in {time.time() - t1:.2f}s, {si_units(bytes_loaded)}"
         )
 
-    opened_file_handles = []
-    try:
-        with concurrent.futures.ThreadPoolExecutor() as pool:
-            for source in omx:
-                filename = omx_file_name(source)
-                if filename is not None:
-                    # fast path: parallel chunk decoding via h5py
-                    logger.info(f"loading into dataset from {filename}")
-                    f5 = h5py.File(filename, "r")
-                    opened_file_handles.append(f5)
-                    data_group = f5["data"]
-                    for data_name in data_group.keys():
-                        if _should_ignore(ignore, data_name):
-                            logger.info(f"ignoring {data_name}")
-                            continue
-                        dset = data_group[data_name]
-                        filter_note = f"{dset.compression}/{dset.compression_opts}"
-                        _load_one(dset, data_name, filter_note, pool)
-                else:
-                    # source is an open file handle with no resolvable
-                    # on-disk filename; read through the handle directly
-                    f = source
-                    for data_name in f.root.data._v_children:
-                        if _should_ignore(ignore, data_name):
-                            logger.info(f"ignoring {data_name}")
-                            continue
-                        filters = f.root.data[data_name].filters
-                        filter_note = f"{filters.complib}/{filters.complevel}"
-                        _load_one(f.root.data[data_name], data_name, filter_note, pool)
-        logger.info(f"loading to dataset complete in {time.time() - t0:.2f}s")
-    finally:
-        for h in opened_file_handles:
-            h.close()
+    with concurrent.futures.ThreadPoolExecutor() as pool:
+        for source in omx:
+            if isinstance(source, (str, os.PathLike)):
+                logger.info(f"loading into dataset from {source}")
+                file_context = h5py.File(source, "r")
+            elif isinstance(source, h5py.File):
+                logger.info(f"loading into dataset from {source.filename}")
+                file_context = contextlib.nullcontext(source)
+            else:
+                raise TypeError("omx entries must be h5py.File or path-like objects")
+            with file_context as handle:
+                data_group = handle["data"]
+                for data_name, dset in data_group.items():
+                    if _should_ignore(ignore, data_name):
+                        logger.info(f"ignoring {data_name}")
+                        continue
+                    filter_note = f"{dset.compression}/{dset.compression_opts}"
+                    _load_one(dset, data_name, filter_note, pool)
+    logger.info(f"loading to dataset complete in {time.time() - t0:.2f}s")
 
 
 def _parquet_layout(labels_0, labels_1):

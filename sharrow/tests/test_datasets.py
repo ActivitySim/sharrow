@@ -2,8 +2,8 @@ import secrets
 import tempfile
 from pathlib import Path
 
+import h5py
 import numpy as np
-import openmatrix
 import pandas as pd
 import pytest
 import xarray as xr
@@ -16,15 +16,12 @@ def test_dataset_construct_with_zoneids():
     tempdir = tempfile.TemporaryDirectory()
     t = Path(tempdir.name)
 
-    with openmatrix.open_file(t.joinpath("dummy5.omx"), mode="w") as out:
-        out.create_carray("/data", "Eye", obj=np.eye(5, dtype=np.float32))
-        out.create_carray("/lookup", "Zone", obj=np.asarray([11, 22, 33, 44, 55]))
-        shp = np.empty(2, dtype=int)
-        shp[0] = 5
-        shp[1] = 5
-        out.root._v_attrs.SHAPE = shp
+    with h5py.File(t.joinpath("dummy5.omx"), mode="w") as out:
+        out.create_dataset("data/Eye", data=np.eye(5, dtype=np.float32))
+        out.create_dataset("lookup/Zone", data=np.asarray([11, 22, 33, 44, 55]))
+        out.attrs["SHAPE"] = np.asarray([5, 5], dtype=int)
 
-    with openmatrix.open_file(t.joinpath("dummy5.omx"), mode="r") as back:
+    with h5py.File(t.joinpath("dummy5.omx"), mode="r") as back:
         ds = sh.dataset.from_omx(back, indexes="Zone")
 
     assert sorted(ds.coords) == ["dtaz", "otaz"]
@@ -32,11 +29,11 @@ def test_dataset_construct_with_zoneids():
     assert sorted(ds.variables) == ["Eye", "dtaz", "otaz"]
     assert ds["Eye"].data == approx(np.eye(5, dtype=np.float32))
 
-    with openmatrix.open_file(t.joinpath("dummy5.omx"), mode="r") as back:
+    with h5py.File(t.joinpath("dummy5.omx"), mode="r") as back:
         ds0 = sh.dataset.from_omx(back, indexes="zero-based")
     assert ds0.coords["otaz"].values == approx(np.asarray([0, 1, 2, 3, 4]))
 
-    with openmatrix.open_file(t.joinpath("dummy5.omx"), mode="r") as back:
+    with h5py.File(t.joinpath("dummy5.omx"), mode="r") as back:
         ds1 = sh.dataset.from_omx(back, indexes="one-based")
     assert ds1.coords["otaz"].values == approx(np.asarray([1, 2, 3, 4, 5]))
 
@@ -72,7 +69,7 @@ def test_dataset_categoricals():
 
 def test_load_with_ignore():
     filename = sh.example_data.get_skims_filename()
-    with openmatrix.open_file(filename) as f:
+    with h5py.File(filename) as f:
         skims = sh.dataset.from_omx_3d(
             f,
             index_names=("otaz", "dtaz", "time_period"),
@@ -83,7 +80,7 @@ def test_load_with_ignore():
         )
     assert "DRV_COM_WLK_FAR" in skims.variables
 
-    with openmatrix.open_file(filename) as f:
+    with h5py.File(filename) as f:
         skims1 = sh.dataset.from_omx_3d(
             f,
             index_names=("otaz", "dtaz", "time_period"),
@@ -95,7 +92,7 @@ def test_load_with_ignore():
         )
     assert "DRV_COM_WLK_FAR" not in skims1.variables
 
-    with openmatrix.open_file(filename) as f:
+    with h5py.File(filename) as f:
         skims2 = sh.dataset.from_omx_3d(
             f,
             index_names=("otaz", "dtaz", "time_period"),
@@ -121,7 +118,7 @@ def test_deferred_load_to_shared_memory():
     from sharrow.example_data import get_skims_filename
 
     skims_filename = get_skims_filename()
-    with openmatrix.open_file(skims_filename) as f:
+    with h5py.File(skims_filename) as f:
         d0 = sh.dataset.from_omx_3d(
             f,
             index_names=("otaz", "dtaz", "time_period"),
@@ -315,27 +312,23 @@ def test_from_parquet_3d_ignore():
     assert "DIST" in skims.variables
 
 
-def _write_compressed_omx(path, matrices, complib="zlib", complevel=7, shuffle=True):
+def _write_compressed_omx(path, matrices, compression="gzip", compression_opts=7):
     """Write an OMX file with compressed, oddly-chunked matrix tables."""
-    import tables
-
-    filters = tables.Filters(complevel=complevel, complib=complib, shuffle=shuffle)
     n1, n2 = next(iter(matrices.values())).shape
-    with openmatrix.open_file(path, mode="w") as out:
+    with h5py.File(path, mode="w") as out:
         for name, arr in matrices.items():
-            out.create_carray(
-                "/data",
-                name,
-                obj=arr,
-                filters=filters,
+            out.create_dataset(
+                f"data/{name}",
+                data=arr,
+                compression=compression,
+                compression_opts=compression_opts,
+                shuffle=True,
                 # chunk shape that does not evenly divide the array,
                 # to exercise edge-chunk handling
-                chunkshape=(7, 7),
+                chunks=(7, 7),
             )
-        out.create_carray("/lookup", "taz", obj=np.arange(11, 11 + n1))
-        shp = np.empty(2, dtype=int)
-        shp[0], shp[1] = n1, n2
-        out.root._v_attrs.SHAPE = shp
+        out.create_dataset("lookup/taz", data=np.arange(11, 11 + n1))
+        out.attrs["SHAPE"] = np.asarray([n1, n2], dtype=int)
 
 
 def _random_matrices(n=25, seed=42):
@@ -353,7 +346,7 @@ def test_from_omx_compressed_zlib():
     with tempfile.TemporaryDirectory() as tempdir:
         f = Path(tempdir).joinpath("skims.omx")
         _write_compressed_omx(f, matrices)
-        with openmatrix.open_file(f, mode="r") as back:
+        with h5py.File(f, mode="r") as back:
             ds = sh.dataset.from_omx(back, indexes="taz")
             ds_renamed = sh.dataset.from_omx(
                 back, indexes="taz", renames={"distance": "DIST"}
@@ -367,15 +360,12 @@ def test_from_omx_compressed_zlib():
     assert sorted(ds_limited.data_vars) == ["COUNTS"]
 
 
-def test_from_omx_compressed_h5py_handle():
-    import h5py
-
+def test_from_omx_compressed_path():
     matrices = _random_matrices()
     with tempfile.TemporaryDirectory() as tempdir:
         f = Path(tempdir).joinpath("skims.omx")
         _write_compressed_omx(f, matrices)
-        with h5py.File(f, mode="r") as back:
-            ds = sh.dataset.from_omx(back, indexes="taz")
+        ds = sh.dataset.from_omx(f, indexes="taz")
     for name, arr in matrices.items():
         np.testing.assert_array_equal(ds[name].values, arr)
     assert ds.coords["otaz"].values == approx(np.arange(11, 36))
@@ -402,7 +392,7 @@ def test_from_omx_3d_compressed_zlib():
         assert skims.coords["otaz"].values == approx(np.arange(11, 36))
 
         # also via an already-open file handle
-        with openmatrix.open_file(f, mode="r") as back:
+        with h5py.File(f, mode="r") as back:
             skims2 = sh.dataset.from_omx_3d(
                 back,
                 time_periods=["AM", "PM"],
@@ -429,10 +419,15 @@ def test_reload_from_omx_3d_compressed():
         sh.dataset.reload_from_omx_3d(blank2, [str(f)], ignore=["COUNTS"])
         assert (blank2["COUNTS"].values == 0).all()
         np.testing.assert_array_equal(blank2["DIST"].values, expected["DIST"].values)
+        # An h5py handle is accepted directly and remains owned by the caller.
+        blank3 = xr.zeros_like(expected)
+        with h5py.File(f, "r") as handle:
+            sh.dataset.reload_from_omx_3d(blank3, handle)
+            assert handle.id.valid
+        xr.testing.assert_equal(blank3, expected)
 
 
 def test_from_omx_compressed_blosc():
-    import h5py
     import hdf5plugin
 
     rng = np.random.default_rng(7)
@@ -474,7 +469,7 @@ def test_from_omx_3d_writable_handle():
     with tempfile.TemporaryDirectory() as tempdir:
         f = Path(tempdir).joinpath("skims.omx")
         _write_compressed_omx(f, matrices)
-        with openmatrix.open_file(f, mode="a") as back:
+        with h5py.File(f, mode="a") as back:
             skims = sh.dataset.from_omx_3d(
                 back, time_periods=["AM", "PM"], max_float_precision=64
             )
