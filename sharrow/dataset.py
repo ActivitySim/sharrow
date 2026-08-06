@@ -6,8 +6,10 @@ import concurrent.futures
 import contextlib
 import hashlib
 import logging
+import multiprocessing
 import os
 import re
+import secrets
 import time
 from collections.abc import Hashable, Iterable, Mapping, Sequence
 from pathlib import Path
@@ -425,10 +427,108 @@ def _should_ignore(ignore, x):
     return False
 
 
-def _fast_load_omx_array(filename, name):
-    """Load one matrix table from an OMX file, decoding chunks in parallel."""
+def _omx_target_dtype(dtype, max_float_precision):
+    """Return the in-memory dtype after applying the precision limit."""
+    dtype = np.dtype(dtype)
+    if np.issubdtype(dtype, np.floating):
+        max_dtype = np.dtype(f"float{max_float_precision}")
+        if dtype.itemsize > max_dtype.itemsize:
+            return max_dtype
+    return dtype
+
+
+def _empty_omx_3d(shape, dtype):
+    """Allocate a 3-D array whose individual last-axis pages are contiguous.
+
+    OMX stores each time-period page as an independent C-contiguous 2-D HDF5
+    dataset.  Making the logical last axis physically outermost lets h5py read
+    each source page directly into the result without a matrix-sized temporary.
+    """
+    dtype = np.dtype(dtype)
+    nbytes = int(np.prod(shape)) * dtype.itemsize
+    buffer = np.empty(nbytes, dtype=np.uint8)
+    strides = (
+        shape[1] * dtype.itemsize,
+        dtype.itemsize,
+        shape[0] * shape[1] * dtype.itemsize,
+    )
+    return np.ndarray(shape, dtype=dtype, buffer=buffer, strides=strides)
+
+
+def _read_omx_dataset(dset, out=None, dtype=None):
+    """Read one HDF5 dataset with native h5py decompression and conversion."""
+    if out is not None:
+        if out.flags.c_contiguous:
+            # HDF5 converts directly to the destination dtype when needed.
+            dset.read_direct(out)
+        else:
+            # h5py requires a C-contiguous destination.  This fallback is used
+            # for ordinary C-order 3-D arrays whose last-axis pages are strided.
+            out[...] = dset.astype(out.dtype)[()]
+        return out
+    if dtype is None or np.dtype(dtype) == dset.dtype:
+        return dset[()]
+    return dset.astype(np.dtype(dtype))[()]
+
+
+def _fast_load_omx_array(filename, name, dtype=None):
+    """Load one matrix table through h5py's native HDF5 filter pipeline."""
     with h5py.File(filename, "r") as f:
-        return omx_reader.read_dataset(f["data"][name])
+        return _read_omx_dataset(f["data"][name], dtype=dtype)
+
+
+def _load_omx_variable(page_sources, shape, dtype):
+    """Load all pages of one logical OMX variable in a single Dask task."""
+    result = _empty_omx_3d(shape, dtype)
+    open_files = {}
+    try:
+        for period, source in enumerate(page_sources):
+            if source is None:
+                result[..., period].fill(0)
+                continue
+            filename, data_name, eager_array = source
+            if eager_array is not None:
+                result[..., period] = eager_array
+                continue
+            if filename not in open_files:
+                open_files[filename] = h5py.File(filename, "r")
+            _read_omx_dataset(
+                open_files[filename]["data"][data_name], result[..., period]
+            )
+    finally:
+        for handle in open_files.values():
+            handle.close()
+    return result
+
+
+def _load_omx_assignments(dataset, source, assignments):
+    """Load all selected matrices from one source into a prepared Dataset."""
+    if isinstance(source, h5py.File):
+        file_context = contextlib.nullcontext(source)
+    else:
+        file_context = h5py.File(source, "r")
+    bytes_loaded = 0
+    with file_context as handle:
+        data_group = handle["data"]
+        for data_name, variable_name, period in assignments:
+            target = dataset[variable_name].data
+            if period is not None:
+                target = target[..., period]
+            _read_omx_dataset(data_group[data_name], target)
+            bytes_loaded += target.nbytes
+    return bytes_loaded
+
+
+def _load_omx_shared_worker(shared_memory_key, source, assignments):
+    """Process worker that fills disjoint pages of a shared OMX Dataset."""
+    target = xr.Dataset.shm.from_shared_memory(shared_memory_key, mode="r+")
+    bytes_loaded = _load_omx_assignments(target, source, assignments)
+    if shared_memory_key.startswith("memmap:"):
+        for memory_object in target.shm._shared_memory_objs_:
+            flush = getattr(memory_object, "flush", None)
+            if flush is not None:
+                flush()
+    return bytes_loaded
 
 
 def _is_reopenable(filename) -> bool:
@@ -456,6 +556,11 @@ def from_omx_3d(
     time_period_sep="__",
     max_float_precision=32,
     ignore=None,
+    load="lazy",
+    task_granularity="variable",
+    workers=None,
+    memory_path=None,
+    shared_memory_key=None,
 ):
     """
     Create a Dataset from an OMX file with an implicit third dimension.
@@ -496,22 +601,67 @@ def from_omx_3d(
         match the name of a variable, that variable will not be included
         in the loaded dataset. This is useful for excluding variables that
         are not needed in the current application.
+    load : {"lazy", "eager", "shared", "memmap"}, default "lazy"
+        Loading mode. ``"lazy"`` returns Dask arrays. ``"eager"`` loads into
+        ordinary NumPy arrays in the calling process. ``"shared"`` uses
+        process-parallel reads into shared memory and is the fastest mode for
+        multiple large OMX files. ``"memmap"`` uses the same parallel loader
+        with disk-backed arrays, substantially reducing resident memory at the
+        cost of additional storage I/O.
+    task_granularity : {"variable", "matrix"}, default "variable"
+        Dask task granularity for lazy loading. Grouping all time-period pages
+        of a variable minimizes graph and file-open overhead. Matrix granularity
+        can use less memory when only selected periods are subsequently loaded.
+    workers : int, optional
+        Number of file-level worker processes for ``"shared"`` or ``"memmap"``.
+        The default uses up to one worker per source file. Eager loading uses
+        one worker in the calling process.
+    memory_path : path-like, optional
+        New backing file to create when ``load="memmap"``. The associated
+        metadata is stored alongside it with a ``.meta.pkl`` suffix. Delete
+        both when finished with
+        ``result.shm.delete_shared_memory_files(result.shm.shared_memory_key)``.
+    shared_memory_key : str, optional
+        Key used to identify an explicitly shared dataset. A unique key is
+        generated by default. Call ``result.shm.release_shared_memory()`` when
+        a shared result is no longer needed.
 
     Returns
     -------
     Dataset
+        Lazy Dask-backed, ordinary in-memory, shared-memory-backed, or
+        memory-mapped according to ``load``.
     """
+    if load is True:
+        load = "eager"
+    elif load is False:
+        load = "lazy"
+    if load not in {"lazy", "eager", "shared", "memmap"}:
+        raise ValueError("load must be 'lazy', 'eager', 'shared', or 'memmap'")
+    if task_granularity not in {"variable", "matrix"}:
+        raise ValueError("task_granularity must be 'variable' or 'matrix'")
+    if workers is not None and (not isinstance(workers, int) or workers < 1):
+        raise ValueError("workers must be a positive integer")
+    if load == "eager" and workers not in {None, 1}:
+        raise ValueError(
+            "load='eager' uses one process; use load='shared' for parallel reads"
+        )
+    if load == "memmap" and memory_path is None:
+        raise ValueError("memory_path is required when load='memmap'")
+    if load != "memmap" and memory_path is not None:
+        raise ValueError("memory_path is only used when load='memmap'")
+
     if isinstance(omx, (h5py.File, str, os.PathLike)):
-        omx = [omx]
+        omx_sources = [omx]
     else:
-        omx = list(omx)
-    if not omx:
+        omx_sources = list(omx)
+    if not omx_sources:
         raise ValueError("at least one OMX file is required")
 
     use_file_handles = []
     opened_file_handles = []
     try:
-        for source in omx:
+        for source in omx_sources:
             if isinstance(source, (str, os.PathLike)):
                 h = h5py.File(source, "r")
                 opened_file_handles.append(h)
@@ -524,38 +674,22 @@ def from_omx_3d(
         for handle in opened_file_handles:
             handle.close()
         raise
-    omx = use_file_handles
+    omx_handles = use_file_handles
 
     try:
-        omx_shape = tuple(int(i) for i in omx[0].attrs["SHAPE"])
-        omx_lookup = omx[0]["lookup"]
-        omx_data = []
+        omx_shape = tuple(int(i) for i in omx_handles[0].attrs["SHAPE"])
+        omx_lookup = omx_handles[0]["lookup"]
+        omx_data = [handle["data"] for handle in omx_handles]
         omx_data_map = {}
-        for n, i in enumerate(omx):
-            omx_data.append(i["data"])
-            for k in _group_names(omx_data[-1]):
-                omx_data_map[k] = n
+        matrix_metadata = {}
+        for source_number, data_group in enumerate(omx_data):
+            for data_name in _group_names(data_group):
+                node = data_group[data_name]
+                omx_data_map[data_name] = source_number
+                matrix_metadata[data_name] = (tuple(node.shape), np.dtype(node.dtype))
 
-        omx_filenames = [omx_file_name(i) for i in omx]
+        omx_filenames = [omx_file_name(i) for i in omx_handles]
         omx_reopenable = [_is_reopenable(i) for i in omx_filenames]
-
-        import dask.array
-
-        def _lazy_omx_array(k):
-            # Build a lazy dask array for one matrix table.  When the source
-            # file can be independently reopened, defer to the parallel
-            # chunk-decoding reader; otherwise read the data eagerly, as the
-            # open file handle may be closed before the dask graph is computed.
-            n = omx_data_map[k]
-            filename = omx_filenames[n]
-            node = omx_data[n][k]
-            if not omx_reopenable[n]:
-                return dask.array.from_array(np.asarray(node[:]))
-            return dask.array.from_delayed(
-                dask.delayed(_fast_load_omx_array)(filename, k),
-                shape=tuple(node.shape),
-                dtype=node.dtype,
-            )
 
         data_names = list(omx_data_map.keys())
         if ignore is not None:
@@ -593,50 +727,240 @@ def from_omx_3d(
         time_periods_map = {t: n for n, t in enumerate(time_periods)}
 
         pending_3d = {}
-        content = {}
-
-        for k in data_names:
-            if time_period_sep in k:
-                base_k, time_k = k.split(time_period_sep, 1)
-                if base_k not in pending_3d:
-                    pending_3d[base_k] = [None] * len(time_periods)
-                pending_3d[base_k][time_periods_map[time_k]] = _lazy_omx_array(k)
-            else:
-                content[k] = xr.DataArray(
-                    _lazy_omx_array(k),
-                    dims=index_names[:2],
-                    coords={
-                        index_names[0]: r1,
-                        index_names[1]: r2,
-                    },
+        variable_specs = {}
+        for data_name in data_names:
+            source_number = omx_data_map[data_name]
+            matrix_shape, matrix_dtype = matrix_metadata[data_name]
+            if matrix_shape != omx_shape:
+                raise ValueError(
+                    f"matrix {data_name!r} has shape {matrix_shape}, expected {omx_shape}"
                 )
-        for base_k, darrs in pending_3d.items():
-            # find a prototype array
-            prototype = None
-            for i in darrs:
-                prototype = i
-                if prototype is not None:
-                    break
-            if prototype is None:
-                raise ValueError("no prototype")
-            darrs_ = [
-                (i if i is not None else dask.array.zeros_like(prototype))
-                for i in darrs
-            ]
-            content[base_k] = xr.DataArray(
-                dask.array.stack(darrs_, axis=-1),
-                dims=index_names,
-                coords={
-                    index_names[0]: r1,
-                    index_names[1]: r2,
-                    index_names[2]: time_periods,
-                },
+            entry = (source_number, data_name, matrix_dtype)
+            if time_period_sep in data_name:
+                base_name, period_name = data_name.split(time_period_sep, 1)
+                if period_name not in time_periods_map:
+                    raise KeyError(
+                        f"time period {period_name!r} from {data_name!r} is not in "
+                        "time_periods"
+                    )
+                pending_3d.setdefault(base_name, [None] * len(time_periods))[
+                    time_periods_map[period_name]
+                ] = entry
+            else:
+                variable_specs[data_name] = {
+                    "pages": [entry],
+                    "shape": omx_shape,
+                    "dtype": _omx_target_dtype(matrix_dtype, max_float_precision),
+                }
+        for base_name, pages in pending_3d.items():
+            source_dtypes = [page[2] for page in pages if page is not None]
+            variable_specs[base_name] = {
+                "pages": pages,
+                "shape": omx_shape + (len(time_periods),),
+                "dtype": _omx_target_dtype(
+                    np.result_type(*source_dtypes), max_float_precision
+                ),
+            }
+
+        coords = {index_names[0]: r1, index_names[1]: r2}
+        if pending_3d:
+            coords[index_names[2]] = time_periods
+
+        # Each assignment belongs to exactly one source file. Duplicate OMX
+        # names retain the established last-file-wins behavior.
+        assignments = [[] for _ in omx_handles]
+        for variable_name, spec in variable_specs.items():
+            is_3d = len(spec["shape"]) == 3
+            for period, page in enumerate(spec["pages"]):
+                if page is None:
+                    continue
+                source_number, data_name, _ = page
+                assignments[source_number].append(
+                    (data_name, variable_name, period if is_3d else None)
+                )
+
+        if load == "lazy":
+            import dask
+            import dask.array
+
+            eager_arrays = {}
+
+            def source_descriptor(page):
+                if page is None:
+                    return None
+                source_number, data_name, _ = page
+                if omx_reopenable[source_number]:
+                    return (str(omx_filenames[source_number]), data_name, None)
+                if data_name not in eager_arrays:
+                    eager_arrays[data_name] = np.asarray(
+                        omx_data[source_number][data_name][()]
+                    )
+                return (None, data_name, eager_arrays[data_name])
+
+            content = {}
+            for variable_name, spec in variable_specs.items():
+                dtype = spec["dtype"]
+                if len(spec["shape"]) == 2:
+                    page = spec["pages"][0]
+                    descriptor = source_descriptor(page)
+                    filename, data_name, eager_array = descriptor
+                    if eager_array is not None:
+                        array = dask.array.from_array(eager_array).astype(dtype)
+                    else:
+                        array = dask.array.from_delayed(
+                            dask.delayed(_fast_load_omx_array)(
+                                filename, data_name, dtype
+                            ),
+                            shape=spec["shape"],
+                            dtype=dtype,
+                        )
+                elif task_granularity == "variable":
+                    page_sources = [source_descriptor(i) for i in spec["pages"]]
+                    array = dask.array.from_delayed(
+                        dask.delayed(_load_omx_variable)(
+                            page_sources, spec["shape"], dtype
+                        ),
+                        shape=spec["shape"],
+                        dtype=dtype,
+                    )
+                else:
+                    page_arrays = []
+                    for page in spec["pages"]:
+                        descriptor = source_descriptor(page)
+                        if descriptor is None:
+                            page_arrays.append(
+                                dask.array.zeros(
+                                    omx_shape, chunks=omx_shape, dtype=dtype
+                                )
+                            )
+                            continue
+                        filename, data_name, eager_array = descriptor
+                        if eager_array is not None:
+                            page_array = dask.array.from_array(eager_array).astype(
+                                dtype
+                            )
+                        else:
+                            page_array = dask.array.from_delayed(
+                                dask.delayed(_fast_load_omx_array)(
+                                    filename, data_name, dtype
+                                ),
+                                shape=omx_shape,
+                                dtype=dtype,
+                            )
+                        page_arrays.append(page_array)
+                    array = dask.array.stack(page_arrays, axis=-1)
+                dims = index_names if array.ndim == 3 else index_names[:2]
+                content[variable_name] = (dims, array)
+            return xr.Dataset(content, coords=coords)
+
+        if load == "eager":
+            content = {}
+            for variable_name, spec in variable_specs.items():
+                if len(spec["shape"]) == 3:
+                    array = _empty_omx_3d(spec["shape"], spec["dtype"])
+                    for period, page in enumerate(spec["pages"]):
+                        if page is None:
+                            array[..., period].fill(0)
+                else:
+                    array = np.empty(spec["shape"], dtype=spec["dtype"])
+                dims = index_names if array.ndim == 3 else index_names[:2]
+                content[variable_name] = (dims, array)
+            result = xr.Dataset(content, coords=coords)
+            for source, source_assignments in zip(omx_handles, assignments):
+                if source_assignments:
+                    _load_omx_assignments(result, source, source_assignments)
+            return result
+
+        # Shared and memory-mapped modes use a lightweight template to reserve
+        # one contiguous backing buffer, then independent processes fill each
+        # source file directly into disjoint final-array pages.
+        if not all(omx_reopenable[n] for n, batch in enumerate(assignments) if batch):
+            raise ValueError(
+                f"load={load!r} requires path-backed OMX files that can be reopened"
             )
-        for i in content:
-            if np.issubdtype(content[i].dtype, np.floating):
-                if content[i].dtype.itemsize > max_float_precision / 8:
-                    content[i] = content[i].astype(f"float{max_float_precision}")
-        return xr.Dataset(content)
+        import dask.array
+
+        template_content = {}
+        array_order = {}
+        for variable_name, spec in variable_specs.items():
+            dims = index_names if len(spec["shape"]) == 3 else index_names[:2]
+            template_content[variable_name] = (
+                dims,
+                dask.array.empty(
+                    spec["shape"], chunks=spec["shape"], dtype=spec["dtype"]
+                ),
+            )
+            if len(spec["shape"]) == 3:
+                array_order[variable_name] = "last-axis-first"
+        template = xr.Dataset(template_content, coords=coords)
+
+        if load == "memmap":
+            memory_path = Path(memory_path).expanduser().resolve()
+            metadata_path = Path(f"{memory_path}.meta.pkl")
+            if memory_path.exists() or metadata_path.exists():
+                raise FileExistsError(
+                    f"memory_path and metadata path must not already exist: {memory_path}"
+                )
+            memory_path.parent.mkdir(parents=True, exist_ok=True)
+            key = f"memmap:{memory_path}"
+        else:
+            if shared_memory_key is not None and shared_memory_key.startswith(
+                "memmap:"
+            ):
+                raise ValueError("shared_memory_key must not start with 'memmap:'")
+            key = shared_memory_key or f"omx-{secrets.token_hex(8)}"
+
+        result = template.shm.to_shared_memory(
+            key, mode="r+", load=False, array_order=array_order
+        )
+        if hasattr(result.shm, "tasks"):
+            del result.shm.tasks
+        if hasattr(result.shm, "task_names"):
+            del result.shm.task_names
+
+        active_batches = [
+            (str(omx_filenames[n]), batch)
+            for n, batch in enumerate(assignments)
+            if batch
+        ]
+        worker_count = workers or max(1, min(len(active_batches), os.cpu_count() or 1))
+        started = time.time()
+        try:
+            if worker_count == 1:
+                bytes_loaded = sum(
+                    _load_omx_assignments(result, source, batch)
+                    for source, batch in active_batches
+                )
+            else:
+                # Spawn avoids inheriting any HDF5 state held by the caller.
+                mp_context = multiprocessing.get_context("spawn")
+                with concurrent.futures.ProcessPoolExecutor(
+                    max_workers=worker_count, mp_context=mp_context
+                ) as pool:
+                    futures = [
+                        pool.submit(_load_omx_shared_worker, key, source, batch)
+                        for source, batch in active_batches
+                    ]
+                    bytes_loaded = sum(future.result() for future in futures)
+            if load == "memmap":
+                for memory_object in result.shm._shared_memory_objs_:
+                    flush = getattr(memory_object, "flush", None)
+                    if flush is not None:
+                        flush()
+            logger.info(
+                "loaded %s from %d OMX files with %d worker(s) in %.2fs",
+                si_units(bytes_loaded),
+                len(active_batches),
+                worker_count,
+                time.time() - started,
+            )
+            return result
+        except Exception:
+            if load == "shared":
+                result.shm.release_shared_memory()
+            else:
+                result.shm.delete_shared_memory_files(key)
+            raise
     finally:
         for h in opened_file_handles:
             h.close()
@@ -654,10 +978,9 @@ def reload_from_omx_3d(
 
     This loads the data from the OMX files into the dataset, replacing
     the existing data in the dataset.  The dataset must have been created
-    by `from_omx_3d` or a similar function. Note that `from_omx_3d` will
-    create a dataset backed by `dask.array` objects; this function allows for
-    loading the data without going through dask, which may have poor performance
-    on some platforms.
+    by `from_omx_3d` or a similar function. By default, `from_omx_3d` creates
+    a dataset backed by `dask.array` objects; this function allows for loading
+    the data without going through Dask.
 
     Parameters
     ----------
@@ -682,14 +1005,7 @@ def reload_from_omx_3d(
     bytes_loaded = 0
     t0 = time.time()
 
-    def _load_into(raw, dset, executor):
-        """Fill the array `raw` from the HDF5 dataset `dset`."""
-        if raw.dtype == dset.dtype:
-            omx_reader.read_dataset(dset, out=raw, executor=executor)
-        else:
-            raw[:, :] = omx_reader.read_dataset(dset, executor=executor)
-
-    def _load_one(dset, data_name, filter_note, executor):
+    def _load_one(dset, data_name, filter_note):
         nonlocal bytes_loaded
         t1 = time.time()
         if time_period_sep in data_name:
@@ -704,39 +1020,42 @@ def reload_from_omx_3d(
                     f"dataset variable {data_name_x} has "
                     f"{len(dataset[data_name_x].dims)} dimensions, expected 3"
                 )
-            raw = dataset[data_name_x].sel(time_period=data_name_t).data
+            period_dimension = dataset[data_name_x].dims[-1]
+            raw = dataset[data_name_x].sel({period_dimension: data_name_t}).data
         else:
+            if data_name not in dataset:
+                logger.info(f"skipping {data_name} because it is not in dataset")
+                return
             if len(dataset[data_name].dims) != 2:
                 raise ValueError(
                     f"dataset variable {data_name} has "
                     f"{len(dataset[data_name].dims)} dimensions, expected 2"
                 )
             raw = dataset[data_name].data
-        _load_into(raw, dset, executor)
+        _read_omx_dataset(dset, raw)
         bytes_loaded += raw.nbytes
         logger.debug(
             f"loaded {data_name} ({filter_note}) to dataset "
             f"in {time.time() - t1:.2f}s, {si_units(bytes_loaded)}"
         )
 
-    with concurrent.futures.ThreadPoolExecutor() as pool:
-        for source in omx:
-            if isinstance(source, (str, os.PathLike)):
-                logger.info(f"loading into dataset from {source}")
-                file_context = h5py.File(source, "r")
-            elif isinstance(source, h5py.File):
-                logger.info(f"loading into dataset from {source.filename}")
-                file_context = contextlib.nullcontext(source)
-            else:
-                raise TypeError("omx entries must be h5py.File or path-like objects")
-            with file_context as handle:
-                data_group = handle["data"]
-                for data_name, dset in data_group.items():
-                    if _should_ignore(ignore, data_name):
-                        logger.info(f"ignoring {data_name}")
-                        continue
-                    filter_note = f"{dset.compression}/{dset.compression_opts}"
-                    _load_one(dset, data_name, filter_note, pool)
+    for source in omx:
+        if isinstance(source, (str, os.PathLike)):
+            logger.info(f"loading into dataset from {source}")
+            file_context = h5py.File(source, "r")
+        elif isinstance(source, h5py.File):
+            logger.info(f"loading into dataset from {source.filename}")
+            file_context = contextlib.nullcontext(source)
+        else:
+            raise TypeError("omx entries must be h5py.File or path-like objects")
+        with file_context as handle:
+            data_group = handle["data"]
+            for data_name, dset in data_group.items():
+                if _should_ignore(ignore, data_name):
+                    logger.info(f"ignoring {data_name}")
+                    continue
+                filter_note = f"{dset.compression}/{dset.compression_opts}"
+                _load_one(dset, data_name, filter_note)
     logger.info(f"loading to dataset complete in {time.time() - t0:.2f}s")
 
 

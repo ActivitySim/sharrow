@@ -402,6 +402,112 @@ def test_from_omx_3d_compressed_zlib():
         xr.testing.assert_equal(skims, skims2.compute())
 
 
+def test_from_omx_3d_loading_modes():
+    """Lazy batching and direct eager loading produce identical skim arrays."""
+    matrices = _random_matrices()
+    with tempfile.TemporaryDirectory() as tempdir:
+        f = Path(tempdir).joinpath("skims.omx")
+        _write_compressed_omx(f, matrices)
+        lazy_variable = sh.dataset.from_omx_3d(
+            f,
+            time_periods=["EA", "AM", "PM"],
+            task_granularity="variable",
+        )
+        lazy_matrix = sh.dataset.from_omx_3d(
+            f,
+            time_periods=["EA", "AM", "PM"],
+            task_granularity="matrix",
+        )
+        eager = sh.dataset.from_omx_3d(f, time_periods=["EA", "AM", "PM"], load="eager")
+
+        # One task per logical variable substantially reduces scheduler work.
+        assert len(lazy_variable.__dask_graph__()) < len(lazy_matrix.__dask_graph__())
+        xr.testing.assert_equal(lazy_variable.compute(), eager)
+        xr.testing.assert_equal(lazy_matrix.compute(), eager)
+        assert (eager["TIME"].sel(time_period="EA").values == 0).all()
+        assert eager["TIME"].data[..., 0].flags.c_contiguous
+        assert eager["DIST"].dtype == np.float32
+
+
+def test_from_omx_3d_shared_parallel():
+    """Separate OMX files can load concurrently into final shared pages."""
+    matrices = _random_matrices()
+    with tempfile.TemporaryDirectory() as tempdir:
+        first = Path(tempdir).joinpath("first.omx")
+        second = Path(tempdir).joinpath("second.omx")
+        _write_compressed_omx(
+            first, {name: data for name, data in matrices.items() if name != "TIME__PM"}
+        )
+        _write_compressed_omx(second, {"TIME__PM": matrices["TIME__PM"]})
+        expected = sh.dataset.from_omx_3d(
+            [first, second], time_periods=["EA", "AM", "PM"], load="eager"
+        )
+        token = "parallel-skims-" + secrets.token_hex(5)
+        shared = sh.dataset.from_omx_3d(
+            [first, second],
+            time_periods=["EA", "AM", "PM"],
+            load="shared",
+            workers=2,
+            shared_memory_key=token,
+        )
+        try:
+            xr.testing.assert_equal(shared, expected)
+            assert shared.shm.is_shared_memory
+            assert shared["TIME"].data[..., 1].flags.c_contiguous
+        finally:
+            shared.shm.release_shared_memory()
+
+
+def test_from_omx_3d_memmap_low_memory():
+    """The low-memory mode loads directly into a new disk-backed array."""
+    matrices = _random_matrices()
+    with tempfile.TemporaryDirectory() as tempdir:
+        f = Path(tempdir).joinpath("skims.omx")
+        backing = Path(tempdir).joinpath("skims-memory.dat")
+        _write_compressed_omx(f, matrices)
+        expected = sh.dataset.from_omx_3d(
+            f, time_periods=["EA", "AM", "PM"], load="eager"
+        )
+        mapped = sh.dataset.from_omx_3d(
+            f,
+            time_periods=["EA", "AM", "PM"],
+            load="memmap",
+            memory_path=backing,
+            workers=2,
+        )
+        xr.testing.assert_equal(mapped, expected)
+        assert backing.exists()
+        assert Path(f"{backing}.meta.pkl").exists()
+        assert isinstance(mapped.shm._shared_memory_objs_[-1], np.memmap)
+
+        with pytest.raises(FileExistsError):
+            sh.dataset.from_omx_3d(
+                f,
+                time_periods=["EA", "AM", "PM"],
+                load="memmap",
+                memory_path=backing,
+            )
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "message"),
+    [
+        ({"load": "invalid"}, "load must be"),
+        ({"task_granularity": "invalid"}, "task_granularity"),
+        ({"load": "shared", "workers": 0}, "positive integer"),
+        ({"load": "memmap"}, "memory_path is required"),
+        ({"load": "eager", "workers": 2}, "load='shared'"),
+    ],
+)
+def test_from_omx_3d_loading_mode_validation(kwargs, message):
+    with pytest.raises(ValueError, match=message):
+        sh.dataset.from_omx_3d(
+            sh.example_data.get_skims_filename(),
+            time_periods=["EA", "AM", "MD", "PM", "EV"],
+            **kwargs,
+        )
+
+
 def test_reload_from_omx_3d_compressed():
     matrices = _random_matrices()
     with tempfile.TemporaryDirectory() as tempdir:
@@ -426,6 +532,11 @@ def test_reload_from_omx_3d_compressed():
             assert handle.id.valid
         xr.testing.assert_equal(blank3, expected)
 
+        # The time-period dimension need not use Sharrow's default name.
+        custom_dims = xr.zeros_like(expected.rename(time_period="period"))
+        sh.dataset.reload_from_omx_3d(custom_dims, f)
+        xr.testing.assert_equal(custom_dims, expected.rename(time_period="period"))
+
 
 def test_from_omx_compressed_blosc():
     import hdf5plugin
@@ -445,7 +556,20 @@ def test_from_omx_compressed_blosc():
             out.attrs["SHAPE"] = np.asarray([25, 25], dtype=int)
         with h5py.File(f, mode="r") as back:
             ds = sh.dataset.from_omx(back, indexes="taz")
+        token = "blosc-skims-" + secrets.token_hex(5)
+        shared = sh.dataset.from_omx_3d(
+            f,
+            indexes="taz",
+            time_periods=["AM"],
+            load="shared",
+            workers=2,
+            shared_memory_key=token,
+        )
     np.testing.assert_array_equal(ds["DIST"].values, arr)
+    try:
+        np.testing.assert_array_equal(shared["DIST"].values, arr.astype(np.float32))
+    finally:
+        shared.shm.release_shared_memory()
 
 
 def test_from_omx_3d_to_zarr():
