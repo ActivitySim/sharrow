@@ -21,7 +21,6 @@ dependencies:
   - pytest-regressions
   - pytest-xdist
   - nbmake
-  - openmatrix
   - h5py
   - python-blosc2
   - hdf5plugin

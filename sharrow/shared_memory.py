@@ -246,7 +246,25 @@ class SharedMemDatasetAccessor:
 
     def release_shared_memory(self):
         """Release shared memory allocated to this Dataset."""
-        release_shared_memory(self._shared_memory_key_)
+        key = self._shared_memory_key_
+        if key and key.startswith("memmap:"):
+            # Memmaps are intentionally not kept in the process-global shared
+            # memory registry. Release the Dataset's own buffer and mapping so
+            # Windows can delete or replace the backing file immediately.
+            buffer = getattr(self, "_buffer", None)
+            if buffer is not None:
+                buffer.release()
+                del self._buffer
+            for memory_object in self._shared_memory_objs_:
+                if isinstance(memory_object, np.memmap):
+                    memory_object.flush()
+                    mmap = getattr(memory_object, "_mmap", None)
+                    if mmap is not None and not mmap.closed:
+                        mmap.close()
+            self._shared_memory_objs_.clear()
+            self._shared_memory_owned_ = False
+        else:
+            release_shared_memory(key)
 
     @staticmethod
     def delete_shared_memory_files(key):
@@ -260,6 +278,7 @@ class SharedMemDatasetAccessor:
         dask_scheduler="threads",
         pre_init=False,
         load=True,
+        array_order=None,
     ):
         """
         Load this Dataset into shared memory.
@@ -291,6 +310,11 @@ class SharedMemDatasetAccessor:
             the `shm.tasks` attribute of the resulting Dataset object, but do not
             necessarily need to be run if data can be loaded using alternative
             methods (e.g. `sharrow.dataset.reload_from_omx_3d`).
+        array_order : mapping, optional
+            Optional storage order overrides keyed by variable name.  The
+            ``"last-axis-first"`` order stores each page along the last axis
+            contiguously.  This is useful when a three-dimensional array is
+            populated from a collection of two-dimensional source arrays.
 
         Returns
         -------
@@ -336,18 +360,33 @@ class SharedMemDatasetAccessor:
                 a_nbytes = a.data.nbytes
             else:
                 logger.debug(f"preparing dense array {a.name}")
-                wrappers.append(
-                    {
-                        "dims": a.dims,
-                        "name": a.name,
-                        "attrs": a.attrs,
-                        "dtype": a.dtype,
-                        "shape": a.shape,
-                        "coord": is_coord,
-                        "nbytes": a.nbytes,
-                        "position": position,
-                    }
-                )
+                wrapper = {
+                    "dims": a.dims,
+                    "name": a.name,
+                    "attrs": a.attrs,
+                    "dtype": a.dtype,
+                    "shape": a.shape,
+                    "coord": is_coord,
+                    "nbytes": a.nbytes,
+                    "position": position,
+                }
+                order = None if array_order is None else array_order.get(k)
+                if order == "last-axis-first":
+                    if a.ndim < 2:
+                        raise ValueError(
+                            "last-axis-first storage requires at least two dimensions"
+                        )
+                    # The logical last axis is physically outermost, making
+                    # each ``[..., page]`` view C contiguous for direct I/O.
+                    itemsize = a.dtype.itemsize
+                    strides = [itemsize]
+                    for size in reversed(a.shape[1:-1]):
+                        strides.insert(0, strides[0] * size)
+                    strides.append(int(np.prod(a.shape[:-1])) * itemsize)
+                    wrapper["strides"] = tuple(strides)
+                elif order is not None:
+                    raise ValueError(f"unknown shared-memory array order {order!r}")
+                wrappers.append(wrapper)
                 a_nbytes = a.nbytes
 
             sizes.append(a_nbytes)
@@ -372,8 +411,9 @@ class SharedMemDatasetAccessor:
 
         if pre_init:
             logger.debug("pre-initializing shared memory buffer")
-            # gross init with all zeros
-            buffer[:] = b"\0" * len(buffer)
+            # Fill in place.  Constructing a same-sized bytes object can
+            # temporarily double memory use for multi-gigabyte skim datasets.
+            np.ndarray(len(buffer), dtype=np.uint8, buffer=buffer).fill(0)
 
         tasks = []
         task_names = []
@@ -412,7 +452,10 @@ class SharedMemDatasetAccessor:
             else:
                 logger.debug(f"preparing load task: {_name} ({si_units(_size)})")
                 mem_arr = np.ndarray(
-                    shape=a.shape, dtype=a.dtype, buffer=buffer[_pos : _pos + _size]
+                    shape=a.shape,
+                    dtype=a.dtype,
+                    buffer=buffer[_pos : _pos + _size],
+                    strides=w.get("strides"),
                 )
                 if isinstance(a, xr.DataArray) and isinstance(a.data, da.Array):
                     tasks.append(da.store(a.data, mem_arr, lock=False, compute=False))
@@ -500,7 +543,7 @@ class SharedMemDatasetAccessor:
             # for memmap, list is loaded from pickle, not shared ram
             pass
 
-        if own_data and own_data is not True:
+        if own_data is not None and not isinstance(own_data, (bool, np.bool_)):
             mem = own_data
             own_data = True
         else:
@@ -523,6 +566,7 @@ class SharedMemDatasetAccessor:
             coord = t.pop("coord", False)  # noqa: F841
             position = t.pop("position")
             nbytes = t.pop("nbytes")
+            strides = t.pop("strides", None)
             is_sparse = t.pop("sparse", False)
             if is_sparse:
                 if sparse is None:
@@ -565,7 +609,10 @@ class SharedMemDatasetAccessor:
                 )
             else:
                 mem_arr = np.ndarray(
-                    shape, dtype=dtype, buffer=buffer[position : position + nbytes]
+                    shape,
+                    dtype=dtype,
+                    buffer=buffer[position : position + nbytes],
+                    strides=strides,
                 )
             content[name] = DataArray(mem_arr, **t)
 

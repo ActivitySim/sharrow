@@ -50,14 +50,13 @@ SUPPORTED_FILTERS = frozenset(
 )
 
 
-def h5_filename(omx) -> str | None:
-    """Resolve the on-disk filename of an OMX-like object.
+def h5_filename(omx: h5py.File | str | os.PathLike) -> str | None:
+    """Resolve the on-disk filename of an OMX HDF5 file.
 
     Parameters
     ----------
-    omx : str, os.PathLike, h5py.File, tables.File, or larch.OMX
-        An OMX file reference: a path, an h5py file, a pytables file (which
-        includes ``openmatrix.File``), or a larch OMX object.
+    omx : str, os.PathLike, or h5py.File
+        An OMX file path or open HDF5 file.
 
     Returns
     -------
@@ -66,8 +65,8 @@ def h5_filename(omx) -> str | None:
     """
     if isinstance(omx, (str, os.PathLike)):
         return os.fspath(omx)
-    # h5py.File, tables.File (and openmatrix.File), and larch.OMX all expose
-    # the underlying file path as a `filename` attribute.
+    if not isinstance(omx, h5py.File):
+        return None
     filename = getattr(omx, "filename", None)
     if isinstance(filename, (str, os.PathLike)):
         filename = os.fspath(filename)

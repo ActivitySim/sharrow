@@ -3,6 +3,7 @@ import os
 from importlib.resources import as_file, files
 from pathlib import Path
 
+import h5py
 import numpy as np
 import pandas as pd
 
@@ -28,13 +29,10 @@ def get_skims_filename() -> str:
 
 
 def get_skims_omx():
-    import openmatrix
-
     from . import dataset
 
     with get_example_data_path("skims.omx") as filename:
-        skims = None
-        with openmatrix.open_file(str(filename)) as f:
+        with h5py.File(filename, "r") as f:
             skims = dataset.from_omx_3d(
                 f,
                 index_names=("otaz", "dtaz", "time_period"),
