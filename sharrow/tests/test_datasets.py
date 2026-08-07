@@ -513,18 +513,26 @@ def test_from_omx_3d_memmap_low_memory():
             memory_path=backing,
             workers=2,
         )
-        xr.testing.assert_equal(mapped, expected)
-        assert backing.exists()
-        assert Path(f"{backing}.meta.pkl").exists()
-        assert isinstance(mapped.shm._shared_memory_objs_[-1], np.memmap)
+        key = mapped.shm.shared_memory_key
+        try:
+            xr.testing.assert_equal(mapped, expected)
+            assert backing.exists()
+            assert Path(f"{backing}.meta.pkl").exists()
+            assert isinstance(mapped.shm._shared_memory_objs_[-1], np.memmap)
 
-        with pytest.raises(FileExistsError):
-            sh.dataset.from_omx_3d(
-                f,
-                time_periods=["EA", "AM", "PM"],
-                load="memmap",
-                memory_path=backing,
-            )
+            with pytest.raises(FileExistsError):
+                sh.dataset.from_omx_3d(
+                    f,
+                    time_periods=["EA", "AM", "PM"],
+                    load="memmap",
+                    memory_path=backing,
+                )
+        finally:
+            mapped.shm.release_shared_memory()
+            mapped.shm.delete_shared_memory_files(key)
+
+        assert not backing.exists()
+        assert not Path(f"{backing}.meta.pkl").exists()
 
 
 @pytest.mark.parametrize(

@@ -246,7 +246,25 @@ class SharedMemDatasetAccessor:
 
     def release_shared_memory(self):
         """Release shared memory allocated to this Dataset."""
-        release_shared_memory(self._shared_memory_key_)
+        key = self._shared_memory_key_
+        if key and key.startswith("memmap:"):
+            # Memmaps are intentionally not kept in the process-global shared
+            # memory registry. Release the Dataset's own buffer and mapping so
+            # Windows can delete or replace the backing file immediately.
+            buffer = getattr(self, "_buffer", None)
+            if buffer is not None:
+                buffer.release()
+                del self._buffer
+            for memory_object in self._shared_memory_objs_:
+                if isinstance(memory_object, np.memmap):
+                    memory_object.flush()
+                    mmap = getattr(memory_object, "_mmap", None)
+                    if mmap is not None and not mmap.closed:
+                        mmap.close()
+            self._shared_memory_objs_.clear()
+            self._shared_memory_owned_ = False
+        else:
+            release_shared_memory(key)
 
     @staticmethod
     def delete_shared_memory_files(key):
