@@ -2,29 +2,28 @@ import secrets
 import tempfile
 from pathlib import Path
 
+import h5py
 import numpy as np
-import openmatrix
 import pandas as pd
 import pytest
 import xarray as xr
 from pytest import approx
 
 import sharrow as sh
+from sharrow import omx_reader
+from sharrow.shared_memory import SharedMemDatasetAccessor
 
 
 def test_dataset_construct_with_zoneids():
     tempdir = tempfile.TemporaryDirectory()
     t = Path(tempdir.name)
 
-    with openmatrix.open_file(t.joinpath("dummy5.omx"), mode="w") as out:
-        out.create_carray("/data", "Eye", obj=np.eye(5, dtype=np.float32))
-        out.create_carray("/lookup", "Zone", obj=np.asarray([11, 22, 33, 44, 55]))
-        shp = np.empty(2, dtype=int)
-        shp[0] = 5
-        shp[1] = 5
-        out.root._v_attrs.SHAPE = shp
+    with h5py.File(t.joinpath("dummy5.omx"), mode="w") as out:
+        out.create_dataset("data/Eye", data=np.eye(5, dtype=np.float32))
+        out.create_dataset("lookup/Zone", data=np.asarray([11, 22, 33, 44, 55]))
+        out.attrs["SHAPE"] = np.asarray([5, 5], dtype=int)
 
-    with openmatrix.open_file(t.joinpath("dummy5.omx"), mode="r") as back:
+    with h5py.File(t.joinpath("dummy5.omx"), mode="r") as back:
         ds = sh.dataset.from_omx(back, indexes="Zone")
 
     assert sorted(ds.coords) == ["dtaz", "otaz"]
@@ -32,11 +31,11 @@ def test_dataset_construct_with_zoneids():
     assert sorted(ds.variables) == ["Eye", "dtaz", "otaz"]
     assert ds["Eye"].data == approx(np.eye(5, dtype=np.float32))
 
-    with openmatrix.open_file(t.joinpath("dummy5.omx"), mode="r") as back:
+    with h5py.File(t.joinpath("dummy5.omx"), mode="r") as back:
         ds0 = sh.dataset.from_omx(back, indexes="zero-based")
     assert ds0.coords["otaz"].values == approx(np.asarray([0, 1, 2, 3, 4]))
 
-    with openmatrix.open_file(t.joinpath("dummy5.omx"), mode="r") as back:
+    with h5py.File(t.joinpath("dummy5.omx"), mode="r") as back:
         ds1 = sh.dataset.from_omx(back, indexes="one-based")
     assert ds1.coords["otaz"].values == approx(np.asarray([1, 2, 3, 4, 5]))
 
@@ -72,7 +71,7 @@ def test_dataset_categoricals():
 
 def test_load_with_ignore():
     filename = sh.example_data.get_skims_filename()
-    with openmatrix.open_file(filename) as f:
+    with h5py.File(filename) as f:
         skims = sh.dataset.from_omx_3d(
             f,
             index_names=("otaz", "dtaz", "time_period"),
@@ -83,7 +82,7 @@ def test_load_with_ignore():
         )
     assert "DRV_COM_WLK_FAR" in skims.variables
 
-    with openmatrix.open_file(filename) as f:
+    with h5py.File(filename) as f:
         skims1 = sh.dataset.from_omx_3d(
             f,
             index_names=("otaz", "dtaz", "time_period"),
@@ -95,7 +94,7 @@ def test_load_with_ignore():
         )
     assert "DRV_COM_WLK_FAR" not in skims1.variables
 
-    with openmatrix.open_file(filename) as f:
+    with h5py.File(filename) as f:
         skims2 = sh.dataset.from_omx_3d(
             f,
             index_names=("otaz", "dtaz", "time_period"),
@@ -121,7 +120,7 @@ def test_deferred_load_to_shared_memory():
     from sharrow.example_data import get_skims_filename
 
     skims_filename = get_skims_filename()
-    with openmatrix.open_file(skims_filename) as f:
+    with h5py.File(skims_filename) as f:
         d0 = sh.dataset.from_omx_3d(
             f,
             index_names=("otaz", "dtaz", "time_period"),
@@ -315,27 +314,23 @@ def test_from_parquet_3d_ignore():
     assert "DIST" in skims.variables
 
 
-def _write_compressed_omx(path, matrices, complib="zlib", complevel=7, shuffle=True):
+def _write_compressed_omx(path, matrices, compression="gzip", compression_opts=7):
     """Write an OMX file with compressed, oddly-chunked matrix tables."""
-    import tables
-
-    filters = tables.Filters(complevel=complevel, complib=complib, shuffle=shuffle)
     n1, n2 = next(iter(matrices.values())).shape
-    with openmatrix.open_file(path, mode="w") as out:
+    with h5py.File(path, mode="w") as out:
         for name, arr in matrices.items():
-            out.create_carray(
-                "/data",
-                name,
-                obj=arr,
-                filters=filters,
+            out.create_dataset(
+                f"data/{name}",
+                data=arr,
+                compression=compression,
+                compression_opts=compression_opts,
+                shuffle=True,
                 # chunk shape that does not evenly divide the array,
                 # to exercise edge-chunk handling
-                chunkshape=(7, 7),
+                chunks=(7, 7),
             )
-        out.create_carray("/lookup", "taz", obj=np.arange(11, 11 + n1))
-        shp = np.empty(2, dtype=int)
-        shp[0], shp[1] = n1, n2
-        out.root._v_attrs.SHAPE = shp
+        out.create_dataset("lookup/taz", data=np.arange(11, 11 + n1))
+        out.attrs["SHAPE"] = np.asarray([n1, n2], dtype=int)
 
 
 def _random_matrices(n=25, seed=42):
@@ -348,12 +343,73 @@ def _random_matrices(n=25, seed=42):
     }
 
 
+def test_parallel_omx_reader_converts_into_noncontiguous_output(tmp_path):
+    """Parallel chunk decoding casts directly into a final array view."""
+    source = np.arange(625, dtype=np.float64).reshape(25, 25) / 7
+    path = tmp_path / "direct-conversion.h5"
+    with h5py.File(path, "w") as handle:
+        handle.create_dataset(
+            "data",
+            data=source,
+            compression="gzip",
+            shuffle=True,
+            chunks=(7, 7),
+        )
+
+    backing = np.empty((25, 25, 2), dtype=np.float32)
+    destination = backing[..., 1]
+    assert not destination.flags.c_contiguous
+    with h5py.File(path, "r") as handle:
+        result = omx_reader.read_dataset(handle["data"], out=destination, max_workers=2)
+
+    assert result is destination
+    np.testing.assert_array_equal(destination, source.astype(np.float32))
+
+
+def test_parallel_omx_reader_fallback_converts_dtype(tmp_path):
+    """The native h5py fallback also converts into the requested dtype."""
+    source = np.arange(36, dtype=np.float64).reshape(6, 6) / 7
+    path = tmp_path / "uncompressed.h5"
+    with h5py.File(path, "w") as handle:
+        handle.create_dataset("data", data=source)
+
+    destination = np.empty(source.shape, dtype=np.float32)
+    with h5py.File(path, "r") as handle:
+        omx_reader.read_dataset(handle["data"], out=destination, max_workers=2)
+    np.testing.assert_array_equal(destination, source.astype(np.float32))
+
+
+def test_omx_shape_is_inferred_when_attribute_is_missing(tmp_path):
+    """Files written without SHAPE retain OpenMatrix-compatible behavior."""
+    matrices = _random_matrices()
+    path = tmp_path / "missing-shape.omx"
+    _write_compressed_omx(path, matrices)
+    with h5py.File(path, "r+") as handle:
+        del handle.attrs["SHAPE"]
+
+    two_dimensional = sh.dataset.from_omx(path, indexes="taz")
+    three_dimensional = sh.dataset.from_omx_3d(
+        path,
+        indexes="taz",
+        time_periods=["AM", "PM"],
+        load="eager",
+    )
+
+    np.testing.assert_array_equal(two_dimensional["DIST"], matrices["DIST"])
+    np.testing.assert_array_equal(
+        three_dimensional["DIST"], matrices["DIST"].astype(np.float32)
+    )
+    np.testing.assert_array_equal(
+        three_dimensional["TIME"].sel(time_period="PM"), matrices["TIME__PM"]
+    )
+
+
 def test_from_omx_compressed_zlib():
     matrices = _random_matrices()
     with tempfile.TemporaryDirectory() as tempdir:
         f = Path(tempdir).joinpath("skims.omx")
         _write_compressed_omx(f, matrices)
-        with openmatrix.open_file(f, mode="r") as back:
+        with h5py.File(f, mode="r") as back:
             ds = sh.dataset.from_omx(back, indexes="taz")
             ds_renamed = sh.dataset.from_omx(
                 back, indexes="taz", renames={"distance": "DIST"}
@@ -367,18 +423,53 @@ def test_from_omx_compressed_zlib():
     assert sorted(ds_limited.data_vars) == ["COUNTS"]
 
 
-def test_from_omx_compressed_h5py_handle():
-    import h5py
+def test_from_omx_compressed_path():
+    matrices = _random_matrices()
+    with tempfile.TemporaryDirectory() as tempdir:
+        f = Path(tempdir).joinpath("skims.omx")
+        _write_compressed_omx(f, matrices)
+        ds = sh.dataset.from_omx(f, indexes="taz")
+    for name, arr in matrices.items():
+        np.testing.assert_array_equal(ds[name].values, arr)
+    assert ds.coords["otaz"].values == approx(np.arange(11, 36))
+
+
+def test_from_omx_filename_bearing_legacy_handle():
+    """Legacy OMX handles are reopened by filename without being imported."""
+
+    class LegacyOMXHandle:
+        """Minimal protocol exposed by openmatrix.File and PyTables File."""
+
+        def __init__(self, filename):
+            self.filename = filename
+            self.close_called = False
+
+        def close(self):
+            self.close_called = True
 
     matrices = _random_matrices()
     with tempfile.TemporaryDirectory() as tempdir:
         f = Path(tempdir).joinpath("skims.omx")
         _write_compressed_omx(f, matrices)
-        with h5py.File(f, mode="r") as back:
-            ds = sh.dataset.from_omx(back, indexes="taz")
-    for name, arr in matrices.items():
-        np.testing.assert_array_equal(ds[name].values, arr)
-    assert ds.coords["otaz"].values == approx(np.arange(11, 36))
+        legacy_handle = LegacyOMXHandle(f)
+
+        expected_2d = sh.dataset.from_omx(f, indexes="taz")
+        actual_2d = sh.dataset.from_omx(legacy_handle, indexes="taz")
+        xr.testing.assert_equal(actual_2d, expected_2d)
+
+        expected_3d = sh.dataset.from_omx_3d(f, time_periods=["AM", "PM"], load="eager")
+        actual_3d = sh.dataset.from_omx_3d(
+            [legacy_handle], time_periods=["AM", "PM"]
+        ).compute()
+        xr.testing.assert_equal(actual_3d, expected_3d)
+
+        reloaded = xr.zeros_like(expected_3d)
+        sh.dataset.reload_from_omx_3d(reloaded, legacy_handle)
+        xr.testing.assert_equal(reloaded, expected_3d)
+
+        # Sharrow owns only the temporary h5py handle it creates. The caller's
+        # compatibility handle remains open and under caller control.
+        assert not legacy_handle.close_called
 
 
 def test_from_omx_3d_compressed_zlib():
@@ -402,7 +493,7 @@ def test_from_omx_3d_compressed_zlib():
         assert skims.coords["otaz"].values == approx(np.arange(11, 36))
 
         # also via an already-open file handle
-        with openmatrix.open_file(f, mode="r") as back:
+        with h5py.File(f, mode="r") as back:
             skims2 = sh.dataset.from_omx_3d(
                 back,
                 time_periods=["AM", "PM"],
@@ -410,6 +501,228 @@ def test_from_omx_3d_compressed_zlib():
             )
         # data remains readable after the handle is closed
         xr.testing.assert_equal(skims, skims2.compute())
+
+
+def test_from_omx_3d_loading_modes():
+    """Lazy batching and direct eager loading produce identical skim arrays."""
+    matrices = _random_matrices()
+    with tempfile.TemporaryDirectory() as tempdir:
+        f = Path(tempdir).joinpath("skims.omx")
+        _write_compressed_omx(f, matrices)
+        lazy_variable = sh.dataset.from_omx_3d(
+            f,
+            time_periods=["EA", "AM", "PM"],
+            task_granularity="variable",
+        )
+        lazy_matrix = sh.dataset.from_omx_3d(
+            f,
+            time_periods=["EA", "AM", "PM"],
+            task_granularity="matrix",
+        )
+        eager = sh.dataset.from_omx_3d(f, time_periods=["EA", "AM", "PM"], load="eager")
+
+        # One task per logical variable substantially reduces scheduler work.
+        assert len(lazy_variable.__dask_graph__()) < len(lazy_matrix.__dask_graph__())
+        xr.testing.assert_equal(lazy_variable.compute(), eager)
+        xr.testing.assert_equal(lazy_matrix.compute(), eager)
+        assert (eager["TIME"].sel(time_period="EA").values == 0).all()
+        assert eager["TIME"].data[..., 0].flags.c_contiguous
+        assert eager["DIST"].dtype == np.float32
+
+
+def test_from_omx_3d_shared_parallel():
+    """Separate OMX files can load concurrently into final shared pages."""
+    matrices = _random_matrices()
+    with tempfile.TemporaryDirectory() as tempdir:
+        first = Path(tempdir).joinpath("first.omx")
+        second = Path(tempdir).joinpath("second.omx")
+        _write_compressed_omx(
+            first, {name: data for name, data in matrices.items() if name != "TIME__PM"}
+        )
+        _write_compressed_omx(second, {"TIME__PM": matrices["TIME__PM"]})
+        expected = sh.dataset.from_omx_3d(
+            [first, second], time_periods=["EA", "AM", "PM"], load="eager"
+        )
+        token = "parallel-skims-" + secrets.token_hex(5)
+        shared = sh.dataset.from_omx_3d(
+            [first, second],
+            time_periods=["EA", "AM", "PM"],
+            load="shared",
+            workers=2,
+            shared_memory_key=token,
+        )
+        try:
+            xr.testing.assert_equal(shared, expected)
+            assert shared.shm.is_shared_memory
+            assert shared["TIME"].data[..., 1].flags.c_contiguous
+        finally:
+            shared.shm.release_shared_memory()
+
+
+def test_from_omx_3d_memmap_low_memory():
+    """The low-memory mode loads directly into a new disk-backed array."""
+    matrices = _random_matrices()
+    with tempfile.TemporaryDirectory() as tempdir:
+        f = Path(tempdir).joinpath("skims.omx")
+        backing = Path(tempdir).joinpath("skims-memory.dat")
+        _write_compressed_omx(f, matrices)
+        expected = sh.dataset.from_omx_3d(
+            f, time_periods=["EA", "AM", "PM"], load="eager"
+        )
+        mapped = sh.dataset.from_omx_3d(
+            f,
+            time_periods=["EA", "AM", "PM"],
+            load="memmap",
+            memory_path=backing,
+            workers=2,
+        )
+        key = mapped.shm.shared_memory_key
+        try:
+            xr.testing.assert_equal(mapped, expected)
+            assert backing.exists()
+            assert Path(f"{backing}.meta.pkl").exists()
+            assert isinstance(mapped.shm._shared_memory_objs_[-1], np.memmap)
+
+            with pytest.raises(FileExistsError):
+                sh.dataset.from_omx_3d(
+                    f,
+                    time_periods=["EA", "AM", "PM"],
+                    load="memmap",
+                    memory_path=backing,
+                )
+        finally:
+            mapped.shm.release_shared_memory()
+            mapped.shm.delete_shared_memory_files(key)
+
+        assert not backing.exists()
+        assert not Path(f"{backing}.meta.pkl").exists()
+
+
+def test_windows_parallel_backend_uses_threads(monkeypatch, tmp_path):
+    """The Windows backend avoids spawn and caps workers to active sources."""
+    matrices = _random_matrices()
+    first = tmp_path / "first.omx"
+    second = tmp_path / "second.omx"
+    backing = tmp_path / "skims-memory.dat"
+    _write_compressed_omx(
+        first, {name: data for name, data in matrices.items() if name != "TIME__PM"}
+    )
+    _write_compressed_omx(second, {"TIME__PM": matrices["TIME__PM"]})
+    expected = sh.dataset.from_omx_3d(
+        [first, second], time_periods=["EA", "AM", "PM"], load="eager"
+    )
+
+    def forbid_process_pool(*args, **kwargs):
+        pytest.fail("the Windows OMX backend must not create a process pool")
+
+    monkeypatch.setattr(sh.dataset, "_omx_uses_processes", lambda: False)
+    monkeypatch.setattr(
+        sh.dataset.concurrent.futures, "ProcessPoolExecutor", forbid_process_pool
+    )
+    mapped = sh.dataset.from_omx_3d(
+        [first, second],
+        time_periods=["EA", "AM", "PM"],
+        load="memmap",
+        memory_path=backing,
+        workers=100,
+    )
+    key = mapped.shm.shared_memory_key
+    try:
+        xr.testing.assert_equal(mapped, expected)
+        assert sh.dataset._omx_worker_count(100, 2) == 2
+    finally:
+        mapped.shm.release_shared_memory()
+        mapped.shm.delete_shared_memory_files(key)
+
+
+def test_memmap_metadata_failure_removes_new_backing_file(monkeypatch, tmp_path):
+    """Partial memmap construction is transactional, including on Windows."""
+    source = tmp_path / "skims.omx"
+    backing = tmp_path / "skims-memory.dat"
+    _write_compressed_omx(source, _random_matrices())
+
+    def fail_metadata(*args, **kwargs):
+        raise RuntimeError("injected metadata failure")
+
+    monkeypatch.setattr(sh.shared_memory, "create_shared_list", fail_metadata)
+    with pytest.raises(RuntimeError, match="injected metadata failure"):
+        sh.dataset.from_omx_3d(
+            source,
+            time_periods=["EA", "AM", "PM"],
+            load="memmap",
+            memory_path=backing,
+            workers=1,
+        )
+
+    assert not backing.exists()
+    assert not Path(f"{backing}.meta.pkl").exists()
+
+
+def test_from_omx_3d_memmap_failure_releases_before_delete(monkeypatch, tmp_path):
+    """A failed memmap load closes its mapping before deleting backing files."""
+    source = tmp_path / "skims.omx"
+    backing = tmp_path / "skims-memory.dat"
+    _write_compressed_omx(source, _random_matrices())
+
+    def fail_load(*args, **kwargs):
+        raise RuntimeError("injected load failure")
+
+    cleanup_steps = []
+    original_release = SharedMemDatasetAccessor.release_shared_memory
+    original_delete = SharedMemDatasetAccessor.delete_shared_memory_files
+
+    def record_release(accessor):
+        cleanup_steps.append("release")
+        original_release(accessor)
+
+    def record_delete(key):
+        # Model Windows' requirement that a file cannot be unlinked while its
+        # memory mapping remains open.
+        assert cleanup_steps == ["release"]
+        cleanup_steps.append("delete")
+        original_delete(key)
+
+    monkeypatch.setattr(sh.dataset, "_load_omx_assignments", fail_load)
+    monkeypatch.setattr(
+        SharedMemDatasetAccessor, "release_shared_memory", record_release
+    )
+    monkeypatch.setattr(
+        SharedMemDatasetAccessor,
+        "delete_shared_memory_files",
+        staticmethod(record_delete),
+    )
+
+    with pytest.raises(RuntimeError, match="injected load failure"):
+        sh.dataset.from_omx_3d(
+            source,
+            time_periods=["EA", "AM", "PM"],
+            load="memmap",
+            memory_path=backing,
+            workers=1,
+        )
+
+    assert cleanup_steps == ["release", "delete"]
+    assert not backing.exists()
+    assert not Path(f"{backing}.meta.pkl").exists()
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "message"),
+    [
+        ({"load": "invalid"}, "load must be"),
+        ({"task_granularity": "invalid"}, "task_granularity"),
+        ({"load": "shared", "workers": 0}, "positive integer"),
+        ({"load": "memmap"}, "memory_path is required"),
+        ({"load": "eager", "workers": 2}, "load='shared'"),
+    ],
+)
+def test_from_omx_3d_loading_mode_validation(kwargs, message):
+    with pytest.raises(ValueError, match=message):
+        sh.dataset.from_omx_3d(
+            sh.example_data.get_skims_filename(),
+            time_periods=["EA", "AM", "MD", "PM", "EV"],
+            **kwargs,
+        )
 
 
 def test_reload_from_omx_3d_compressed():
@@ -429,11 +742,66 @@ def test_reload_from_omx_3d_compressed():
         sh.dataset.reload_from_omx_3d(blank2, [str(f)], ignore=["COUNTS"])
         assert (blank2["COUNTS"].values == 0).all()
         np.testing.assert_array_equal(blank2["DIST"].values, expected["DIST"].values)
+        # An h5py handle is accepted directly and remains owned by the caller.
+        blank3 = xr.zeros_like(expected)
+        with h5py.File(f, "r") as handle:
+            sh.dataset.reload_from_omx_3d(blank3, handle)
+            assert handle.id.valid
+        xr.testing.assert_equal(blank3, expected)
+
+        # The time-period dimension need not use Sharrow's default name.
+        custom_dims = xr.zeros_like(expected.rename(time_period="period"))
+        sh.dataset.reload_from_omx_3d(custom_dims, f)
+        xr.testing.assert_equal(custom_dims, expected.rename(time_period="period"))
+
+
+def test_reload_from_omx_3d_shared_parallel():
+    """Parallel reload fills only selected arrays and preserves source precedence."""
+    matrices = _random_matrices()
+    with tempfile.TemporaryDirectory() as tempdir:
+        first = Path(tempdir).joinpath("first.omx")
+        second = Path(tempdir).joinpath("second.omx")
+        _write_compressed_omx(
+            first, {name: data for name, data in matrices.items() if name != "TIME__PM"}
+        )
+        _write_compressed_omx(
+            second,
+            {
+                "DIST": matrices["DIST"] + 1,
+                "TIME__PM": matrices["TIME__PM"],
+            },
+        )
+
+        expected = sh.dataset.from_omx_3d(
+            [first, second], time_periods=["AM", "PM"], load="eager"
+        ).drop_vars("COUNTS")
+        blank = xr.zeros_like(expected)
+        token = "parallel-reload-" + secrets.token_hex(5)
+        shared = blank.shm.to_shared_memory(
+            token,
+            mode="r+",
+            load=False,
+            array_order={
+                name: "last-axis-first"
+                for name, variable in blank.data_vars.items()
+                if variable.ndim == 3
+            },
+        )
+        try:
+            sh.dataset.reload_from_omx_3d(shared, [first, second], workers=2)
+            xr.testing.assert_equal(shared, expected)
+            assert shared["TIME"].data[..., 0].flags.c_contiguous
+        finally:
+            shared.shm.release_shared_memory()
+
+        with pytest.raises(ValueError, match="shared-memory-backed"):
+            sh.dataset.reload_from_omx_3d(blank, [first, second], workers=2)
+        with pytest.raises(ValueError, match="positive integer"):
+            sh.dataset.reload_from_omx_3d(blank, [first, second], workers=0)
 
 
 def test_from_omx_compressed_blosc():
-    import h5py
-    import hdf5plugin
+    hdf5plugin = pytest.importorskip("hdf5plugin")
 
     rng = np.random.default_rng(7)
     arr = rng.random((25, 25))
@@ -450,7 +818,20 @@ def test_from_omx_compressed_blosc():
             out.attrs["SHAPE"] = np.asarray([25, 25], dtype=int)
         with h5py.File(f, mode="r") as back:
             ds = sh.dataset.from_omx(back, indexes="taz")
+        token = "blosc-skims-" + secrets.token_hex(5)
+        shared = sh.dataset.from_omx_3d(
+            f,
+            indexes="taz",
+            time_periods=["AM"],
+            load="shared",
+            workers=2,
+            shared_memory_key=token,
+        )
     np.testing.assert_array_equal(ds["DIST"].values, arr)
+    try:
+        np.testing.assert_array_equal(shared["DIST"].values, arr.astype(np.float32))
+    finally:
+        shared.shm.release_shared_memory()
 
 
 def test_from_omx_3d_to_zarr():
@@ -474,7 +855,7 @@ def test_from_omx_3d_writable_handle():
     with tempfile.TemporaryDirectory() as tempdir:
         f = Path(tempdir).joinpath("skims.omx")
         _write_compressed_omx(f, matrices)
-        with openmatrix.open_file(f, mode="a") as back:
+        with h5py.File(f, mode="a") as back:
             skims = sh.dataset.from_omx_3d(
                 back, time_periods=["AM", "PM"], max_float_precision=64
             )

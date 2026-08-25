@@ -93,6 +93,39 @@ These functions can be found in the :py:mod:`sharrow.dataset` module.
 .. autofunction:: sharrow.dataset.from_zarr
 .. autofunction:: sharrow.dataset.from_named_objects
 
+OMX Loading Portability
+~~~~~~~~~~~~~~~~~~~~~~~
+
+Standard gzip/shuffle OMX files work with Sharrow's base installation. Files
+that use Blosc, Zstandard, or other optional HDF5 filters may require the
+additional filter packages::
+
+    pip install "sharrow[hdf5-plugins]"
+
+These third-party filter packages do not currently publish Windows ARM64
+wheels, so Windows on ARM uses the standard HDF5 filters supported by h5py.
+
+The ``shared`` and ``memmap`` loading modes can read several source files
+concurrently. On Windows, Sharrow uses file-level threads so these modes work
+from ordinary scripts, notebooks, and frozen applications without a
+``__main__`` multiprocessing guard or Windows' process-pool size limit. On
+other platforms, Sharrow uses spawned worker processes to avoid inheriting
+open HDF5 state. Calls made at module scope in a standalone script should
+therefore use the standard guarded entry point::
+
+    if __name__ == "__main__":
+        skims = sharrow.dataset.from_omx_3d(
+            skim_files,
+            time_periods=["EA", "AM", "MD", "PM", "EV"],
+            load="shared",
+        )
+
+Set ``workers=1`` for deterministic serial I/O on every platform. Successful
+``memmap`` loads retain their backing data and metadata files intentionally.
+Call ``result.shm.release_shared_memory()`` before
+``result.shm.delete_shared_memory_files(result.shm.shared_memory_key)`` when
+the files are no longer needed.
+
 Editing
 ~~~~~~~
 .. automethod:: sharrow.Dataset.ensure_integer

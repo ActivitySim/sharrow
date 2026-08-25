@@ -14,8 +14,6 @@ dependencies = [
     "pandas >= 1.2",
     "pyarrow",
     "h5py",
-    "blosc2",
-    "hdf5plugin",
     "xarray",
     "numba >= 0.57",
     "numexpr",
@@ -33,6 +31,12 @@ classifiers = [
 description = "numba for ActivitySim-style spec files"
 readme = "README.md"
 keywords = ["activitysim", "discrete choice"]
+
+[project.optional-dependencies]
+hdf5-plugins = [
+    "blosc2; platform_system != 'Windows' or platform_machine != 'ARM64'",
+    "hdf5plugin; platform_system != 'Windows' or platform_machine != 'ARM64'",
+]
 
 [project.urls]
 Documentation = "https://activitysim.github.io/sharrow/"
@@ -90,9 +94,10 @@ testpaths = [
 
 [dependency-groups]
 dev = [
+    "blosc2; platform_system != 'Windows' or platform_machine != 'ARM64'",
+    "hdf5plugin; platform_system != 'Windows' or platform_machine != 'ARM64'",
     "ipykernel>=6.31.0",
     "nbmake>=1.5.5",
-    "openmatrix>=0.3.5.0",
     "pytest>=8.4.2",
     "pytest-regressions>=2.8.3",
     "scipy>=1.13.1",
