@@ -15,7 +15,7 @@ from .relationships import DataTree, Relationship
 
 
 def timestamp():
-    return datetime.datetime.now(datetime.timezone.utc).astimezone().isoformat()
+    return datetime.datetime.now(datetime.UTC).astimezone().isoformat()
 
 
 class ReadOnlyError(ValueError):

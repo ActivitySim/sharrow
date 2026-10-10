@@ -31,7 +31,7 @@ ast_Constant_Type = ast.Constant
 
 
 def ast_String_value(x):
-    return x.value if isinstance(x, ast.Str) else x
+    return x.value if isinstance(x, ast.Constant) and isinstance(x.value, str) else x
 
 
 ast_TupleIndex_Type = ast.Tuple
@@ -469,9 +469,7 @@ class RewriteForNumba(ast.NodeTransformer):
                     if isinstance(n, int):
                         elts.append(ast.Name(id=f"_arg{n:02}", ctx=ast.Load()))
                     elif isinstance(n, dict):
-                        elts.append(
-                            ast.Constant(n=n[missing_dim_value], ctx=ast.Load())
-                        )
+                        elts.append(ast.Constant(value=n[missing_dim_value]))
                     else:
                         elts.append(n)
                     logger.debug(f"ELT {unparse_(elts[-1])}")
@@ -537,9 +535,9 @@ class RewriteForNumba(ast.NodeTransformer):
                         func=ast.Name("digital_decode", cts=ast.Load()),
                         args=[
                             result,
-                            ast.Num(scale),
-                            ast.Num(offset),
-                            ast.Num(missing_value),
+                            ast.Constant(value=scale),
+                            ast.Constant(value=offset),
+                            ast.Constant(value=missing_value),
                         ],
                         keywords=[],
                     )
@@ -550,13 +548,13 @@ class RewriteForNumba(ast.NodeTransformer):
                         result = ast.BinOp(
                             left=result,
                             op=ast.Mult(),
-                            right=ast.Num(scale),
+                            right=ast.Constant(value=scale),
                         )
                     if offset:
                         result = ast.BinOp(
                             left=result,
                             op=ast.Add(),
-                            right=ast.Num(offset),
+                            right=ast.Constant(value=offset),
                         )
 
         blender = self.blenders.get(attr, None)
@@ -938,7 +936,7 @@ class RewriteForNumba(ast.NodeTransformer):
                         cat_is_lt_zero = ast.Compare(
                             left=apply_args[0].slice,
                             ops=[ast.Lt()],
-                            comparators=[ast.Num(0)],
+                            comparators=[ast.Constant(value=0)],
                         )
                         result = ast.BoolOp(
                             op=ast.Or(), values=[cat_is_lt_zero, result]

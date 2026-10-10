@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sharrow"
-requires-python = ">=3.9"
+requires-python = ">=3.11"
 dynamic = ["version"]
 dependencies = [
     "numpy >= 1.19",
@@ -16,7 +16,7 @@ dependencies = [
     "h5py",
     "blosc2",
     "hdf5plugin",
-    "xarray",
+    "xarray >= 2025.3.1",
     "numba >= 0.57",
     "numexpr",
     "filelock",
@@ -26,9 +26,10 @@ dependencies = [
 classifiers = [
     "License :: OSI Approved :: BSD License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
 ]
 description = "numba for ActivitySim-style spec files"
 readme = "README.md"
@@ -52,7 +53,7 @@ write_to = "sharrow/_version.py"
 [tool.ruff]
 fix = true
 line-length = 88
-target-version = "py39"
+target-version = "py311"
 extend-include = ["*.ipynb"]
 
 [tool.ruff.lint]
@@ -97,5 +98,5 @@ dev = [
     "pytest-regressions>=2.8.3",
     "scipy>=1.13.1",
     "sparse>=0.15.5",
-    "zarr>=2.18.2",
+    "zarr>=3.1.3,<4",
 ]
