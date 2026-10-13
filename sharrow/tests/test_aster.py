@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 
 from sharrow.aster import ast_String_value, expression_for_numba
-from sharrow.maths import digital_decode, transpose_leading
+from sharrow.maths import clip, digital_decode, transpose_leading
 
 
 @pytest.mark.parametrize("value", ["DIST", "", "AM"])
@@ -58,6 +58,33 @@ def test_raw_string_lookup():
         spacevars={"income": 1},
     )
     assert eval(rewritten, {"_inputs": np.array([5, 12])}) == 12
+
+
+@pytest.mark.filterwarnings("error::DeprecationWarning")
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        ("np.clip(skims.DIST, 2, 4)", [2, 3, 4]),
+        ("skims.DIST.clip(2)", [2, 3, 5]),
+        ("skims.DIST.clip(upper=4)", [1, 3, 4]),
+        ("skims.DIST.clip(lower=2)", [2, 3, 5]),
+        ("skims.DIST.clip(2, 4)", [2, 3, 4]),
+        ("skims.DIST.clip(lower=2, upper=4)", [2, 3, 4]),
+    ],
+)
+def test_clip_rewrite(expression, expected):
+    rewritten = expression_for_numba(
+        expression,
+        spacename="skims",
+        dim_slots=(0,),
+        spacevars={"DIST"},
+    )
+    namespace = {
+        "__skims__DIST": np.array([1, 3, 5]),
+        "clip": clip.py_func,
+    }
+    result = [eval(rewritten, {**namespace, "_arg00": i}) for i in range(3)]
+    np.testing.assert_allclose(result, expected)
 
 
 def test_string_tuple_lookup():
