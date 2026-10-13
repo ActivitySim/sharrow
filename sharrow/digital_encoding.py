@@ -164,7 +164,9 @@ def digitize_by_dictionary(arr, bitwidth=8):
     result = arr.copy()
     bins = find_bins(arr, final_width=1 << bitwidth)
     try:
-        bin_edges = (bins[1:] - bins[:-1]) / 2 + bins[:-1]
+        has_nan = bool(len(bins)) and np.isnan(bins[-1])
+        numeric_bins = bins[:-1] if has_nan else bins
+        bin_edges = (numeric_bins[1:] - numeric_bins[:-1]) / 2 + numeric_bins[:-1]
     except TypeError:
         # bins are not numeric
         bin_map = {x: n for n, x in enumerate(bins)}
@@ -181,13 +183,19 @@ def digitize_by_dictionary(arr, bitwidth=8):
             pass
         else:
             if isinstance(arr_data, da.Array):
-                result.data = da.digitize(arr_data, bin_edges).astype(f"uint{bitwidth}")
+                codes = da.digitize(arr_data, bin_edges)
+                if has_nan:
+                    codes = da.where(da.isnan(arr_data), len(bins) - 1, codes)
+                result.data = codes.astype(f"uint{bitwidth}")
                 result.attrs["digital_encoding"] = {
                     "dictionary": bins,
                 }
                 return result
         # fall back to numpy digitize
-        result.data = np.digitize(arr, bin_edges).astype(f"uint{bitwidth}")
+        codes = np.digitize(arr, bin_edges)
+        if has_nan:
+            codes = np.where(np.isnan(arr), len(bins) - 1, codes)
+        result.data = codes.astype(f"uint{bitwidth}")
         result.attrs["digital_encoding"] = {
             "dictionary": bins,
         }
