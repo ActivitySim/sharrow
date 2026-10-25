@@ -3,8 +3,10 @@ channels:
   - conda-forge
   - nodefaults
 dependencies:
-  - python=3.9
-  - pip
+  - python=3.11
+  # eMudhra CA incident: pip and certifi versions that drop the compromised CA
+  - pip>=26.2.2
+  - certifi>=2026.10.19
   # required for testing
   - dask
   - filelock

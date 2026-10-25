@@ -41,9 +41,9 @@ jobs:
         shell: bash -l {0}
     steps:
         - uses: actions/checkout@v4
-        - uses: astral-sh/setup-uv@v7
+        - uses: astral-sh/setup-uv@18d369b23da25a81e9458561248e1aafff6a70fa # v10.3.1
           with:
-            version: "0.9.6"
+            version: "0.13.4"
             enable-cache: true
             cache-dependency-glob: "uv.lock"
             python-version: '3.11'
@@ -73,9 +73,9 @@ jobs:
         shell: bash -l {0}
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v7
+      - uses: astral-sh/setup-uv@18d369b23da25a81e9458561248e1aafff6a70fa # v10.3.1
         with:
-          version: "0.9.6"
+          version: "0.13.4"
           python-version: ${{ matrix.python-version }}
       - name: File contents
         run: |
@@ -111,9 +111,9 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Install uv and set Python 3.11
-      uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+      uses: astral-sh/setup-uv@18d369b23da25a81e9458561248e1aafff6a70fa # v10.3.1
       with:
-        version: "0.12.2"
+        version: "0.13.4"
         python-version: "3.11"
         enable-cache: true
     - name: Install dependencies
@@ -191,9 +191,9 @@ jobs:
           path: 'activitysim'
 
       - name: Setup UV
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@18d369b23da25a81e9458561248e1aafff6a70fa # v10.3.1
         with:
-          version: "0.9.6"
+          version: "0.13.4"
           enable-cache: true
           cache-dependency-glob: "uv.lock"
           python-version: ${{ env.python-version }}
