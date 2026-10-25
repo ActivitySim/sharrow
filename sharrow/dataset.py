@@ -6,6 +6,7 @@ import hashlib
 import logging
 import re
 import time
+import zipfile
 from collections.abc import Hashable, Iterable, Mapping, Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -1187,10 +1188,13 @@ def from_zarr(store, *args, **kwargs):
 
 def from_zarr_with_attr(*args, **kwargs):
     obj = from_zarr(*args, **kwargs)
-    for k in obj:
+    for k in obj.variables:
         attrs = {}
         for aname, avalue in obj[k].attrs.items():
             attrs[aname] = _from_evalable_string(avalue)
+        digital_encoding = attrs.get("digital_encoding", {})
+        if "dictionary" in digital_encoding:
+            digital_encoding["dictionary"] = np.asarray(digital_encoding["dictionary"])
         obj[k] = obj[k].assign_attrs(attrs)
     attrs = {}
     for aname, avalue in obj.attrs.items():
@@ -1501,9 +1505,10 @@ def to_zarr_zip(self, *args, **kwargs):
     ----------
     store : MutableMapping, str or Path, optional
         Store or path to directory in file system.  If given with a
-        ".zarr.zip" extension, and keyword arguments limited to 'mode' and
-        'compression', then a ZipStore will be created, populated, and then
-        immediately closed.
+        ".zarr.zip" extension, then a ZipStore will be created, populated,
+        and immediately closed. ZIP writes require ``compute=True``.
+    zarr_format : {2, 3}, default 2
+        On-disk format. Format 2 preserves compatibility with existing caches.
     chunk_store : MutableMapping, str or Path, optional
         Store or path to directory in file system only for Zarr array chunks.
         Requires zarr-python v2.4.0 or later.
@@ -1568,14 +1573,29 @@ def to_zarr_zip(self, *args, **kwargs):
         If not other chunks are found, Zarr uses its own heuristics to
         choose automatic chunk sizes.
     """
-    if len(args) == 1 and isinstance(args[0], str) and args[0].endswith(".zarr.zip"):
-        if {"compression", "mode"}.issuperset(kwargs.keys()):
-            import zarr
+    # Accept the older spelling even when Xarray no longer supports it.
+    zarr_version = kwargs.pop("zarr_version", None)
+    zarr_format = kwargs.get("zarr_format")
+    if zarr_format is None:
+        kwargs["zarr_format"] = zarr_version if zarr_version is not None else 2
+    elif zarr_version is not None and zarr_version != zarr_format:
+        raise ValueError("zarr_version and zarr_format must agree")
 
-            with zarr.ZipStore(args[0], **kwargs) as store:
-                self.to_zarr(store)
-            return
-    return super().to_zarr(*args, **kwargs)
+    destination = args[0] if args else kwargs.get("store")
+    if isinstance(destination, (str, Path)) and str(destination).endswith(".zarr.zip"):
+        from zarr.storage import ZipStore
+
+        if kwargs.get("compute", True) is False:
+            raise ValueError("Writing a .zarr.zip file requires compute=True")
+        mode = "w" if kwargs.get("mode") == "w" else "a"
+        compression = kwargs.pop("compression", zipfile.ZIP_STORED)
+        with ZipStore(str(destination), mode=mode, compression=compression) as store:
+            if args:
+                args = (store, *args[1:])
+            else:
+                kwargs["store"] = store
+            return self.to_zarr(*args, **kwargs)
+    return self.to_zarr(*args, **kwargs)
 
 
 def _to_ast_literal(x):
@@ -1595,8 +1615,8 @@ def _to_ast_literal(x):
         return _to_ast_literal(x.to_list())
     elif isinstance(x, np.ndarray):
         return _to_ast_literal(list(x))
-    elif isinstance(x, np.str_):
-        return repr(str(x))
+    elif isinstance(x, np.generic):
+        return _to_ast_literal(x.item())
     else:
         return repr(x)
 
@@ -1612,6 +1632,13 @@ def _to_evalable_string(x):
         return f" {_to_ast_literal(x)} "
 
 
+class _RestoreSpecialFloats(ast.NodeTransformer):
+    def visit_Name(self, node):
+        if node.id in ("nan", "inf"):
+            return ast.Constant(value=float(node.id))
+        return node
+
+
 def _from_evalable_string(x):
     if isinstance(x, str):
         # if x.startswith(" {") and x.endswith("} "):
@@ -1624,7 +1651,8 @@ def _from_evalable_string(x):
             return False
         if x.startswith(" ") and x.endswith(" "):
             try:
-                return ast.literal_eval(x.strip(" "))
+                literal = ast.parse(x.strip(" "), mode="eval")
+                return ast.literal_eval(_RestoreSpecialFloats().visit(literal))
             except Exception:
                 print(x)
                 raise
@@ -1641,9 +1669,10 @@ def to_zarr_with_attr(self, *args, **kwargs):
     ----------
     store : MutableMapping, str or Path, optional
         Store or path to directory in file system.  If given with a
-        ".zarr.zip" extension, and keyword arguments limited to 'mode' and
-        'compression', then a ZipStore will be created, populated, and then
-        immediately closed.
+        ".zarr.zip" extension, then a ZipStore will be created, populated,
+        and immediately closed. ZIP writes require ``compute=True``.
+    zarr_format : {2, 3}, default 2
+        On-disk format. Format 2 preserves compatibility with existing caches.
     chunk_store : MutableMapping, str or Path, optional
         Store or path to directory in file system only for Zarr array chunks.
         Requires zarr-python v2.4.0 or later.
@@ -1724,7 +1753,7 @@ def to_zarr_with_attr(self, *args, **kwargs):
     for aname, avalue in self.attrs.items():
         attrs[aname] = _to_evalable_string(avalue)
     obj = obj.assign_attrs(attrs)
-    return obj.to_zarr(*args, **kwargs)
+    return obj.to_zarr_zip(*args, **kwargs)
 
 
 @register_dataset_method

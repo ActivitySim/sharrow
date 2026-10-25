@@ -93,4 +93,4 @@ def omx_to_zarr(
                     index_names[1]: r2,
                 },
             )
-        ds.to_zarr(zarr_directory, mode="a")
+        ds.to_zarr(zarr_directory, mode="a", zarr_format=2)
