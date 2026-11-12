@@ -1323,7 +1323,12 @@ def reload_from_omx_3d(
 
     started = time.time()
     load_batches = [
-        (str(filenames[source_number]), batch)
+        (
+            sources[source_number]
+            if worker_count == 1
+            else str(filenames[source_number]),
+            batch,
+        )
         for source_number, batch in active_batches
     ]
     bytes_loaded = _load_omx_batches(dataset, load_batches, worker_count)

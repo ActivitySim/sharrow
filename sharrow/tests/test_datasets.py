@@ -985,3 +985,25 @@ sh.shared_memory.delete_shared_memory_files(key)
     )
     assert not (tmp_path / "mapped.dat").exists()
     assert not (tmp_path / "mapped.dat.meta.pkl").exists()
+
+
+@pytest.mark.parametrize("mode", ["r", "a", "w", "memory"])
+def test_reload_preserves_caller_handle(tmp_path, mode):
+    """Serial reload uses the live handle even when no backing file exists."""
+    path = tmp_path / "source.omx"
+    values = np.arange(9, dtype=np.float64).reshape(3, 3)
+    if mode in {"r", "a"}:
+        with openmatrix.open_file(path, "w") as handle:
+            handle.create_matrix("DIST", obj=values)
+    options = {"driver": "core", "backing_store": False} if mode == "memory" else {}
+    with openmatrix.open_file(
+        path, "w" if mode == "memory" else mode, **options
+    ) as handle:
+        if mode in {"w", "memory"}:
+            handle.create_matrix("DIST", obj=values)
+        target = xr.Dataset({"DIST": (("o", "d"), np.zeros((3, 3), dtype="float32"))})
+        sh.dataset.reload_from_omx_3d(target, handle, workers=1)
+        np.testing.assert_array_equal(target.DIST, values)
+        assert handle.id.valid
+    if mode == "memory":
+        assert not path.exists()
