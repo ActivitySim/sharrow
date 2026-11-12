@@ -23,10 +23,10 @@ dependencies:
   - pytest-regressions
   - pytest-xdist
   - nbmake
-  - openmatrix
   - h5py
   - python-blosc2
   - hdf5plugin
   - zarr
   - pip:
+    - openmatrix>=0.4.0
     - larch>=6
