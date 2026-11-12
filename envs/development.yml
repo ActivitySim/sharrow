@@ -21,7 +21,6 @@ dependencies:
   - numba>=0.57
   - numexpr
   - numpy>=1.19,<2
-  - openmatrix
   - pandas>=1.2
   - pyarrow
   - pytest
@@ -33,5 +32,6 @@ dependencies:
   - zarr
 
   - pip:
+    - openmatrix>=0.4.0
     - larch>=6
     - -e ..
