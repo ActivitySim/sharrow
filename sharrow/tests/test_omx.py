@@ -135,3 +135,43 @@ def test_omx_to_zarr(omx_file, tmp_path):
             dataset["TIME"].sel(time_period="PM"), matrices["TIME__PM"]
         )
         np.testing.assert_array_equal(dataset.coords["otaz"], [101, 102, 103])
+
+
+@pytest.mark.parametrize("precision", [None, 32])
+def test_omx_to_zarr_precision_and_storage_chunks(tmp_path, precision):
+    """Conversion preserves float64 by default and bounds spatial/period chunks."""
+    import json
+
+    source = tmp_path / "precise.omx"
+    destination = tmp_path / "precise.zarr"
+    values = np.full((300, 270), 1.0000000001, dtype="float64")
+    with openmatrix.open_file(source, "w") as handle:
+        handle.create_matrix("DIST", obj=values)
+        handle.create_matrix("TIME__AM", obj=values)
+        handle.create_matrix("TIME__PM", obj=values * 2)
+        handle.create_matrix(
+            "COUNTS", obj=np.full(values.shape, 2**54 + 1, dtype="int64")
+        )
+    kwargs = {} if precision is None else {"max_float_precision": precision}
+    omx_to_zarr(
+        source,
+        destination,
+        time_periods=["AM", "PM"],
+        index_names=("origin", "destination", "period"),
+        **kwargs,
+    )
+    dtype = "float64" if precision is None else "float32"
+    with xr.open_zarr(destination) as result:
+        assert result.DIST.dtype == np.dtype(dtype)
+        assert result.TIME.dtype == np.dtype(dtype)
+        np.testing.assert_array_equal(result.DIST, values.astype(dtype))
+        np.testing.assert_array_equal(
+            result.TIME.sel(period="AM"), values.astype(dtype)
+        )
+        np.testing.assert_array_equal(
+            result.TIME.sel(period="PM"), (values * 2).astype(dtype)
+        )
+        np.testing.assert_array_equal(result.COUNTS, 2**54 + 1)
+    for name, chunks in [("DIST", [256, 256]), ("TIME", [256, 256, 1])]:
+        metadata = json.loads((destination / name / ".zarray").read_text())
+        assert metadata["chunks"] == chunks

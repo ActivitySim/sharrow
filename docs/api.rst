@@ -157,6 +157,13 @@ files on Windows, discard the Dataset and all retained views::
 File deletion is a separate, explicit operation; release never deletes memmap
 files. Do not force-close the underlying mapping while views remain alive.
 
+OMX to Zarr conversion preserves float64 values by default. Pass
+``max_float_precision=32`` to ``sharrow.translate.omx_to_zarr`` only when the
+precision reduction is intended. Output uses Zarr format 2 with spatial chunks
+of at most 256 by 256 cells and one period per chunk. This bounds stored chunks
+independently of the source loader's tasks; decoding still materializes a source
+matrix, rather than streaming individual spatial tiles from OMX.
+
 Editing
 ~~~~~~~
 .. automethod:: sharrow.Dataset.ensure_integer
