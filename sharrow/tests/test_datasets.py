@@ -1054,3 +1054,46 @@ np.testing.assert_array_equal(
         text=True,
         timeout=20,
     )
+
+
+def test_default_lazy_selection_reads_only_selected_period(tmp_path, monkeypatch):
+    """A selective read must not decode unrequested time-period matrices."""
+    path = tmp_path / "skims.omx"
+    matrices = _random_matrices()
+    _write_compressed_omx(path, matrices)
+    reads = []
+    original = sh.dataset._read_omx_dataset
+
+    def record_read(dataset, *args, **kwargs):
+        reads.append(dataset.name)
+        return original(dataset, *args, **kwargs)
+
+    monkeypatch.setattr(sh.dataset, "_read_omx_dataset", record_read)
+    lazy = sh.dataset.from_omx_3d(path, time_periods=["AM", "PM"])
+    actual = lazy.TIME.sel(time_period="AM").compute(scheduler="synchronous")
+    np.testing.assert_array_equal(actual, matrices["TIME__AM"])
+    assert reads == ["/data/TIME__AM"]
+    assert lazy.TIME.chunks[-1] == (1, 1)
+
+
+def test_reload_default_does_not_spawn(tmp_path, monkeypatch):
+    """Legacy reload calls remain in-process even with several shared sources."""
+    paths = [tmp_path / "one.omx", tmp_path / "two.omx"]
+    for path in paths:
+        _write_compressed_omx(path, _random_matrices())
+    expected = sh.dataset.from_omx_3d(paths, time_periods=["AM", "PM"], load="eager")
+    shared = xr.zeros_like(expected).shm.to_shared_memory(
+        "default-reload-" + secrets.token_hex(5), load=False
+    )
+
+    def forbid_pool(*args, **kwargs):
+        pytest.fail("default reload must not spawn processes")
+
+    monkeypatch.setattr(
+        sh.dataset.concurrent.futures, "ProcessPoolExecutor", forbid_pool
+    )
+    try:
+        sh.dataset.reload_from_omx_3d(shared, paths)
+        xr.testing.assert_equal(shared, expected)
+    finally:
+        shared.shm.release_shared_memory()

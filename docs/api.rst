@@ -111,6 +111,16 @@ additional filter packages::
 These third-party filter packages do not currently publish Windows ARM64
 wheels, so Windows on ARM uses the standard HDF5 filters supported by h5py.
 
+Lazy loading defaults to one Dask task per matrix (time-period page), so
+selecting a period does not load the other periods. Use
+``task_granularity="variable"`` explicitly when loading whole variables and
+reducing task overhead matters more than selective reads. Eager and direct
+shared/memmap loads continue to fill their final destination arrays directly.
+
+``reload_from_omx_3d`` loads files serially by default, with parallel chunk
+decoding. Existing callers do not acquire multiprocessing requirements.
+Pass ``workers>1`` to opt into file-level parallel reloads.
+
 The ``shared`` and ``memmap`` loading modes can read several source files
 concurrently. On Windows, Sharrow uses file-level threads so these modes work
 from ordinary scripts, notebooks, and frozen applications without a

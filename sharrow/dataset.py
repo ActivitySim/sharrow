@@ -835,7 +835,7 @@ def from_omx_3d(
     max_float_precision=32,
     ignore=None,
     load="lazy",
-    task_granularity="variable",
+    task_granularity="matrix",
     workers=None,
     memory_path=None,
     shared_memory_key=None,
@@ -889,10 +889,11 @@ def from_omx_3d(
         large OMX files. ``"memmap"`` uses the same parallel loader with
         disk-backed arrays, substantially reducing resident memory at the cost
         of additional storage I/O.
-    task_granularity : {"variable", "matrix"}, default "variable"
-        Dask task granularity for lazy loading. Grouping all time-period pages
-        of a variable minimizes graph and file-open overhead. Matrix granularity
-        can use less memory when only selected periods are subsequently loaded.
+    task_granularity : {"matrix", "variable"}, default "matrix"
+        Dask task granularity for lazy loading. The default keeps one task per
+        period, avoiding reads of unselected periods and limiting intermediate
+        arrays during copies or realignment. Opt into "variable" to group all
+        periods and reduce graph and file-open overhead for whole-variable reads.
     workers : int, optional
         Number of source files to load concurrently for ``"shared"`` or
         ``"memmap"``. The default uses up to one worker per source file.
@@ -1291,11 +1292,11 @@ def reload_from_omx_3d(
         in the load process. This is useful for excluding variables that
         are not found in the target dataset.
     workers : int, optional
-        Number of source files to load concurrently. By default, path-backed
-        OMX files are loaded concurrently when ``dataset`` is shared-memory-
-        backed. Windows uses threads; other platforms use spawned processes.
-        Ordinary in-process datasets and sources that cannot be reopened are
-        loaded serially. Set to 1 to force serial I/O.
+        Number of source files to load concurrently. The default loads files
+        serially, retaining parallel chunk decoding within each file. Opt into
+        file-level parallelism with workers > 1 and a shared-memory destination
+        plus reopenable sources. Windows uses threads; other platforms spawn
+        processes and require a guarded script entry point.
     """
     if isinstance(ignore, str):
         ignore = [ignore]
@@ -1322,9 +1323,7 @@ def reload_from_omx_3d(
         _is_reopenable(filenames[source_number]) for source_number, _ in active_batches
     )
     if workers is None:
-        worker_count = (
-            _omx_worker_count(None, len(active_batches)) if parallel_capable else 1
-        )
+        worker_count = 1
     else:
         worker_count = _omx_worker_count(workers, len(active_batches))
         if worker_count > 1 and not parallel_capable:
