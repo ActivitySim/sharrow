@@ -31,7 +31,7 @@ ast_Constant_Type = ast.Constant
 
 
 def ast_String_value(x):
-    return x.value if isinstance(x, ast.Str) else x
+    return x.value if isinstance(x, ast.Constant) and isinstance(x.value, str) else x
 
 
 ast_TupleIndex_Type = ast.Tuple
@@ -469,9 +469,7 @@ class RewriteForNumba(ast.NodeTransformer):
                     if isinstance(n, int):
                         elts.append(ast.Name(id=f"_arg{n:02}", ctx=ast.Load()))
                     elif isinstance(n, dict):
-                        elts.append(
-                            ast.Constant(n=n[missing_dim_value], ctx=ast.Load())
-                        )
+                        elts.append(ast.Constant(value=n[missing_dim_value]))
                     else:
                         elts.append(n)
                     logger.debug(f"ELT {unparse_(elts[-1])}")
@@ -534,12 +532,12 @@ class RewriteForNumba(ast.NodeTransformer):
                     scale = digital_encoding.get("scale", 1)
                     offset = digital_encoding.get("offset", 0)
                     result = ast.Call(
-                        func=ast.Name("digital_decode", cts=ast.Load()),
+                        func=ast.Name("digital_decode", ctx=ast.Load()),
                         args=[
                             result,
-                            ast.Num(scale),
-                            ast.Num(offset),
-                            ast.Num(missing_value),
+                            ast.Constant(value=scale),
+                            ast.Constant(value=offset),
+                            ast.Constant(value=missing_value),
                         ],
                         keywords=[],
                     )
@@ -550,13 +548,13 @@ class RewriteForNumba(ast.NodeTransformer):
                         result = ast.BinOp(
                             left=result,
                             op=ast.Mult(),
-                            right=ast.Num(scale),
+                            right=ast.Constant(value=scale),
                         )
                     if offset:
                         result = ast.BinOp(
                             left=result,
                             op=ast.Add(),
-                            right=ast.Num(offset),
+                            right=ast.Constant(value=offset),
                         )
 
         blender = self.blenders.get(attr, None)
@@ -582,7 +580,7 @@ class RewriteForNumba(ast.NodeTransformer):
                         ast_Constant(max_blend_distance),  # blend_limit
                     )
                 result = ast.Call(
-                    func=ast.Name("get_blended_2", cts=ast.Load()),
+                    func=ast.Name("get_blended_2", ctx=ast.Load()),
                     args=get_blended_2_args,
                     keywords=[],
                 )
@@ -781,14 +779,14 @@ class RewriteForNumba(ast.NodeTransformer):
                 for a in node.args:
                     clip_args.append(self.visit(a))
                 result = ast.Call(
-                    func=ast.Name("clip", cts=ast.Load()),
+                    func=ast.Name("clip", ctx=ast.Load()),
                     args=clip_args,
                     keywords=[self.visit(i) for i in node.keywords],
                 )
             elif len(node.args) == 1 and len(node.keywords) == 0:
                 # single positional arg becomes max
                 result = ast.Call(
-                    func=ast.Name("max", cts=ast.Load()),
+                    func=ast.Name("max", ctx=ast.Load()),
                     args=[self.visit(node.func.value), self.visit(node.args[0])],
                     keywords=[],
                 )
@@ -797,7 +795,7 @@ class RewriteForNumba(ast.NodeTransformer):
                 if node.keywords[0].arg in ("upper", "max"):
                     # becomes min
                     result = ast.Call(
-                        func=ast.Name("min", cts=ast.Load()),
+                        func=ast.Name("min", ctx=ast.Load()),
                         args=[
                             self.visit(node.func.value),
                             self.visit(node.keywords[0].value),
@@ -807,7 +805,7 @@ class RewriteForNumba(ast.NodeTransformer):
                 elif node.keywords[0].arg in ("lower", "min"):
                     # becomes max
                     result = ast.Call(
-                        func=ast.Name("max", cts=ast.Load()),
+                        func=ast.Name("max", ctx=ast.Load()),
                         args=[
                             self.visit(node.func.value),
                             self.visit(node.keywords[0].value),
@@ -817,12 +815,12 @@ class RewriteForNumba(ast.NodeTransformer):
             elif len(node.args) == 2 and len(node.keywords) == 0:
                 # two positional arg becomes max and min
                 nested_call = ast.Call(
-                    func=ast.Name("min", cts=ast.Load()),
+                    func=ast.Name("min", ctx=ast.Load()),
                     args=[self.visit(node.func.value), self.visit(node.args[1])],
                     keywords=[],
                 )
                 result = ast.Call(
-                    func=ast.Name("max", cts=ast.Load()),
+                    func=ast.Name("max", ctx=ast.Load()),
                     args=[nested_call, self.visit(node.args[0])],
                     keywords=[],
                 )
@@ -834,7 +832,7 @@ class RewriteForNumba(ast.NodeTransformer):
                 for a in node.args:
                     clip_args.append(self.visit(a))
                 result = ast.Call(
-                    func=ast.Name("clip", cts=ast.Load()),
+                    func=ast.Name("clip", ctx=ast.Load()),
                     args=clip_args,
                     keywords=[self.visit(i) for i in node.keywords],
                 )
@@ -938,7 +936,7 @@ class RewriteForNumba(ast.NodeTransformer):
                         cat_is_lt_zero = ast.Compare(
                             left=apply_args[0].slice,
                             ops=[ast.Lt()],
-                            comparators=[ast.Num(0)],
+                            comparators=[ast.Constant(value=0)],
                         )
                         result = ast.BoolOp(
                             op=ast.Or(), values=[cat_is_lt_zero, result]

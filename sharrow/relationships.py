@@ -1644,7 +1644,11 @@ class DataTree:
                         return mapper.get(x, 0)
 
                     if upstream.size:
-                        offsets = xr.apply_ufunc(np.vectorize(mapper_get), upstream)
+                        # offsets are new data; don't inherit attrs (e.g.
+                        # last_checkpoint) from the label array
+                        offsets = xr.apply_ufunc(
+                            np.vectorize(mapper_get), upstream, keep_attrs=False
+                        )
                     else:
                         offsets = xr.DataArray([], dims=["index"])
                     if offsets.dtype.kind != "i":
