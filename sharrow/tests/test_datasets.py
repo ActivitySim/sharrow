@@ -1164,7 +1164,8 @@ def test_omx_shape_error_identifies_source_and_exclusion(tmp_path, load):
             [first, second], time_periods=["AM"], load=load, **options
         )
     message = str(error.value)
-    assert str(first) in message and str(second) in message
+    # Diagnostics quote paths with repr, which escapes Windows backslashes.
+    assert repr(str(first)) in message and repr(str(second)) in message
     assert "UNRELATED" in message
     assert "(4, 4), expected (3, 3)" in message
     assert "SHAPE metadata" in message and "ignore" in message
