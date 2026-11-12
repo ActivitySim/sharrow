@@ -1007,3 +1007,50 @@ def test_reload_preserves_caller_handle(tmp_path, mode):
         assert handle.id.valid
     if mode == "memory":
         assert not path.exists()
+
+
+def test_lazy_decoder_restarts_after_fork(tmp_path):
+    """A child can decode OMX after inheriting a warmed parent thread pool."""
+    import os
+    import subprocess
+    import sys
+
+    if not hasattr(os, "fork"):
+        pytest.skip("fork is unavailable")
+    source = tmp_path / "source.omx"
+    _write_compressed_omx(source, _random_matrices())
+    code = """
+import os
+import signal
+import sys
+import numpy as np
+import sharrow as sh
+
+expected = sh.dataset._fast_load_omx_array(sys.argv[1], 'DIST')
+reader = sh.dataset._lazy_omx_reader
+sh.dataset._lazy_omx_reader_lock.acquire()
+pid = os.fork()
+if pid == 0:
+    signal.alarm(10)
+    assert sh.dataset._lazy_omx_reader is None
+    assert sh.dataset._lazy_omx_reader_lock.acquire(blocking=False)
+    sh.dataset._lazy_omx_reader_lock.release()
+    actual = sh.dataset._fast_load_omx_array(sys.argv[1], 'DIST')
+    np.testing.assert_array_equal(actual, expected)
+    sh.dataset._shutdown_lazy_omx_reader()
+    os._exit(0)
+sh.dataset._lazy_omx_reader_lock.release()
+_, status = os.waitpid(pid, 0)
+assert os.waitstatus_to_exitcode(status) == 0, status
+assert sh.dataset._lazy_omx_reader is reader
+np.testing.assert_array_equal(
+    sh.dataset._fast_load_omx_array(sys.argv[1], 'DIST'), expected
+)
+"""
+    subprocess.run(
+        [sys.executable, "-c", code, str(source)],
+        check=True,
+        capture_output=True,
+        text=True,
+        timeout=20,
+    )

@@ -73,6 +73,18 @@ _lazy_omx_reader = None
 _lazy_omx_reader_lock = threading.Lock()
 
 
+def _reset_lazy_omx_reader_after_fork():
+    """Discard inherited thread state without joining vanished parent threads."""
+    global _lazy_omx_reader, _lazy_omx_reader_lock
+    _lazy_omx_reader = None
+    # The parent may have forked while another thread held this lock.
+    _lazy_omx_reader_lock = threading.Lock()
+
+
+if hasattr(os, "register_at_fork"):
+    os.register_at_fork(after_in_child=_reset_lazy_omx_reader_after_fork)
+
+
 def _get_lazy_omx_reader():
     """Return the process-wide decoder pool shared by concurrent Dask tasks."""
     global _lazy_omx_reader
