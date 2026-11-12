@@ -1039,8 +1039,14 @@ def from_omx_3d(
             source_number = omx_data_map[data_name]
             matrix_shape, matrix_dtype = matrix_metadata[data_name]
             if matrix_shape != omx_shape:
+                source_label = omx_filenames[source_number] or "<in-memory>"
+                reference_label = omx_filenames[0] or "<in-memory>"
                 raise ValueError(
-                    f"matrix {data_name!r} has shape {matrix_shape}, expected {omx_shape}"
+                    f"matrix {data_name!r} in OMX source {source_label!r} has shape "
+                    f"{matrix_shape}, expected {omx_shape} from the first source "
+                    f"{reference_label!r}. Check SHAPE metadata and coordinate "
+                    "consistency. Use ignore to exclude this matrix only if it "
+                    "is not needed; ignore cannot repair incorrect shape metadata."
                 )
             entry = (source_number, data_name, matrix_dtype)
             if time_period_sep in data_name:

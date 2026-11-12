@@ -111,6 +111,14 @@ additional filter packages::
 These third-party filter packages do not currently publish Windows ARM64
 wheels, so Windows on ARM uses the standard HDF5 filters supported by h5py.
 
+All selected OMX matrices must match the shape declared or inferred from the
+first source file. Inconsistent matrices now raise an error during construction,
+before loading or reserving shared storage. The error identifies the matrix,
+source file, actual shape, and expected shape. Correct stale ``SHAPE`` metadata
+and verify coordinates rather than relying on earlier permissive behavior.
+``ignore`` can exclude an unrelated matrix, but does not repair incorrect
+metadata for matrices that must be loaded.
+
 Lazy loading defaults to one Dask task per matrix (time-period page), so
 selecting a period does not load the other periods. Use
 ``task_granularity="variable"`` explicitly when loading whole variables and

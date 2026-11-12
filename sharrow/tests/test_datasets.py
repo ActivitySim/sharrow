@@ -1148,3 +1148,40 @@ def test_parallel_file_workers_share_decoder_budget(tmp_path, monkeypatch):
         assert budgets == [4, 4]
     finally:
         shared.shm.release_shared_memory()
+
+
+@pytest.mark.parametrize("load", ["lazy", "eager", "shared", "memmap"])
+def test_omx_shape_error_identifies_source_and_exclusion(tmp_path, load):
+    """Reject inconsistent matrices before allocation, with actionable context."""
+    first, second = tmp_path / "first.omx", tmp_path / "second.omx"
+    with openmatrix.open_file(first, "w") as handle:
+        handle.create_matrix("DIST", obj=np.eye(3))
+    with openmatrix.open_file(second, "w") as handle:
+        handle.create_matrix("UNRELATED", obj=np.eye(4))
+    options = {"memory_path": tmp_path / "mapped.dat"} if load == "memmap" else {}
+    with pytest.raises(ValueError) as error:
+        sh.dataset.from_omx_3d(
+            [first, second], time_periods=["AM"], load=load, **options
+        )
+    message = str(error.value)
+    assert str(first) in message and str(second) in message
+    assert "UNRELATED" in message
+    assert "(4, 4), expected (3, 3)" in message
+    assert "SHAPE metadata" in message and "ignore" in message
+    assert not (tmp_path / "mapped.dat").exists()
+    # Exclusion is appropriate for an unrelated matrix, not bad root metadata.
+    filtered = sh.dataset.from_omx_3d(
+        [first, second], time_periods=["AM"], ignore="^UNRELATED$", load="eager"
+    )
+    np.testing.assert_array_equal(filtered.DIST, np.eye(3))
+
+
+def test_omx_stale_shape_metadata_is_rejected(tmp_path):
+    """A named coordinate does not silently override inconsistent SHAPE metadata."""
+    path = tmp_path / "stale.omx"
+    with openmatrix.open_file(path, "w") as handle:
+        handle.create_matrix("DIST", obj=np.eye(3))
+        handle.create_mapping("taz", [11, 22, 33])
+        handle.attrs["SHAPE"] = [4, 4]
+    with pytest.raises(ValueError, match=r"expected \(4, 4\).*SHAPE metadata"):
+        sh.dataset.from_omx_3d(path, time_periods=["AM"], indexes="taz")
