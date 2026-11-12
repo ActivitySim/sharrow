@@ -128,9 +128,19 @@ therefore use the standard guarded entry point::
 
 Set ``workers=1`` for deterministic serial I/O on every platform. Successful
 ``memmap`` loads retain their backing data and metadata files intentionally.
-Call ``result.shm.release_shared_memory()`` before
-``result.shm.delete_shared_memory_files(result.shm.shared_memory_key)`` when
-the files are no longer needed.
+Releasing a memmap flushes it and relinquishes the accessor's ownership;
+existing Dataset arrays and retained NumPy views remain valid. The mapping
+closes when the last array reference is discarded. Before deleting the backing
+files on Windows, discard the Dataset and all retained views::
+
+    key = result.shm.shared_memory_key
+    result.shm.release_shared_memory()
+    del result  # also discard any retained DataArrays or NumPy views
+    gc.collect()  # import gc; Xarray accessor cycles may delay collection
+    sharrow.Dataset.shm.delete_shared_memory_files(key)
+
+File deletion is a separate, explicit operation; release never deletes memmap
+files. Do not force-close the underlying mapping while views remain alive.
 
 Editing
 ~~~~~~~

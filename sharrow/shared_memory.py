@@ -260,15 +260,22 @@ class SharedMemDatasetAccessor:
         return r
 
     def release_shared_memory(self):
-        """Release shared memory allocated to this Dataset."""
+        """Release this accessor's ownership of shared storage.
+
+        Memmap views keep their mapping alive until the last array reference is
+        discarded. On Windows, discard the Dataset and any retained views before
+        calling ``delete_shared_memory_files``; release does not invalidate them.
+        """
         key = self._shared_memory_key_
         if key and key.startswith("memmap:"):
-            # Memmaps are intentionally not kept in the process-global shared
-            # memory registry. Release the Dataset's own buffer and mapping so
-            # Windows can delete or replace the backing file immediately.
+            # NumPy views retain the memmap through their base chain. Never
+            # close its mmap explicitly here: callers may still hold those views.
+            for memory_object in self._shared_memory_objs_:
+                if isinstance(memory_object, np.memmap):
+                    memory_object.flush()
             buffer = getattr(self, "_buffer", None)
-            _close_memmap_objects(self._shared_memory_objs_, buffer=buffer)
             if buffer is not None:
+                buffer.release()
                 del self._buffer
             self._shared_memory_objs_.clear()
             self._shared_memory_owned_ = False

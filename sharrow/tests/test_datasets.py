@@ -1,3 +1,4 @@
+import gc
 import secrets
 import tempfile
 from pathlib import Path
@@ -593,7 +594,9 @@ def test_from_omx_3d_memmap_low_memory():
                 )
         finally:
             mapped.shm.release_shared_memory()
-            mapped.shm.delete_shared_memory_files(key)
+            del mapped
+            gc.collect()
+            SharedMemDatasetAccessor.delete_shared_memory_files(key)
 
         assert not backing.exists()
         assert not Path(f"{backing}.meta.pkl").exists()
@@ -633,7 +636,9 @@ def test_windows_parallel_backend_uses_threads(monkeypatch, tmp_path):
         assert sh.dataset._omx_worker_count(100, 2) == 2
     finally:
         mapped.shm.release_shared_memory()
-        mapped.shm.delete_shared_memory_files(key)
+        del mapped
+        gc.collect()
+        SharedMemDatasetAccessor.delete_shared_memory_files(key)
 
 
 def test_memmap_metadata_failure_removes_new_backing_file(monkeypatch, tmp_path):
@@ -917,7 +922,9 @@ def test_openmatrix_loading_modes(tmp_path, load, source_kind):
     finally:
         if key is not None:
             dataset.shm.release_shared_memory()
-            dataset.shm.delete_shared_memory_files(key)
+            del dataset
+            gc.collect()
+            SharedMemDatasetAccessor.delete_shared_memory_files(key)
 
 
 def test_openmatrix_in_memory_handle():
@@ -932,3 +939,49 @@ def test_openmatrix_in_memory_handle():
         assert handle.id.valid
     np.testing.assert_array_equal(two_d["DIST"], np.eye(3))
     np.testing.assert_array_equal(three_d["DIST"], np.eye(3, dtype="float32"))
+
+
+def test_memmap_release_keeps_retained_views_alive(tmp_path):
+    """Releasing a Dataset must not unmap storage still used by NumPy views."""
+    import subprocess
+    import sys
+
+    source = tmp_path / "skims.omx"
+    _write_compressed_omx(source, _random_matrices())
+    code = """
+import gc
+import sys
+import weakref
+import numpy as np
+import sharrow as sh
+
+ds = sh.dataset.from_omx_3d(
+    sys.argv[1], time_periods=['AM', 'PM'], load='memmap',
+    memory_path=sys.argv[2], workers=1,
+)
+key = ds.shm.shared_memory_key
+mapping = weakref.ref(ds.shm._shared_memory_objs_[0])
+view = ds['DIST'].values
+expected = view.copy()
+ds.shm.release_shared_memory()
+ds.shm.release_shared_memory()
+np.testing.assert_array_equal(ds['DIST'].values, expected)
+np.testing.assert_array_equal(view, expected)
+del ds
+gc.collect()
+np.testing.assert_array_equal(view, expected)
+assert mapping() is not None
+del view
+gc.collect()
+assert mapping() is None
+sh.shared_memory.delete_shared_memory_files(key)
+"""
+    subprocess.run(
+        [sys.executable, "-c", code, str(source), str(tmp_path / "mapped.dat")],
+        check=True,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert not (tmp_path / "mapped.dat").exists()
+    assert not (tmp_path / "mapped.dat.meta.pkl").exists()
