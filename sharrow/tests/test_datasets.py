@@ -1097,3 +1097,54 @@ def test_reload_default_does_not_spawn(tmp_path, monkeypatch):
         xr.testing.assert_equal(shared, expected)
     finally:
         shared.shm.release_shared_memory()
+
+
+def test_parallel_file_workers_share_decoder_budget(tmp_path, monkeypatch):
+    """The file-worker boundary passes a divided CPU budget to each decoder."""
+    paths = [tmp_path / "one.omx", tmp_path / "two.omx"]
+    for path in paths:
+        _write_compressed_omx(path, _random_matrices())
+    expected = sh.dataset.from_omx_3d(paths, time_periods=["AM", "PM"], load="eager")
+    budgets = []
+    original_pool = sh.dataset.concurrent.futures.ProcessPoolExecutor
+
+    def recording_pool(*args, **kwargs):
+        pool = original_pool(*args, **kwargs)
+        submit = pool.submit
+
+        def record_submit(fn, *args, **kwargs):
+            budgets.append(args[-1])
+            return submit(fn, *args, **kwargs)
+
+        pool.submit = record_submit
+        return pool
+
+    monkeypatch.setattr(sh.dataset.os, "cpu_count", lambda: 8)
+    monkeypatch.setattr(sh.dataset, "_omx_uses_processes", lambda: True)
+    monkeypatch.setattr(
+        sh.dataset.concurrent.futures, "ProcessPoolExecutor", recording_pool
+    )
+    shared = sh.dataset.from_omx_3d(
+        paths, time_periods=["AM", "PM"], load="shared", workers=2
+    )
+    try:
+        xr.testing.assert_equal(shared, expected)
+        # Only the second source has assignments when names overlap. Use the
+        # actual active worker count, not the requested upper limit.
+        assert budgets == []
+    finally:
+        shared.shm.release_shared_memory()
+
+    with openmatrix.open_file(paths[0], "w") as handle:
+        handle.create_matrix("DIST", obj=np.eye(25))
+    with openmatrix.open_file(paths[1], "w") as handle:
+        handle.create_matrix("TIME__AM", obj=np.eye(25))
+    shared = sh.dataset.from_omx_3d(
+        paths, time_periods=["AM"], load="shared", workers=2
+    )
+    try:
+        np.testing.assert_array_equal(shared.DIST, np.eye(25))
+        np.testing.assert_array_equal(shared.TIME[..., 0], np.eye(25))
+        assert budgets == [4, 4]
+    finally:
+        shared.shm.release_shared_memory()

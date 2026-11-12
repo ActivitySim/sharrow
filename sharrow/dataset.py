@@ -654,10 +654,11 @@ def _load_omx_assignments(dataset, source, assignments, reader=None):
     return bytes_loaded
 
 
-def _load_omx_shared_worker(shared_memory_key, source, assignments):
+def _load_omx_shared_worker(shared_memory_key, source, assignments, decoder_workers):
     """Process worker that fills disjoint pages of a shared OMX Dataset."""
     target = xr.Dataset.shm.from_shared_memory(shared_memory_key, mode="r+")
-    bytes_loaded = _load_omx_assignments(target, source, assignments)
+    with _OmxReadCoordinator(max_workers=decoder_workers) as reader:
+        bytes_loaded = _load_omx_assignments(target, source, assignments, reader=reader)
     if shared_memory_key.startswith("memmap:"):
         for memory_object in target.shm._shared_memory_objs_:
             flush = getattr(memory_object, "flush", None)
@@ -715,12 +716,22 @@ def _load_omx_batches(dataset, active_batches, worker_count):
                 return sum(future.result() for future in futures)
 
     shared_memory_key = dataset.shm.shared_memory_key
+    # Share the machine's CPU budget across file workers instead of giving
+    # every process a machine-sized decoder pool. Each process needs at least
+    # one decoder, even when an explicit file-worker count exceeds CPU count.
+    decoder_workers = max(1, min(32, (os.cpu_count() or 1) // worker_count))
     mp_context = multiprocessing.get_context("spawn")
     with concurrent.futures.ProcessPoolExecutor(
         max_workers=worker_count, mp_context=mp_context
     ) as pool:
         futures = [
-            pool.submit(_load_omx_shared_worker, shared_memory_key, source, batch)
+            pool.submit(
+                _load_omx_shared_worker,
+                shared_memory_key,
+                source,
+                batch,
+                decoder_workers,
+            )
             for source, batch in active_batches
         ]
         return sum(future.result() for future in futures)

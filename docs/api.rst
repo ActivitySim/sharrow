@@ -136,6 +136,11 @@ therefore use the standard guarded entry point::
             load="shared",
         )
 
+Process-based file workers divide the CPU budget between their decoder pools
+instead of each creating a machine-sized pool. Chunk queue limits are still
+per process, and at least one decoder is needed per active worker; this is not
+a global byte limit. Windows file threads share one decoder pool.
+
 Set ``workers=1`` for deterministic serial I/O on every platform. Successful
 ``memmap`` loads retain their backing data and metadata files intentionally.
 Releasing a memmap flushes it and relinquishes the accessor's ownership;
